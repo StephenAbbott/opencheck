@@ -1,0 +1,625 @@
+[
+ {
+  "direct_children": [],
+  "direct_children_total": 0,
+  "direct_parent": {
+   "attributes": {
+    "conformityFlag": "CONFORMING",
+    "entity": {
+     "category": "GENERAL",
+     "creationDate": "1983-04-26T00:00:00Z",
+     "eventGroups": [
+      {
+       "events": [
+        {
+         "effectiveDate": "2024-08-02T00:00:00Z",
+         "recordedDate": "2024-09-27T09:05:22Z",
+         "status": "COMPLETED",
+         "type": "CHANGE_HQ_ADDRESS",
+         "validationDocuments": "SUPPORTING_DOCUMENTS"
+        }
+       ],
+       "groupType": "STANDALONE"
+      },
+      {
+       "events": [
+        {
+         "effectiveDate": "2024-08-02T00:00:00Z",
+         "recordedDate": "2024-09-27T09:05:22Z",
+         "status": "COMPLETED",
+         "type": "CHANGE_LEGAL_ADDRESS",
+         "validationDocuments": "SUPPORTING_DOCUMENTS"
+        }
+       ],
+       "groupType": "STANDALONE"
+      }
+     ],
+     "headquartersAddress": {
+      "addressLines": [
+       "Level 1, 1 Elizabeth Street"
+      ],
+      "city": "SYDNEY",
+      "country": "AU",
+      "language": "en",
+      "postalCode": "2000",
+      "region": "AU-NSW"
+     },
+     "jurisdiction": "AU",
+     "legalAddress": {
+      "addressLines": [
+       "Level 1, 1 Elizabeth Street"
+      ],
+      "city": "SYDNEY",
+      "country": "AU",
+      "language": "en",
+      "postalCode": "2000",
+      "region": "AU-NSW"
+     },
+     "legalForm": {
+      "id": "R4KK"
+     },
+     "legalName": {
+      "language": "en",
+      "name": "MACQUARIE BANK LIMITED"
+     },
+     "registeredAs": "008 583 542",
+     "registeredAt": {
+      "id": "RA000014",
+      "other": null
+     },
+     "status": "ACTIVE"
+    },
+    "lei": "4ZHCHI4KYZG2WVRT8631",
+    "registration": {
+     "corroborationLevel": "FULLY_CORROBORATED",
+     "initialRegistrationDate": "2012-06-06T15:53:00Z",
+     "lastUpdateDate": "2026-05-15T08:40:25Z",
+     "managingLou": "529900T8BM49AURSDO55",
+     "nextRenewalDate": "2027-06-14T07:59:00Z",
+     "status": "ISSUED",
+     "validatedAs": "008 583 542",
+     "validatedAt": {
+      "id": "RA000014",
+      "other": null
+     }
+    }
+   },
+   "id": "4ZHCHI4KYZG2WVRT8631",
+   "type": "lei-records"
+  },
+  "direct_parent_exception": null,
+  "direct_parent_relationship": {
+   "attributes": {
+    "registration": {
+     "lastUpdateDate": "2026-10-04T17:28:34Z",
+     "status": "PUBLISHED"
+    },
+    "relationship": {
+     "endNode": {
+      "id": "4ZHCHI4KYZG2WVRT8631",
+      "type": "LEI"
+     },
+     "periods": [
+      {
+       "startDate": "2007-07-11T00:00:00Z",
+       "type": "RELATIONSHIP_PERIOD"
+      }
+     ],
+     "startNode": {
+      "id": "17GKQF40GFUEUUWOO622",
+      "type": "LEI"
+     },
+     "status": "ACTIVE",
+     "type": "IS_DIRECTLY_CONSOLIDATED_BY"
+    }
+   },
+   "id": "17GKQF40GFUEUUWOO622|LEI|IS_DIRECTLY_CONSOLIDATED_BY",
+   "type": "relationship-records"
+  },
+  "lei": "17GKQF40GFUEUUWOO622",
+  "record": {
+   "attributes": {
+    "conformityFlag": "CONFORMING",
+    "entity": {
+     "category": "GENERAL",
+     "creationDate": "2007-07-11T00:00:00Z",
+     "eventGroups": [
+      {
+       "events": [
+        {
+         "effectiveDate": "2021-09-22T00:00:00Z",
+         "recordedDate": "2022-06-30T11:58:18Z",
+         "status": "COMPLETED",
+         "type": "CHANGE_LEGAL_NAME",
+         "validationDocuments": "SUPPORTING_DOCUMENTS"
+        }
+       ],
+       "groupType": "STANDALONE"
+      }
+     ],
+     "headquartersAddress": {
+      "addressLines": [
+       "Ropemaker Place",
+       "28 Ropemaker Street"
+      ],
+      "city": "London",
+      "country": "GB",
+      "language": "en",
+      "postalCode": "EC2Y 9HD",
+      "region": "GB-LND"
+     },
+     "jurisdiction": "GB",
+     "legalAddress": {
+      "addressLines": [
+       "Ropemaker Place",
+       "28 Ropemaker Street"
+      ],
+      "city": "London",
+      "country": "GB",
+      "language": "en",
+      "postalCode": "EC2Y 9HD",
+      "region": "GB-LND"
+     },
+     "legalForm": {
+      "id": "H0PO"
+     },
+     "legalName": {
+      "language": "en",
+      "name": "MACQUARIE ROPEMAKER LIMITED"
+     },
+     "otherNames": [
+      {
+       "language": "en",
+       "name": "MACQUARIE BANK INTERNATIONAL LIMITED",
+       "type": "PREVIOUS_LEGAL_NAME"
+      },
+      {
+       "language": "en",
+       "name": "MACQUARIE BANC INTERNATIONAL LIMITED",
+       "type": "PREVIOUS_LEGAL_NAME"
+      },
+      {
+       "language": "en",
+       "name": "MACQUARIE BANC EUROPE LIMITED",
+       "type": "PREVIOUS_LEGAL_NAME"
+      }
+     ],
+     "registeredAs": "06309906",
+     "registeredAt": {
+      "id": "RA000585",
+      "other": null
+     },
+     "status": "ACTIVE"
+    },
+    "lei": "17GKQF40GFUEUUWOO622",
+    "registration": {
+     "corroborationLevel": "FULLY_CORROBORATED",
+     "initialRegistrationDate": "2012-11-14T03:58:00Z",
+     "lastUpdateDate": "2026-10-04T17:28:34Z",
+     "managingLou": "529900T8BM49AURSDO55",
+     "nextRenewalDate": "2027-05-13T09:30:00Z",
+     "status": "ISSUED",
+     "validatedAs": "06309906",
+     "validatedAt": {
+      "id": "RA000585",
+      "other": null
+     }
+    }
+   },
+   "id": "17GKQF40GFUEUUWOO622",
+   "type": "lei-records"
+  },
+  "snapshot_fallback": false,
+  "snapshot_source": "mirror",
+  "source_id": "gleif",
+  "ultimate_parent": {
+   "attributes": {
+    "conformityFlag": "CONFORMING",
+    "entity": {
+     "category": "GENERAL",
+     "creationDate": "2006-10-12T00:00:00Z",
+     "eventGroups": [
+      {
+       "events": [
+        {
+         "effectiveDate": "2024-08-02T00:00:00Z",
+         "recordedDate": "2024-09-27T09:35:05Z",
+         "status": "COMPLETED",
+         "type": "CHANGE_HQ_ADDRESS",
+         "validationDocuments": "SUPPORTING_DOCUMENTS"
+        }
+       ],
+       "groupType": "STANDALONE"
+      },
+      {
+       "events": [
+        {
+         "effectiveDate": "2024-08-02T00:00:00Z",
+         "recordedDate": "2024-09-27T09:35:05Z",
+         "status": "COMPLETED",
+         "type": "CHANGE_LEGAL_ADDRESS",
+         "validationDocuments": "SUPPORTING_DOCUMENTS"
+        }
+       ],
+       "groupType": "STANDALONE"
+      }
+     ],
+     "headquartersAddress": {
+      "addressLines": [
+       "LEVEL 1, 1 ELIZABETH STREET"
+      ],
+      "city": "SYDNEY",
+      "country": "AU",
+      "language": "en",
+      "postalCode": "2000",
+      "region": "AU-NSW"
+     },
+     "jurisdiction": "AU",
+     "legalAddress": {
+      "addressLines": [
+       "1 ELIZABETH STREET"
+      ],
+      "city": "SYDNEY",
+      "country": "AU",
+      "language": "en",
+      "postalCode": "2000",
+      "region": "AU-NSW"
+     },
+     "legalForm": {
+      "id": "R4KK"
+     },
+     "legalName": {
+      "language": "en",
+      "name": "MACQUARIE GROUP LIMITED"
+     },
+     "registeredAs": "122 169 279",
+     "registeredAt": {
+      "id": "RA000014",
+      "other": null
+     },
+     "status": "ACTIVE"
+    },
+    "lei": "ACMHD8HWFMFUIQQ8Y590",
+    "registration": {
+     "corroborationLevel": "FULLY_CORROBORATED",
+     "initialRegistrationDate": "2012-06-06T15:51:00Z",
+     "lastUpdateDate": "2026-01-07T09:46:03Z",
+     "managingLou": "529900T8BM49AURSDO55",
+     "nextRenewalDate": "2027-02-24T13:49:19Z",
+     "status": "ISSUED",
+     "validatedAs": "122 169 279",
+     "validatedAt": {
+      "id": "RA000014",
+      "other": null
+     }
+    }
+   },
+   "id": "ACMHD8HWFMFUIQQ8Y590",
+   "type": "lei-records"
+  },
+  "ultimate_parent_exception": null,
+  "ultimate_parent_relationship": {
+   "attributes": {
+    "registration": {
+     "lastUpdateDate": "2026-10-04T17:28:34Z",
+     "status": "PUBLISHED"
+    },
+    "relationship": {
+     "endNode": {
+      "id": "ACMHD8HWFMFUIQQ8Y590",
+      "type": "LEI"
+     },
+     "periods": [
+      {
+       "startDate": "2007-07-11T00:00:00Z",
+       "type": "RELATIONSHIP_PERIOD"
+      }
+     ],
+     "startNode": {
+      "id": "17GKQF40GFUEUUWOO622",
+      "type": "LEI"
+     },
+     "status": "ACTIVE",
+     "type": "IS_ULTIMATELY_CONSOLIDATED_BY"
+    }
+   },
+   "id": "17GKQF40GFUEUUWOO622|LEI|IS_ULTIMATELY_CONSOLIDATED_BY",
+   "type": "relationship-records"
+  }
+ },
+ {
+  "direct_children": [],
+  "direct_children_total": 0,
+  "direct_parent": null,
+  "direct_parent_exception": {
+   "attributes": {
+    "category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+    "lei": "159500N9IYX6ABSWOK68",
+    "reason": "NATURAL_PERSONS"
+   },
+   "id": "159500N9IYX6ABSWOK68-DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+   "type": "reporting-exceptions"
+  },
+  "lei": "159500N9IYX6ABSWOK68",
+  "record": {
+   "attributes": {
+    "conformityFlag": "CONFORMING",
+    "entity": {
+     "category": "GENERAL",
+     "creationDate": "2019-05-10T00:00:00Z",
+     "eventGroups": [
+      {
+       "events": [
+        {
+         "effectiveDate": "2025-08-24T22:00:00Z",
+         "recordedDate": "2025-10-28T09:40:07Z",
+         "status": "COMPLETED",
+         "type": "CHANGE_LEGAL_ADDRESS",
+         "validationDocuments": "ACCOUNTS_FILING"
+        }
+       ],
+       "groupType": "STANDALONE"
+      },
+      {
+       "events": [
+        {
+         "effectiveDate": "2025-08-24T22:00:00Z",
+         "recordedDate": "2025-10-28T09:40:07Z",
+         "status": "COMPLETED",
+         "type": "CHANGE_HQ_ADDRESS",
+         "validationDocuments": "ACCOUNTS_FILING"
+        }
+       ],
+       "groupType": "STANDALONE"
+      }
+     ],
+     "headquartersAddress": {
+      "addressLines": [
+       "Engelbertstraße 43A"
+      ],
+      "city": "Essen",
+      "country": "DE",
+      "language": "de",
+      "postalCode": "45139",
+      "region": "DE-NW"
+     },
+     "jurisdiction": "DE",
+     "legalAddress": {
+      "addressLines": [
+       "Engelbertstraße 43A"
+      ],
+      "city": "Essen",
+      "country": "DE",
+      "language": "de",
+      "postalCode": "45139",
+      "region": "DE-NW"
+     },
+     "legalForm": {
+      "id": "2HBR"
+     },
+     "legalName": {
+      "language": "de",
+      "name": "PP Ventures Holding GmbH"
+     },
+     "registeredAs": "HRB 31884",
+     "registeredAt": {
+      "id": "RA000232",
+      "other": null
+     },
+     "status": "ACTIVE"
+    },
+    "lei": "159500N9IYX6ABSWOK68",
+    "registration": {
+     "corroborationLevel": "PARTIALLY_CORROBORATED",
+     "initialRegistrationDate": "2024-12-23T10:15:05Z",
+     "lastUpdateDate": "2026-10-26T09:26:47Z",
+     "managingLou": "98450045AN5EB5FDC780",
+     "nextRenewalDate": "2027-12-23T09:15:05Z",
+     "status": "ISSUED",
+     "validatedAs": "HRB 31884",
+     "validatedAt": {
+      "id": "RA000232",
+      "other": null
+     }
+    }
+   },
+   "id": "159500N9IYX6ABSWOK68",
+   "type": "lei-records"
+  },
+  "snapshot_fallback": false,
+  "snapshot_source": "mirror",
+  "source_id": "gleif",
+  "ultimate_parent": null,
+  "ultimate_parent_exception": {
+   "attributes": {
+    "category": "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
+    "lei": "159500N9IYX6ABSWOK68",
+    "reason": "NATURAL_PERSONS"
+   },
+   "id": "159500N9IYX6ABSWOK68-ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
+   "type": "reporting-exceptions"
+  }
+ },
+ {
+  "direct_children": [],
+  "direct_children_total": 0,
+  "direct_parent": null,
+  "direct_parent_exception": null,
+  "lei": "2138006E24B8HM9WHH62",
+  "record": {
+   "attributes": {
+    "conformityFlag": "NOT_APPLICABLE",
+    "entity": {
+     "category": "GENERAL",
+     "creationDate": "2000-12-28T00:00:00Z",
+     "eventGroups": [
+      {
+       "events": [
+        {
+         "effectiveDate": "2012-01-25T00:00:00Z",
+         "recordedDate": "2024-12-05T12:47:31Z",
+         "status": "COMPLETED",
+         "type": "DISSOLUTION",
+         "validationDocuments": "ACCOUNTS_FILING"
+        }
+       ],
+       "groupType": "STANDALONE"
+      }
+     ],
+     "headquartersAddress": {
+      "addressLines": [
+       "HOEVESTEIN 28"
+      ],
+      "city": "OOSTERHOUT",
+      "country": "NL",
+      "language": "en",
+      "postalCode": "4903SC",
+      "region": "NL-NH"
+     },
+     "jurisdiction": "NL",
+     "legalAddress": {
+      "addressLines": [
+       "HOEVESTEIN 28"
+      ],
+      "city": "OOSTERHOUT",
+      "country": "NL",
+      "language": "en",
+      "postalCode": "4903SC",
+      "region": "NL-NH"
+     },
+     "legalForm": {
+      "id": "B5PM"
+     },
+     "legalName": {
+      "language": "en",
+      "name": "BNP PARIBAS CARDIF LEVENSVERZEKERINGEN N.V."
+     },
+     "registeredAs": "20100175",
+     "registeredAt": {
+      "id": "RA000463",
+      "other": null
+     },
+     "status": "INACTIVE"
+    },
+    "lei": "2138006E24B8HM9WHH62",
+    "registration": {
+     "corroborationLevel": "FULLY_CORROBORATED",
+     "initialRegistrationDate": "2014-07-24T00:00:00Z",
+     "lastUpdateDate": "2026-10-26T17:28:30Z",
+     "managingLou": "213800WAVVOPS85N2205",
+     "nextRenewalDate": "2022-07-24T00:00:00Z",
+     "status": "RETIRED",
+     "validatedAs": "20100175",
+     "validatedAt": {
+      "id": "RA000463",
+      "other": null
+     }
+    }
+   },
+   "id": "2138006E24B8HM9WHH62",
+   "type": "lei-records"
+  },
+  "snapshot_fallback": false,
+  "snapshot_source": "mirror",
+  "source_id": "gleif",
+  "ultimate_parent": null,
+  "ultimate_parent_exception": null
+ },
+ {
+  "direct_children": [],
+  "direct_children_total": 0,
+  "direct_parent": null,
+  "direct_parent_exception": {
+   "attributes": {
+    "category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+    "lei": "05OE87VCYRDO6EZZ2Z53",
+    "reason": "NON_CONSOLIDATING"
+   },
+   "id": "05OE87VCYRDO6EZZ2Z53-DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+   "type": "reporting-exceptions"
+  },
+  "lei": "05OE87VCYRDO6EZZ2Z53",
+  "record": {
+   "attributes": {
+    "conformityFlag": "NON_CONFORMING",
+    "entity": {
+     "category": "GENERAL",
+     "creationDate": "1994-06-28T00:00:00Z",
+     "headquartersAddress": {
+      "addressLines": [
+       "C/O Corporation Service Company",
+       "2711 Centerville Road",
+       "Suite 400"
+      ],
+      "city": "Wilmington",
+      "country": "US",
+      "language": "en",
+      "postalCode": "19808",
+      "region": "US-DE"
+     },
+     "jurisdiction": "US-DE",
+     "legalAddress": {
+      "addressLines": [
+       "C/O CORPORATION SERVICE COMPANY",
+       "251 LITTLE FALLS DRIVE"
+      ],
+      "city": "WILMINGTON",
+      "country": "US",
+      "language": "en",
+      "postalCode": "19808",
+      "region": "US-DE"
+     },
+     "legalForm": {
+      "id": "HZEH"
+     },
+     "legalName": {
+      "language": "en",
+      "name": "Rockwood Asset Management, LLC"
+     },
+     "otherNames": [
+      {
+       "language": "en",
+       "name": "Rockwood Asset Management Inc.",
+       "type": "PREVIOUS_LEGAL_NAME"
+      }
+     ],
+     "registeredAs": "2414717",
+     "registeredAt": {
+      "id": "RA000602",
+      "other": null
+     },
+     "status": "ACTIVE"
+    },
+    "lei": "05OE87VCYRDO6EZZ2Z53",
+    "registration": {
+     "corroborationLevel": "FULLY_CORROBORATED",
+     "initialRegistrationDate": "2012-06-06T15:57:00Z",
+     "lastUpdateDate": "2026-05-28T15:11:56Z",
+     "managingLou": "5493001KJTIIGC8Y1R12",
+     "nextRenewalDate": "2014-05-01T12:14:00Z",
+     "status": "LAPSED",
+     "validatedAs": "2414717",
+     "validatedAt": {
+      "id": "RA000602",
+      "other": null
+     }
+    }
+   },
+   "id": "05OE87VCYRDO6EZZ2Z53",
+   "type": "lei-records"
+  },
+  "snapshot_fallback": false,
+  "snapshot_source": "mirror",
+  "source_id": "gleif",
+  "ultimate_parent": null,
+  "ultimate_parent_exception": {
+   "attributes": {
+    "category": "ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
+    "lei": "05OE87VCYRDO6EZZ2Z53",
+    "reason": "NON_CONSOLIDATING"
+   },
+   "id": "05OE87VCYRDO6EZZ2Z53-ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT",
+   "type": "reporting-exceptions"
+  }
+ }
+]

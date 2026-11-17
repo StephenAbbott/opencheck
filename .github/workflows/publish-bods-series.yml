@@ -1,0 +1,139 @@
+name: Publish the monthly BODS series (GLEIF)
+
+# The first layer of the monthly BODS time series (the ledger ticket, 17 Nov
+# 2026): every LEI in GLEIF's Golden Copy as BODS v0.4, published as what
+# changed since the last edition — `new`, `updated` (with a `correcting`
+# annotation when OpenCheck's reading of GLEIF changed), `closed`, and nothing
+# for a record that is unchanged. One GitHub release a month, tagged
+# `bods-series-YYYY-MM`, dated the first of the month.
+#
+# It reads no API. The input is the Golden Copy mirror that
+# refresh-entity-pages-db rebuilds on the 1st (`entity-pages-latest`); this
+# job runs on the 2nd so that a late start of that one (GitHub has run this
+# repository's schedules hours late) still lands first. The build refuses a
+# mirror that was not built from a publish of the first of a month.
+#
+# State: the publication ledger (which statement each record last had) rides
+# on each release as `ledger.sqlite.gz.part-*` and is read back from the
+# newest `bods-series-*` release. A release is created as a draft and
+# published only once every asset is up, so a failed run never leaves a
+# release without its ledger — the next month would then publish every record
+# `new` again. Re-running a month that is already published fails (editions
+# are applied once, in order).
+#
+# Sizes measured on the 1 Nov 2026 Golden Copy are in docs/bods-series.md.
+on:
+  schedule:
+    - cron: "30 4 2 * *" # the 2nd, 04:30 UTC — the mirror is rebuilt on the 1st
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Trial: map only the first N LEIs. Nothing is published."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-bods-series
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    permissions:
+      contents: write # creates the month's release
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SERIES: /mnt/bods-series
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Make room (the mirror, the mapped parts and the ledger are ~15 GB)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          sudo mkdir -p "$SERIES" && sudo chown "$USER" "$SERIES"
+          df -h "$SERIES"
+
+      - name: Install backend
+        run: uv sync
+        working-directory: backend
+
+      - name: Download the Golden Copy mirror
+        run: |
+          gh release download entity-pages-latest -p entity_pages.sqlite.gz -D "$SERIES"
+          gunzip "$SERIES/entity_pages.sqlite.gz"
+
+      - name: Fetch the ledger from the last edition
+        run: |
+          prev="$(gh api "repos/$GH_REPO/releases" --paginate \
+            --jq '.[] | select(.draft | not) | .tag_name | select(startswith("bods-series-"))' \
+            | sort | tail -n 1)"
+          echo "previous edition: ${prev:-none}"
+          if [ -n "$prev" ]; then
+            # No ledger on a published edition means the series cannot go on;
+            # stop here rather than publish every record `new` again.
+            gh release download "$prev" -p 'ledger.sqlite.gz.part-*' -D "$SERIES/prev"
+            cat "$SERIES"/prev/ledger.sqlite.gz.part-* | gunzip > "$SERIES/ledger.sqlite"
+            rm -rf "$SERIES/prev"
+          fi
+
+      - name: Build the edition
+        working-directory: backend
+        env:
+          LIMIT: ${{ inputs.limit }}
+        run: |
+          uv run python scripts/build_bods_series.py \
+            --entity-pages-db "$SERIES/entity_pages.sqlite" \
+            --ledger "$SERIES/ledger.sqlite" \
+            --out-dir "$SERIES/out" \
+            ${LIMIT:+--limit "$LIMIT" --edition "$(date -u +%Y-%m-%d)"}
+          rm -rf "$SERIES/out/work" "$SERIES/entity_pages.sqlite"
+          {
+            echo "### BODS series"
+            sed -n '1,20p' "$SERIES/out/README.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Pack the ledger
+        if: ${{ inputs.limit == '' }}
+        run: |
+          # GitHub caps a release asset at 2 GB.
+          gzip -1 -c "$SERIES/ledger.sqlite" | split -b 1900m - "$SERIES/out/ledger.sqlite.gz.part-"
+          rm "$SERIES/ledger.sqlite"
+          ls -l "$SERIES/out"
+
+      - name: Publish the release
+        if: ${{ inputs.limit == '' }}
+        run: |
+          edition="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['edition'])" "$SERIES/out/manifest.json")"
+          tag="bods-series-${edition%-*}"
+          # A draft left by a failed run is replaced; a published edition is not.
+          if [ "$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)" = "true" ]; then
+            gh release delete "$tag" --yes
+          fi
+          gh release create "$tag" --draft --target "$GITHUB_SHA" \
+            --title "BODS series — GLEIF, $edition" --notes-file "$SERIES/out/README.md"
+          for file in "$SERIES"/out/*; do
+            [ -f "$file" ] || continue
+            ok=""
+            for attempt in 1 2 3 4; do
+              if gh release upload "$tag" "$file" --clobber; then ok=1; break; fi
+              sleep $((attempt * 30))
+            done
+            [ -n "$ok" ] || { echo "upload failed: $file"; exit 1; }
+          done
+          gh release edit "$tag" --draft=false
+
+      - name: Keep a trial's output as an artifact
+        if: ${{ inputs.limit != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bods-series-trial
+          path: ${{ env.SERIES }}/out
+          retention-days: 7

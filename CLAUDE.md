@@ -5672,6 +5672,44 @@ page `docs/dates.md` § "Relationships no source dates". Stephen's decisions:
   payload and `undated` per figure in MCP; a holder credited the company's own
   shares is never routed "through" the subsidiary holding them.
 
+## The monthly BODS series and its publication ledger (the ledger ticket, 17 Nov 2026)
+
+`opencheck/bods/publication_ledger.py`, `bods/reading_versions.py`,
+`scripts/build_bods_series.py`, `scripts/pin_reading_versions.py`,
+`.github/workflows/publish-bods-series.yml`; reader's page
+`docs/bods-series.md`. Stephen's six decisions (17 Nov 2026): one GitHub
+release a month (`bods-series-YYYY-MM`); **changes only**; a mapper correction
+is `updated` with a `correcting` annotation; a closed record that returns gets
+a new `recordId`; GLEIF only for edition one; the edition is the first of the
+month, built from the mirror regenerated that day. Things that will be
+re-derived otherwise:
+
+- **A lookup never writes `updated`; only the ledger does.** It compares
+  `recordDetails` alone (`details_digest`) with the last statement published
+  of the record. `statementDate`, `source` and annotations are outside it.
+- **A change to a series source's mapper needs a reading-version bump**
+  (`READING_VERSIONS`), then `uv run python scripts/pin_reading_versions.py`.
+  `tests/test_reading_versions.py` fails until both are done. Without the
+  bump the series publishes OpenCheck's change as the source's. Today only
+  `gleif` is in a series.
+- **Parties before relationships.** A returning record gets its new
+  `recordId` when applied, and references are rewritten through
+  `ledger.aliases`; a party returning after a relationship was applied raises
+  `OrderError` and the edition rolls back whole.
+- **`close_missing` only for a source read whole.** It refuses past a tenth
+  of the source's live records (`SuspectEditionError`); a `--limit` trial
+  closes nothing.
+- **`updated` / `closed` statement ids carry the edition**; a `new` one is
+  the lookup's `content_statement_id`.
+- **The ledger rides on each release** as `ledger.sqlite.gz.part-*` (GitHub's
+  2 GB asset cap). The release is a draft until every asset is up: a
+  published edition without its ledger would make the next month publish
+  every record `new`. Editions apply once, in date order.
+- **The build drops a parent's copy** from a child's bundle (the parent's own
+  bundle publishes it) unless the mirror holds no record of that parent.
+- Not built: index-tier registers, change-driven re-runs, the history
+  backfill, the demo pack (steps 4–7 on the ticket).
+
 ## The daily changes list reads the deltas for every LEI and never runs a lookup (the daily-deltas ticket, 13 Nov 2026)
 
 `opencheck/daily_changes.py`, `routers/daily_changes.py`; reader's page
