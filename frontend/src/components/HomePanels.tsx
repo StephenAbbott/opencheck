@@ -295,11 +295,25 @@ export function ExampleLeiPicker({
   );
 }
 
+/**
+ * The source count said in How it works — the step-3 title and the summary
+ * panel's figure read this one constant. The hero subline in App.tsx carries
+ * its own copy (see CLAUDE.md's new-adapter checklist).
+ */
+const HOW_IT_WORKS_SOURCE_COUNT = 72;
+
+/** The summary panel's figures, each taken from a step's own text. */
+const HOW_IT_WORKS_FIGURES = [
+  { value: "20", label: "characters in an LEI" },
+  { value: "3.4m", label: "companies with one" },
+  { value: String(HOW_IT_WORKS_SOURCE_COUNT), label: "open sources checked" },
+  { value: "1", label: "report, as a PDF or raw data" },
+] as const;
+
 const HOW_IT_WORKS_STEPS = [
   {
     num: "1",
-    accent: "#3d30d4" as const,
-    icon: <StepKeyIcon className="h-[15px] w-[15px]" />,
+        icon: <StepKeyIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
     title: "One ID, the whole world",
     body: (
       <>
@@ -319,8 +333,7 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     num: "2",
-    accent: "#3d30d4" as const,
-    icon: <StepBridgeIcon className="h-[15px] w-[15px]" />,
+        icon: <StepBridgeIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
     title: "We bridge to the registers",
     body: (
       <>
@@ -340,9 +353,8 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     num: "3",
-    accent: "#3d30d4" as const,
-    icon: <StepNetworkIcon className="h-[15px] w-[15px]" />,
-    title: "72 open sources, in parallel",
+        icon: <StepNetworkIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
+    title: `${HOW_IT_WORKS_SOURCE_COUNT} open sources, in parallel`,
     body: (
       <>
         Each source is queried with the identifier it understands, and the
@@ -354,17 +366,14 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     num: "4",
-    accent: "#3d30d4" as const,
-    icon: <StepShieldIcon className="h-[15px] w-[15px]" />,
+        icon: <StepShieldIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
     title: "Risk, explained and exportable",
     body: (
       <>
-        Deterministic risk signals — sanctions, flagged jurisdictions, complex
-        ownership and more — track the elements due-diligence standards use to
-        judge ownership complexity,
-        and a plain-English AI summary explains them with every statement linked
-        to its source. Take it away as an accessible PDF or raw data — or copy
-        the share link, and a live summary card appears wherever you paste it.
+        A free risk report is generated flagging signals including sanctions,
+        flagged jurisdictions, complex ownership and more. Every statement links
+        to its source. Reports can be exported as accessible PDFs or raw
+        standardised data.
       </>
     ),
     badges: null,
@@ -428,46 +437,76 @@ export function NewFeatures() {
   );
 }
 
+/**
+ * HowItWorks — a summary panel beside a big-icon timeline (option C of the
+ * "How it works" mock-ups, 17 Nov 2026). The panel states the headline
+ * figures; each step is a card beside a 72px icon disc (56px on phones)
+ * carrying its number, joined by a rail that runs from one disc to the next.
+ */
 export function HowItWorks() {
   return (
-    <section className="mb-10 bg-white border border-oo-rule rounded-oo p-7">
+    <section className="mb-10" aria-labelledby="how-it-works-heading">
       <SectionLabel>How it works</SectionLabel>
-      <ol className="mt-2 max-w-2xl">
-        {HOW_IT_WORKS_STEPS.map((step, i) => {
-          const isLast = i === HOW_IT_WORKS_STEPS.length - 1;
-          return (
-            <li key={step.num} className="flex gap-5">
-              {/* Left rail — circle node + connector line */}
-              <div className="flex flex-col items-center flex-shrink-0" style={{ width: 28 }}>
-                <div
-                  className="flex items-center justify-center rounded-full text-white flex-shrink-0"
-                  style={{ width: 28, height: 28, background: step.accent }}
-                  aria-hidden="true"
-                >
-                  {step.icon}
-                </div>
+      <div className="grid gap-7 lg:grid-cols-[360px_1fr] items-start">
+        <div className="rounded-oo border border-oo-softBorder bg-gradient-to-br from-oo-soft to-white p-6 sm:p-7">
+          <h2
+            id="how-it-works-heading"
+            className="font-head font-bold text-oo-title sm:text-oo-display text-oo-ink"
+          >
+            Four steps from one ID to who owns and controls a company
+          </h2>
+          <p className="text-oo-body leading-[1.6] text-oo-muted mt-3">
+            OpenCheck does the register-hopping for you, then shows what it
+            found and where each fact came from.
+          </p>
+          <dl className="grid grid-cols-2 gap-2.5 mt-5">
+            {HOW_IT_WORKS_FIGURES.map((f) => (
+              <div
+                key={f.label}
+                className="flex flex-col-reverse bg-white border border-oo-rule rounded-oo px-3 py-3"
+              >
+                <dt className="text-oo-meta text-oo-muted leading-snug">{f.label}</dt>
+                <dd className="font-head font-bold text-oo-title text-oo-blue">{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <ol>
+          {HOW_IT_WORKS_STEPS.map((step, i) => {
+            const isLast = i === HOW_IT_WORKS_STEPS.length - 1;
+            return (
+              <li key={step.num} className={`relative flex gap-3 sm:gap-5 ${isLast ? "" : "pb-3.5"}`}>
+                {/* Rail from this disc down to the next one */}
                 {!isLast && (
-                  <div
-                    className="w-px flex-1 mt-1"
-                    style={{ background: "#e2e5ea", minHeight: 20 }}
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-[26px] sm:left-[34px] top-14 sm:top-[72px] bottom-0 w-[3px] bg-gradient-to-b from-oo-blue to-oo-mark-line"
                   />
                 )}
-              </div>
-
-              {/* Right content */}
-              <div className={isLast ? "pb-0" : "pb-6"} style={{ paddingTop: 3 }}>
-                <p className="font-head font-bold text-oo-body text-oo-ink leading-snug">
-                  <span className="sr-only">{`Step ${step.num}: `}</span>
-                  {step.title}
-                </p>
-                <p className="text-oo-small leading-[1.65] text-oo-muted mt-1.5">
-                  {step.body}
-                </p>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+                <div
+                  aria-hidden="true"
+                  className="relative z-10 flex flex-none items-center justify-center rounded-full bg-white border-[3px] border-oo-blue text-oo-blue shadow-oo-card h-14 w-14 sm:h-[72px] sm:w-[72px]"
+                >
+                  {step.icon}
+                  <span className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-oo-blue text-oo-meta font-bold text-white">
+                    {step.num}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0 bg-white border border-oo-rule rounded-oo px-4 py-3.5 sm:px-6 sm:py-5">
+                  <h3 className="font-head font-bold text-oo-stat text-oo-ink leading-snug">
+                    <span className="sr-only">{`Step ${step.num}: `}</span>
+                    {step.title}
+                  </h3>
+                  <p className="text-oo-body leading-[1.6] text-oo-muted mt-1.5">
+                    {step.body}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </section>
   );
 }
