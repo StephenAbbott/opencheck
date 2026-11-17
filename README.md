@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 550** — OpenCheck can now publish a monthly BODS series of every LEI in GLEIF's Golden Copy, saying what changed since the last edition as new, updated and closed statements.
+**Latest: Phase 551** — OpenCorporates' record is now checked against GLEIF's legal name, so a wrong company number in GLEIF's mapping shows a note card instead of another company's record.
 
 → [Full development history](docs/status.md)
 
