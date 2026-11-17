@@ -1,7 +1,7 @@
 {
   "src/App.tsx": {
     "hex": 0,
-    "text": 1,
+    "text": 0,
     "vocab": 0,
     "palette": 6,
     "button": 1
@@ -61,13 +61,6 @@
     "vocab": 0,
     "palette": 0,
     "button": 1
-  },
-  "src/components/HomePanels.tsx": {
-    "hex": 0,
-    "text": 1,
-    "vocab": 0,
-    "palette": 0,
-    "button": 0
   },
   "src/components/SearchPanel.tsx": {
     "hex": 0,

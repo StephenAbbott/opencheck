@@ -14,7 +14,7 @@ import {
   StepShieldIcon,
 } from "./icons";
 import { RiskChip, RISK_PRESENTATION } from "./risk/RiskChip";
-import { buttonClasses } from "./ui";
+import { buttonClasses, sectionLabelClasses } from "./ui";
 import {
   cardChips,
   EXAMPLE_VIEW_ANSWERS,
@@ -164,15 +164,26 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
 // ---------------------------------------------------------------------
 
 /**
- * Small uppercase section heading per BO design system: 10–11px,
- * weight 600, letter-spacing 0.12em, muted grey, with a hairline
- * bottom border that lines up the section visually.
+ * The homepage's section eyebrow: the design system's `ui/SectionLabel`
+ * type (DM Sans 12px bold, the same as the "New · …" eyebrows inside the
+ * feature cards) with a hairline rule under it. Until the homepage
+ * harmonisation (17 Nov 2026) this was a local copy in Bitter 11px
+ * semibold, so the page carried two eyebrow styles a few pixels apart.
+ *
+ * `as="p"` where the section's real heading is further down (How it works),
+ * so the page has one `h2` per section.
  */
-export function SectionLabel({ children }: { children: React.ReactNode }) {
+export function SectionLabel({
+  children,
+  as: Tag = "h2",
+}: {
+  children: React.ReactNode;
+  as?: "h2" | "p";
+}) {
   return (
-    <h2 className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted border-b border-oo-rule pb-2 mb-4">
+    <Tag className={sectionLabelClasses("muted", "border-b border-oo-rule pb-2 mb-4")}>
       {children}
-    </h2>
+    </Tag>
   );
 }
 
@@ -210,7 +221,7 @@ export function ExampleLeiPicker({
   return (
     <section className="mb-10">
       <SectionLabel>Try a curated example</SectionLabel>
-      <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <ul className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {EXAMPLE_LEIS.map((ex) => {
           const { shown, more } = cardChips(ex.signals);
           return (
@@ -221,7 +232,7 @@ export function ExampleLeiPicker({
             >
               <h3
                 id={`example-${ex.lei}`}
-                className="font-head text-oo-stat font-bold text-oo-ink leading-tight"
+                className="font-head text-oo-stat font-bold text-oo-ink"
               >
                 {ex.name}
               </h3>
@@ -313,7 +324,7 @@ const HOW_IT_WORKS_FIGURES = [
 const HOW_IT_WORKS_STEPS = [
   {
     num: "1",
-        icon: <StepKeyIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
+    icon: <StepKeyIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
     title: "One ID, the whole world",
     body: (
       <>
@@ -333,7 +344,7 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     num: "2",
-        icon: <StepBridgeIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
+    icon: <StepBridgeIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
     title: "We bridge to the registers",
     body: (
       <>
@@ -353,7 +364,7 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     num: "3",
-        icon: <StepNetworkIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
+    icon: <StepNetworkIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
     title: `${HOW_IT_WORKS_SOURCE_COUNT} open sources, in parallel`,
     body: (
       <>
@@ -366,7 +377,7 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     num: "4",
-        icon: <StepShieldIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
+    icon: <StepShieldIcon className="h-6 w-6 sm:h-8 sm:w-8" />,
     title: "Risk, explained and exportable",
     body: (
       <>
@@ -414,7 +425,7 @@ export function NewFeatures() {
                     className="max-w-full h-auto"
                   />
                 </div>
-                <div className="flex flex-col gap-2 p-5 flex-1">
+                <div className="flex flex-col gap-2 p-4 sm:p-5 flex-1">
                   <p
                     className={`text-oo-meta font-semibold uppercase tracking-oo-eyebrow ${tone.eyebrow}`}
                   >
@@ -446,16 +457,16 @@ export function NewFeatures() {
 export function HowItWorks() {
   return (
     <section className="mb-10" aria-labelledby="how-it-works-heading">
-      <SectionLabel>How it works</SectionLabel>
-      <div className="grid gap-7 lg:grid-cols-[360px_1fr] items-start">
-        <div className="rounded-oo border border-oo-softBorder bg-gradient-to-br from-oo-soft to-white p-6 sm:p-7">
+      <SectionLabel as="p">How it works</SectionLabel>
+      <div className="grid gap-5 lg:grid-cols-[360px_1fr] items-start">
+        <div className="rounded-oo border border-oo-softBorder bg-gradient-to-br from-oo-soft to-white p-4 sm:p-5">
           <h2
             id="how-it-works-heading"
-            className="font-head font-bold text-oo-title sm:text-oo-display text-oo-ink"
+            className="font-head font-bold text-oo-stat sm:text-oo-title text-oo-ink"
           >
             Four steps from one ID to who owns and controls a company
           </h2>
-          <p className="text-oo-body leading-[1.6] text-oo-muted mt-3">
+          <p className="text-oo-small text-oo-muted mt-3">
             OpenCheck does the register-hopping for you, then shows what it
             found and where each fact came from.
           </p>
@@ -476,7 +487,7 @@ export function HowItWorks() {
           {HOW_IT_WORKS_STEPS.map((step, i) => {
             const isLast = i === HOW_IT_WORKS_STEPS.length - 1;
             return (
-              <li key={step.num} className={`relative flex gap-3 sm:gap-5 ${isLast ? "" : "pb-3.5"}`}>
+              <li key={step.num} className={`relative flex gap-3 sm:gap-5 ${isLast ? "" : "pb-5"}`}>
                 {/* Rail from this disc down to the next one */}
                 {!isLast && (
                   <span
@@ -493,12 +504,12 @@ export function HowItWorks() {
                     {step.num}
                   </span>
                 </div>
-                <div className="flex-1 min-w-0 bg-white border border-oo-rule rounded-oo px-4 py-3.5 sm:px-6 sm:py-5">
-                  <h3 className="font-head font-bold text-oo-stat text-oo-ink leading-snug">
+                <div className="flex-1 min-w-0 bg-white border border-oo-rule rounded-oo p-4 sm:p-5">
+                  <h3 className="font-head font-bold text-oo-stat text-oo-ink">
                     <span className="sr-only">{`Step ${step.num}: `}</span>
                     {step.title}
                   </h3>
-                  <p className="text-oo-body leading-[1.6] text-oo-muted mt-1.5">
+                  <p className="text-oo-small text-oo-muted mt-1.5">
                     {step.body}
                   </p>
                 </div>
