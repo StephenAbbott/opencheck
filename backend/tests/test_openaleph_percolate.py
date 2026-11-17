@@ -23,7 +23,7 @@ from opencheck.sources import REGISTRY, SearchKind
 from opencheck.sources.base import SourceHit
 from opencheck.sources.openaleph import _PERCOLATE_MAX_TEXT, OpenAlephAdapter
 
-_API = "https://search.openaleph.org/api/2"
+_API = "https://darc.zone/api/2"
 _PERCOLATE = f"{_API}/beta/percolate"
 _LEI = "213800LH1BZH3DI6G760"
 

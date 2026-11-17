@@ -84,7 +84,7 @@ def _percolate_item(
         "caption": name,
         "properties": props,
         "collection": {"id": 1, "foreign_id": "test", "label": collection},
-        "links": {"ui": f"https://search.openaleph.org/entities/{entity_id or 'x'}"},
+        "links": {"ui": f"https://darc.zone/entities/{entity_id or 'x'}"},
         "percolator_match": match or ["name"],
         "surface_forms": [surface_form],
         "score": 1.5,
@@ -597,7 +597,7 @@ async def test_sub_signal_match_goes_to_screening(fake_percolate) -> None:
     assert first["statement_id"] == "stmt-sechin"
     assert first["collection"] == "Russian Oligarch Database"
     assert first["surface_form"] == "Igor Sechin"
-    assert first["url"].startswith("https://search.openaleph.org/entities/")
+    assert first["url"].startswith("https://darc.zone/entities/")
 
 
 async def test_screening_entries_deduplicated_per_statement_and_entity(

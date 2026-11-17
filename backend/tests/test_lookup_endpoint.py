@@ -142,7 +142,7 @@ def _mock_openaleph_lei_lookup_empty(httpx_mock: HTTPXMock, lei: str) -> None:
     """Mock the OpenAleph fetch_by_lei call to return no results."""
     from urllib.parse import quote
     url = (
-        "https://search.openaleph.org/api/2/entities?"
+        "https://darc.zone/api/2/entities?"
         f"filter:properties.leiCode={quote(lei)}&filter:schema=LegalEntity&limit=5"
     )
     httpx_mock.add_response(url=url, json={"results": []})
@@ -154,7 +154,7 @@ def _mock_openaleph_reg_lookup_empty(
     """Mock the OpenAleph fetch_by_registration call to return no results."""
     from urllib.parse import quote
     url = (
-        "https://search.openaleph.org/api/2/entities?"
+        "https://darc.zone/api/2/entities?"
         f"filter:properties.registrationNumber={quote(reg_number)}"
         f"&filter:properties.jurisdiction={quote(jurisdiction.lower())}"
         "&filter:schema=LegalEntity&limit=5"
@@ -166,7 +166,7 @@ def _mock_openaleph_name_lookup_empty(httpx_mock: HTTPXMock, name: str) -> None:
     """Mock the OpenAleph fetch_by_name (strategy 4) call to return no results."""
     from urllib.parse import quote
     url = (
-        "https://search.openaleph.org/api/2/entities?"
+        "https://darc.zone/api/2/entities?"
         f"q={quote(name)}&filter:schema=LegalEntity&limit=5"
     )
     httpx_mock.add_response(url=url, json={"results": []})

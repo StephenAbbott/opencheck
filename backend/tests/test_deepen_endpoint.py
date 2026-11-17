@@ -11,7 +11,7 @@ from opencheck.config import get_settings
 
 _GLEIF = "https://api.gleif.org/api/v1"
 _OS = "https://api.opensanctions.org"
-_AL = "https://search.openaleph.org/api/2"
+_AL = "https://darc.zone/api/2"
 
 
 @pytest.fixture(autouse=True)

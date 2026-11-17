@@ -682,7 +682,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 ## OpenAleph
 
 - **Data:** investigative data collections (company registries, leaks, sanctions lists, court records)
-- **Endpoint:** <https://search.openaleph.org/>
+- **Endpoint:** <https://darc.zone/> (DARC.ZONE, formerly search.openaleph.org)
 - **License:** per-collection (CC BY, CC BY-SA, or restricted). OpenCheck reads each collection's license metadata from the API and surfaces it on the source card.
 - **Attribution:** per-collection, e.g. "Data from [collection name] in OpenAleph, licensed [license]."
 - **Note:** The OpenAleph adapter is implemented but currently disabled in the registry. Its API is name-keyed rather than identifier-keyed, which does not fit the LEI-anchored flow cleanly yet.
