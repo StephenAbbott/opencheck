@@ -889,7 +889,7 @@ Data generated 2026-11-16T10:45:48+00:00; sentences rendered as of 2026-11-16. *
 
 ### Netherlands (NL) — verified 2026-11-06
 
-> UBO register is accessible to authorities and obliged entities, since 16 Jul 2025. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads KvK — Netherlands Chamber of Commerce for officers and registered holdings, not beneficial owners.
+> UBO register is accessible to authorities and obliged entities, since 16 Jul 2025. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads KvK — Netherlands Chamber of Commerce for the register record only: no officers or owners are published.
 
 | Field | Value |
 |---|---|

@@ -152,10 +152,12 @@ def test_an_adapter_that_reads_beneficial_owners_is_said_to() -> None:
 
 
 def test_an_adapter_that_reads_only_the_company_register_is_not_credited_with_owners() -> None:
-    # KvK: the UBO register is a separate, restricted product OpenCheck does not read.
+    # KvK: the UBO register is a separate, restricted product OpenCheck does
+    # not read, and the open data it does read names no one at all (Wet
+    # hergebruik van overheidsinformatie art. 2(1)(h); KvK, 17 Nov 2026).
     st = statement_for("NL", _TODAY)
     assert st.opencheck_reads and not any(s.reads_beneficial_owners for s in st.opencheck_reads)
-    assert "not beneficial owners" in st.sentence
+    assert "no officers or owners are published" in st.sentence
 
 
 def test_opencheck_reads_is_derived_from_the_registry() -> None:

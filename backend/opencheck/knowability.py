@@ -259,7 +259,9 @@ class SourceRead(BaseModel):
 #: people: the coverage sentence must not say "officers and registered
 #: holdings" of them. Each one's module docstring says what its file holds.
 RECORD_ONLY_SOURCES: frozenset[str] = frozenset(
-    {"bce_belgium", "ica_israel", "si_prs", "nta_japan"}
+    # kvk: the High-Value Dataset carries no names at all (Wet hergebruik
+    # van overheidsinformatie art. 2(1)(h); KvK's reply of 17 Nov 2026).
+    {"bce_belgium", "ica_israel", "si_prs", "nta_japan", "kvk"}
 )
 
 

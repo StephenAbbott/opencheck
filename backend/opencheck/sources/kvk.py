@@ -22,6 +22,20 @@ The flow with GLEIF:
   3. Subsequent internal calls (e.g. ``_safe_deepen``) retrieve the
      cached name via the in-process store.
 
+Why so little, and why only BVs and NVs: the Dutch Re-use of Government
+Information Act (Wet hergebruik van overheidsinformatie, art. 2(1)(h)) does not
+apply to personal data in registers established by law, so KvK must keep any
+personal data out of the High-Value Dataset. It therefore holds only BVs and
+NVs, no names, and a bulk file with no KvK number in it (KvK's reply to
+OpenCheck, 17 Nov 2026; the Dutch Data Protection Authority's advice on the
+bill is what the Act follows). Reading one company at a time through this API
+is the only way in.
+
+Rate limits (confirmed by KvK, 17 Nov 2026, and not raised for anyone): one
+request a minute per IP address, and 200 requests every five minutes across
+all users together. A request paced at one a minute can still get a 429 when
+the shared pool is full; that is a refusal, not "no record".
+
 License: CC BY 4.0 (EU Open Data Directive / High-Value Datasets)
 API reference:
   https://developers.kvk.nl/nl/documentation/open-dataset-basis-bedrijfsgegevens-api
@@ -53,13 +67,34 @@ _CACHE_NS = "kvk"
 # answers a spent quota with a bare 429 (no Retry-After). Until 27 Oct 2026 this
 # adapter had its own retry loop — three tries over ~14 s against a 60 s
 # window, each one another refused request — and nothing paced it at all.
+#
+# There are two limits and the card names the one that refused (KvK's reply of
+# 17 Nov 2026): this server's own minute, or the pool of 200 requests every
+# five minutes that all KvK users share. OpenCheck cannot see the pool, so a
+# 429 on a paced request is always the pool; the throttle then holds every KvK
+# request back for a minute rather than spend another on a full pool.
 
-# Wording when the throttle refused to send because the minute's request was
-# already spent and no slot freed within the wait. Nothing reached KvK.
+# The throttle refused to send because this server's minute was already spent
+# and no slot freed within the wait. Nothing reached KvK.
 _QUOTA_SPENT: str = (
-    "KvK open data allows one request a minute from this server; this "
-    "minute's was already used and no slot freed in time, so the request was "
-    "not sent (HTTP 429 avoided)"
+    "KvK's open data allows one request a minute from each address; this "
+    "server's was already used and no slot freed in time, so the request was "
+    "not sent. Try again in a minute"
+)
+
+# The throttle refused to send because KvK refused a request a moment ago: the
+# shared pool was full. Nothing reached KvK.
+_POOL_FULL_NOT_SENT: str = (
+    "KvK's open data allows 200 requests every five minutes across all its "
+    "users together, and that shared limit was reached a moment ago, so the "
+    "request was not sent. Try again in a few minutes"
+)
+
+# KvK answered 429 to a request this server had paced: the shared pool.
+_POOL_FULL: str = (
+    "KvK refused the request (HTTP 429): its open data allows 200 requests "
+    "every five minutes across all its users together, and that shared limit "
+    "was reached. Try again in a few minutes"
 )
 
 # GLEIF Registration Authority code for KvK (Netherlands Chamber of Commerce).
@@ -78,7 +113,9 @@ _COVERAGE_404: str = (
     "or NV (naamloze vennootschap) with registered business activity; other "
     "legal forms and some holding entities are not included and the API returns "
     "404 for them. This is a coverage limit of the open dataset, not a lookup "
-    "error."
+    "error. Dutch law keeps personal data in public registers out of re-use "
+    "(Wet hergebruik van overheidsinformatie, art. 2(1)(h)), which is why KvK "
+    "limits the open dataset in this way."
 )
 
 
@@ -204,14 +241,16 @@ class KvKAdapter(SourceAdapter):
                     response = await client.get(
                         f"{_API_BASE}/basisbedrijfsgegevens/kvknummer/{kvk_number}"
                     )
-            except HostRateLimitedError:
-                return self._unanswered(kvk_number, name, None)
+            except HostRateLimitedError as exc:
+                return self._unanswered(
+                    kvk_number, name, None, after_refusal=exc.after_refusal
+                )
             except httpx.HTTPError as exc:
                 return self._unanswered(kvk_number, name, type(exc).__name__)
             if response.status_code == 404:
                 # The KvK number is not in the open-data set (BV/NV-only).
-                # Cache the miss so we don't re-hit the 1-req/minute limit,
-                # and degrade gracefully rather than surfacing a 404 error.
+                # A definitive absence: remember it (put_absent expires it after
+                # a week) so the number does not spend another request.
                 data = None
             elif not 200 <= response.status_code < 300:
                 # Phase 324: a 429 the throttle could not wait out, or a 5xx, used
@@ -225,7 +264,10 @@ class KvKAdapter(SourceAdapter):
                     data = response.json()
                 except ValueError:
                     return self._unanswered(kvk_number, name, "a non-JSON body")
-            self._cache.put(cache_key, data)
+            if data is None:
+                self._cache.put_absent(cache_key)
+            else:
+                self._cache.put(cache_key, data)
 
         bundle: dict[str, Any] = {
             "source_id": self.id,
@@ -240,16 +282,31 @@ class KvKAdapter(SourceAdapter):
         validate_raw("kvk", KvKBundle, bundle)
         return bundle
 
-    def _unanswered(self, kvk_number: str, name: str, failure: str | None) -> dict[str, Any]:
+    def _unanswered(
+        self,
+        kvk_number: str,
+        name: str,
+        failure: str | None,
+        *,
+        after_refusal: bool = False,
+    ) -> dict[str, Any]:
         """Record that KvK did not answer and return an empty, uncached bundle.
 
-        ``failure`` is ``None`` when the throttle refused to send at all — the
-        quota was spent, which is a rate limit, not an upstream fault. The
-        detail names the failure only, never the KvK number.
+        ``failure`` is ``None`` when the throttle refused to send at all — a
+        rate limit, not an upstream fault: this server's own minute, or
+        (``after_refusal``) the shared pool KvK reported full a moment ago. A
+        429 KvK sent is the shared pool. The detail names the limit only, never
+        the KvK number.
         """
         if failure is None:
             degradation.record(
-                self.id, _QUOTA_SPENT, reason=degradation.REASON_RATE_LIMITED
+                self.id,
+                _POOL_FULL_NOT_SENT if after_refusal else _QUOTA_SPENT,
+                reason=degradation.REASON_RATE_LIMITED,
+            )
+        elif failure == "HTTP 429":
+            degradation.record(
+                self.id, _POOL_FULL, reason=degradation.REASON_RATE_LIMITED
             )
         else:
             degradation.record(

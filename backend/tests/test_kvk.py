@@ -257,3 +257,90 @@ async def test_a_second_number_within_the_wait_is_answered(adapter, paced):
     assert heineken.call_count == 1
     assert bundle["is_stub"] is False
     assert bundle["company"] == {"actief": "J", "rechtsvormCode": "NV"}
+
+
+# ---------------------------------------------------------------------------
+# 17 Nov 2026: KvK's reply — a 429 on a paced request is the shared pool
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_429_names_the_shared_pool(adapter, paced):
+    # KvK: one request a minute per IP, and 200 every five minutes across all
+    # users. A paced request that gets a 429 met the second limit, so the card
+    # says that — not that this server spent its own minute.
+    from opencheck import degradation
+
+    with respx.mock:
+        respx.get(f"{_URL}/17085815").mock(return_value=Response(429))
+        with degradation.recording() as recorded:
+            await adapter.fetch("17085815", legal_name="ASML Holding N.V.")
+    [entry] = [d for d in recorded if d.source_id == "kvk"]
+    assert entry.reason == "rate_limited"
+    assert "HTTP 429" in entry.detail
+    assert "200 requests every five minutes across all its users" in entry.detail
+    assert "one request a minute" not in entry.detail
+
+
+@pytest.mark.asyncio
+async def test_a_request_held_back_after_a_refusal_names_the_pool(adapter, paced):
+    # After KvK's 429 the throttle holds every KvK request back for a minute.
+    # A second company inside it is not sent, and the card says the shared
+    # limit was reached, not that this server's own minute was used.
+    from opencheck import degradation
+
+    with respx.mock:
+        respx.get(f"{_URL}/17085815").mock(return_value=Response(429))
+        heineken = respx.get(f"{_URL}/33011433").mock(
+            return_value=Response(200, json={"actief": "J"})
+        )
+        await adapter.fetch("17085815", legal_name="ASML Holding N.V.")
+        paced.now += 10
+        with degradation.recording() as recorded:
+            await adapter.fetch("33011433", legal_name="Heineken N.V.")
+    assert heineken.call_count == 0
+    [entry] = [d for d in recorded if d.source_id == "kvk"]
+    assert entry.reason == "rate_limited"
+    assert "not sent" in entry.detail
+    assert "across all its users" in entry.detail
+
+
+@pytest.mark.asyncio
+async def test_this_servers_own_minute_is_named_as_such(adapter, paced):
+    from opencheck import degradation
+
+    with respx.mock:
+        respx.get(f"{_URL}/17085815").mock(return_value=Response(200, json={"actief": "J"}))
+        respx.get(f"{_URL}/33011433").mock(return_value=Response(200, json={"actief": "J"}))
+        await adapter.fetch("17085815")
+        paced.now += 10
+        with degradation.recording() as recorded:
+            await adapter.fetch("33011433")
+    [entry] = [d for d in recorded if d.source_id == "kvk"]
+    assert "one request a minute from each address" in entry.detail
+    assert "across all its users" not in entry.detail
+
+
+@pytest.mark.asyncio
+async def test_a_404_is_remembered_as_an_absence(adapter, monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    from opencheck.config import get_settings
+
+    get_settings.cache_clear()
+    absent: list[str] = []
+    monkeypatch.setattr(adapter._cache, "put_absent", lambda key: absent.append(key))
+    with respx.mock:
+        respx.get(f"{_URL}/33011433").mock(return_value=Response(404))
+        bundle = await adapter.fetch("33011433", legal_name="Heineken N.V.")
+    assert absent == ["kvk/number/33011433"]
+    assert "art. 2(1)(h)" in bundle["coverage_note"]
+    get_settings.cache_clear()
+
+
+def test_knowability_says_kvk_publishes_no_people():
+    from opencheck.knowability import statement_for
+
+    sentence = statement_for("NL").sentence
+    assert "officers and registered holdings" not in sentence
+    assert "no officers or owners are published" in sentence

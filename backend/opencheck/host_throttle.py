@@ -10,7 +10,10 @@ call site can forget to.
 **Why it exists — KvK open data (27 Oct 2026).** ``opendata.kvk.nl`` allows one
 request per minute per IP address (plus 200 per five minutes across all
 callers combined) and answers a spent quota with a bare 429: no
-``Retry-After``, no ``RateLimit-*`` headers. Nothing paced it, and the
+``Retry-After``, no ``RateLimit-*`` headers. KvK confirmed on 17 Nov 2026 that
+a 429 on a request paced at one a minute is the shared pool: when every user
+together has sent 200 in five minutes, everyone is refused, whatever their own
+pace, and KvK does not raise either limit for anyone. Nothing paced it, and the
 adapter's retry loop waited 2 + 4 + 8 ≈ 14 s against a 60 s window, so once the
 minute was spent every retry was certain to fail and was itself another refused
 request. Two of three Dutch company cards checked in production that morning
@@ -121,9 +124,13 @@ class HostRateLimitedError(Exception):
     exactly like an observed 429 that outlasted its retries.
     """
 
-    def __init__(self, host: str, message: str) -> None:
+    def __init__(self, host: str, message: str, *, after_refusal: bool = False) -> None:
         super().__init__(message)
         self.host = host
+        #: True when the slot was held back by the penalty an observed 429 set,
+        #: not by this server's own window — for KvK, the shared pool (every
+        #: user's requests together) was full a moment ago.
+        self.after_refusal = after_refusal
 
 
 class HostThrottle:
@@ -203,6 +210,7 @@ class HostThrottle:
                     f"{lim.window_s:.0f}s from this server and the next slot is "
                     f"{at - now:.0f}s away, beyond the {lim.max_wait_s:.0f}s wait; "
                     "not sent",
+                    after_refusal=self._penalty_until >= at,
                 )
             # Short steps, so a slot that frees early is taken promptly.
             await self._sleep(min(max(at - now, 0.05), 1.0))
