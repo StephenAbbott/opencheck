@@ -125,7 +125,7 @@ def refresh_mirror(db_path: Path) -> dict[str, Any]:
 
     try:
         return mr.refresh_to_latest(db_path)
-    except mr.MirrorNotRefreshable as exc:
+    except mr.MirrorNotRefreshableError as exc:
         raise SystemExit(f"refresh-mirror: {exc}") from exc
 
 

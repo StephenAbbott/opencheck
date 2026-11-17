@@ -561,6 +561,6 @@ def test_refresh_to_latest_refuses_a_gap_no_delta_covers(
 ) -> None:
     publish = _delta_publish(tmp_path, "2026-11-17 08:00:00")
     monkeypatch.setattr(mr.mb, "_latest_publish", lambda: publish)
-    with pytest.raises(mr.MirrorNotRefreshable, match="wider than any delta"):
+    with pytest.raises(mr.MirrorNotRefreshableError, match="wider than any delta"):
         mr.refresh_to_latest(mirror)
     assert ep.EntityStore(mirror).watermark() == datetime(2026, 9, 7, 16, tzinfo=UTC)

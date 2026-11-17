@@ -122,12 +122,14 @@ def refresh_mirror(db: Path, edition: str | None) -> None:
     the next edition would say. Refused without ``--edition``: a refreshed
     mirror is no longer the Golden Copy of the first of a month."""
     if not edition:
-        raise SystemExit("--refresh-mirror needs --edition: the result is not a first-of-month mirror")
+        raise SystemExit(
+            "--refresh-mirror needs --edition: the result is not a first-of-month mirror"
+        )
     from opencheck import mirror_refresh
 
     try:
         result = mirror_refresh.refresh_to_latest(db)
-    except mirror_refresh.MirrorNotRefreshable as exc:
+    except mirror_refresh.MirrorNotRefreshableError as exc:
         raise SystemExit(f"refresh-mirror: {exc}") from exc
     print(f"mirror: {json.dumps(result)}", flush=True)
 
