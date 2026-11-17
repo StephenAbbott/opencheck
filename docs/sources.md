@@ -407,6 +407,14 @@ together. KvK does not raise either limit. When the shared pool is full, KvK
 refuses even a request paced at one a minute. The card then says KvK did not
 answer, names the limit and offers Try again; it never reads as "no record".
 
+To spend as few of the shared requests as it can, OpenCheck keeps each KvK
+answer for 30 days on a disk that survives deploys, and remembers that a
+number is not in the open data for 7 days. A change of status at KvK, such as
+an insolvency, can therefore show up to 30 days late.
+
+The monthly BODS series leaves KvK out for the same reason (see
+[the BODS series](bods-series.md)).
+
 ## Notes
 
 NC-licensed sources (OpenSanctions, EveryPolitician) propagate their non-commercial obligations through `/deepen` and `/export`. The exported `LICENSES.md` warns reviewers before they re-publish. (OpenTender / DIGIWHIST procurement was retired and its code removed — the live `ted_eu` adapter answers the EU-procurement question against TED directly, under a licence that permits commercial reuse.)

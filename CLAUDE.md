@@ -2842,6 +2842,12 @@ These are non-obvious and cost significant debugging time. Do not deviate from t
   reader's explanation is `docs/sources.md` § KvK. A rolling harvest of the
   111,717 in-scope LEIs (78+ days from one IP) is off the table; KvK is not a
   source a whole-LEI monthly series can read.
+- **Answers live on the persistent disk for 30 days** (Stephen, 17 Nov
+  2026): `OPENCHECK_KVK_CACHE_DIR=/var/data/kvk` in `render.yaml`,
+  `kvk_cache_max_age_days` 30. Unset, the cache is the ephemeral data root
+  and every deploy re-asked the shared pool for every Dutch card. A 404 is
+  still `put_absent` (7 days). A status change can show up to 30 days late.
+  The BODS series docs say KvK is left out (`docs/bods-series.md`).
 - **No paid-API fallback** (Stephen, 27 Oct 2026): KvK's authenticated API
   needs a Dutch-registered subscriber and is not openly licensed.
 - Another host with a per-IP quota joins with one entry in

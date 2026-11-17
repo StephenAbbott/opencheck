@@ -46,6 +46,7 @@ Press release (GLEIF partnership):
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -61,6 +62,8 @@ from .schemas.kvk import KvKBundle
 
 _API_BASE = "https://opendata.kvk.nl/api/v1/hvds"
 _CACHE_NS = "kvk"
+#: How long a cached answer is used when settings give no number.
+_DEFAULT_CACHE_MAX_AGE_DAYS = 30.0
 
 # Request pacing lives in opencheck/host_throttle.py, installed by
 # build_client(): KvK's open data allows one request per minute per IP and
@@ -137,7 +140,8 @@ class KvKAdapter(SourceAdapter):
 
 
     def __init__(self) -> None:
-        self._cache = Cache()
+        self._cache_store: Cache | None = None
+        self._cache_store_dir: str | None = None
         # In-process name store: kvk_number -> legal_name.
         # KvK open data does not carry a company name, so we accept the
         # GLEIF-sourced name from app.py and cache it here for the lifetime
@@ -191,6 +195,28 @@ class KvKAdapter(SourceAdapter):
     # Fetch
     # ------------------------------------------------------------------
 
+    @property
+    def _cache(self) -> Cache:
+        """The KvK answer cache, on the persistent disk where one is set.
+
+        Resolved on every use, like ``Cache``'s own root, so a test's
+        environment applies to the long-lived adapter instance.
+        """
+        directory = get_settings().kvk_cache_dir
+        if not isinstance(directory, str) or not directory:
+            directory = None
+        if self._cache_store is None or self._cache_store_dir != directory:
+            self._cache_store = Cache(Path(directory)) if directory else Cache()
+            self._cache_store_dir = directory
+        return self._cache_store
+
+    def _cached(self, cache_key: str) -> tuple[Any, str] | None:
+        """A cached answer no older than ``kvk_cache_max_age_days``."""
+        limit = get_settings().kvk_cache_max_age_days
+        if not isinstance(limit, (int, float)):
+            limit = _DEFAULT_CACHE_MAX_AGE_DAYS
+        return self._cache.get_payload(cache_key, max_age_days=limit)
+
     async def fetch(
         self, hit_id: str, *, legal_name: str = "", remember_name: bool = True
     ) -> dict[str, Any]:
@@ -212,7 +238,7 @@ class KvKAdapter(SourceAdapter):
         name = legal_name or self._names.get(kvk_number, "")
 
         cache_key = f"{_CACHE_NS}/number/{kvk_number}"
-        if self._cache.get_payload(cache_key) is None and self.info.live_available:
+        if self._cached(cache_key) is None and self.info.live_available:
             # Wait for any fetch of the same number already in flight; when it
             # lands, the cache read below serves its answer.
             lock = self._locks.setdefault(kvk_number, asyncio.Lock())
@@ -223,7 +249,7 @@ class KvKAdapter(SourceAdapter):
     async def _fetch_unlocked(
         self, kvk_number: str, name: str, cache_key: str
     ) -> dict[str, Any]:
-        cached = self._cache.get_payload(cache_key)
+        cached = self._cached(cache_key)
 
         if cached is not None:
             data = cached[0]

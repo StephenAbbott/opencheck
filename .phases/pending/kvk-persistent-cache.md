@@ -1,0 +1,6 @@
+---
+title: KvK answers are kept on the persistent disk for 30 days, and the BODS series says why KvK is not in it.
+readme: Cached KvK answers now survive deploys for 30 days, so Dutch cards ask KvK's shared rate limit less often.
+tests: backend +2
+---
+KvK's open data allows one request a minute per IP and 200 every five minutes across all its users (confirmed by KvK on 17 Nov 2026). Its answers were cached on the ephemeral data root, so every Render deploy wiped them and every Dutch card asked the shared pool again. Stephen chose (17 Nov 2026) to keep them on the persistent disk with a 30-day expiry: new settings `OPENCHECK_KVK_CACHE_DIR` (set to `/var/data/kvk` in `render.yaml`) and `OPENCHECK_KVK_CACHE_MAX_AGE_DAYS` (default 30). A 404 is still remembered for 7 days. The trade-off, said in `docs/sources.md`: a status change at KvK can show up to 30 days late. `docs/bods-series.md` now says KvK is not in the monthly series and will not join it: a whole pass would take about 78 days of the shared pool, KvK has no change feed, and its bulk file carries no KvK number. After deploy, check that `/var/data/kvk/cache/live/kvk/number/` fills as Dutch lookups run and that a second lookup of the same company after a redeploy reads "cached".

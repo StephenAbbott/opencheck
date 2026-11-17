@@ -312,6 +312,17 @@ class Settings(BaseSettings):
     kvk_throttle_max_wait_s: float = Field(
         default=20.0, alias="OPENCHECK_KVK_THROTTLE_MAX_WAIT_S"
     )
+    # Where KvK answers are cached. Unset = the response cache under the data
+    # root, which is ephemeral on Render: every deploy wiped every Dutch answer
+    # and each card asked KvK's shared 200-per-five-minutes pool again. Render
+    # points it at the persistent disk (Stephen, 17 Nov 2026).
+    kvk_cache_dir: str | None = Field(default=None, alias="OPENCHECK_KVK_CACHE_DIR")
+    # How long a cached KvK answer is used before KvK is asked again. A
+    # register status change can show this many days late; a cached absence
+    # (404) still expires after cache.ABSENT_TTL_DAYS.
+    kvk_cache_max_age_days: float = Field(
+        default=30.0, alias="OPENCHECK_KVK_CACHE_MAX_AGE_DAYS"
+    )
     # Taiwan GCIS (data.gcis.nat.gov.tw) caps each API user's concurrent
     # connections and daily calls without publishing the numbers. A lookup
     # sends two or three requests; 60 a minute keeps a burst of lookups
