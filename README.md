@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 545** — OpenAleph records that match a company by name only still show on its card but are no longer mapped into its BODS.
+**Latest: Phase 546** — The homepage's How it works section now pairs a summary of the headline figures with a timeline of four larger, numbered steps.
 
 → [Full development history](docs/status.md)
 
