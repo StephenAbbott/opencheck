@@ -198,6 +198,26 @@ def correction_note(source_id: str, was: int, now: int, edition: str) -> dict[st
     )
 
 
+def _parties(stmt: dict[str, Any]) -> tuple[str, str]:
+    """A relationship's subject and interested party, as comparable text."""
+    details = stmt.get("recordDetails") or {}
+    return (
+        json.dumps(details.get("subject"), sort_keys=True),
+        json.dumps(details.get("interestedParty"), sort_keys=True),
+    )
+
+
+def parties_changed_note(edition: str) -> dict[str, Any]:
+    return commenting(
+        "/recordStatus",
+        f"Closed in the edition of {edition} because the relationship's subject or "
+        "interested party changed. BODS ends a relationship record when either party "
+        "changes; the new arrangement is published as a new record. The details are the "
+        "last ones published.",
+        creation_date=edition,
+    )
+
+
 def closure_note(source_id: str, edition: str) -> dict[str, Any]:
     return commenting(
         "/recordStatus",
@@ -324,6 +344,41 @@ class Edition:
                 continue
 
             record_id = base if row["record_id"] is None else _unkey(row["record_id"])
+            if record_type == "relationship" and not incoming_closed:
+                # BODS: a relationship whose subject or interested party
+                # changes has ended. The old record closes and the new
+                # arrangement is a new record (information updates,
+                # "full requirements").
+                body_row = conn.execute(
+                    "SELECT body FROM records WHERE base_id = ?", (key,)
+                ).fetchone()
+                last = ledger.unpack(body_row["body"])
+                if _parties(last) != _parties(stmt):
+                    last["recordType"] = record_type
+                    last["statementDate"] = self.edition
+                    closed = self._publish(last, "closed", record_id)
+                    closed["annotations"] = [parties_changed_note(self.edition)]
+                    life = int(row["life"]) + 1
+                    new_id = life_record_id(base, life)
+                    aliases[base] = new_id
+                    out = self._publish(stmt, "new", new_id)
+                    conn.execute(
+                        "INSERT OR REPLACE INTO records (base_id, record_id, life, "
+                        "record_type, source_id, reading, status, statement_id, digest, "
+                        "first_edition, last_edition, seen_edition, statements, body) "
+                        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (
+                            key, _key(new_id), life, record_type, source_id, reading, "new",
+                            _key(out["statementId"]), digest, day, day, day, 1,
+                            ledger.pack(out),
+                        ),
+                    )
+                    self._count(source_id, "closed")
+                    self._count(source_id, "new")
+                    self._count(source_id, "parties_changed")
+                    yield closed
+                    yield out
+                    continue
             status = "closed" if incoming_closed else "updated"
             out = self._publish(stmt, status, record_id)
             corrected = int(row["reading"]) != reading and row["digest"] != digest

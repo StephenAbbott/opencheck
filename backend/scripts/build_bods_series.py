@@ -383,6 +383,8 @@ def render_readme(manifest: dict[str, Any]) -> str:
         f"- New records: {s.get('new', 0):,}; returned after closing: {s.get('returned', 0):,}",
         f"- Updated: {s.get('updated', 0):,}; updated with a correction note: {s.get('corrected', 0):,}",
         f"- Closed: {s.get('closed', 0):,}",
+        f"- Relationships closed and reopened as a new record because a party changed: "
+        f"{s.get('parties_changed', 0):,} (counted in new and closed above)",
         f"- Unchanged (not published): {s.get('unchanged', 0):,}",
         "",
     ]

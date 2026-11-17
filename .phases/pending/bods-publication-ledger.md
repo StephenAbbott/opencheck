@@ -1,7 +1,7 @@
 ---
 title: A publication ledger and a monthly BODS series, GLEIF first.
 readme: OpenCheck can now publish a monthly BODS series of every LEI in GLEIF's Golden Copy, saying what changed since the last edition as new, updated and closed statements.
-tests: backend +26
+tests: backend +28
 ---
 The first three build steps of the ledger ticket ("BODS publication ledger: recordStatus 'updated' and a monthly time series"), from Stephen's six decisions of 17 Nov 2026: one GitHub release a month; changes only, no confirming statements; a mapper correction published as `updated` with a `correcting` annotation; a closed record that returns gets a new `recordId`; GLEIF only for the first edition; the edition dated the first of the month and built after the Golden Copy is regenerated.
 

@@ -221,8 +221,11 @@ def test_a_record_that_goes_back_to_an_earlier_state_gets_a_new_statement_id(led
 
 def test_a_relationship_moved_to_another_party_record(ledger):
     """The Laundromat shape: 236 relationships named a different
-    interestedParty record a day later. The edge is updated, the party no
-    longer named is closed, the one now named is new."""
+    interestedParty record a day later. BODS ends a relationship record when
+    its subject or interested party changes (information updates, full
+    requirements): the old edge is closed with its last details, the new
+    arrangement is a new record, the party no longer named is closed and the
+    one now named is new."""
     child, parent, rel = network()
     run(ledger, E1, [child, parent], [rel])
     other = entity("PARENT-REKEYED", "Parent AS")
@@ -236,9 +239,59 @@ def test_a_relationship_moved_to_another_party_record(ledger):
     assert moved["recordId"] == rel["recordId"]
     out, counts = run(ledger, E2, [child, other], [moved])
     assert sorted((s["recordType"], s["recordStatus"]) for s in out) == [
-        ("entity", "closed"), ("entity", "new"), ("relationship", "updated"),
+        ("entity", "closed"), ("entity", "new"),
+        ("relationship", "closed"), ("relationship", "new"),
     ]
-    assert counts == {"gleif|closed": 1, "gleif|new": 1, "gleif|unchanged": 1, "gleif|updated": 1}
+    rels = [s for s in out if s["recordType"] == "relationship"]
+    closed, opened = rels
+    assert closed["recordStatus"] == "closed" and closed["recordId"] == rel["recordId"]
+    assert closed["recordDetails"]["interestedParty"] == parent["recordId"]
+    assert validate_annotations(closed) == []
+    assert opened["recordId"] == pl.life_record_id(rel["recordId"], 2)
+    assert opened["recordDetails"]["interestedParty"] == other["recordId"]
+    assert counts == {
+        "gleif|closed": 2, "gleif|new": 2, "gleif|parties_changed": 1, "gleif|unchanged": 1,
+    }
+    # Nothing follows the closed record: the next edition is silent.
+    out, counts = run(ledger, E3, [child, other], [moved])
+    assert out == []
+
+
+def test_a_relationship_whose_interests_change_keeps_its_record(ledger):
+    child, parent, rel = network()
+    run(ledger, E1, [child, parent], [rel])
+    out, _ = run(ledger, E2, [child, parent], [edge("CHILD:direct-parent:PARENT", child, parent, 60.0)])
+    (only,) = out
+    assert (only["recordStatus"], only["recordId"]) == ("updated", rel["recordId"])
+
+
+def test_read_in_order_every_reference_names_an_earlier_statement(ledger):
+    """BODS serialisation: a relationship's subject and interestedParty MUST
+    match the recordId of a statement earlier in the series. No record is
+    published twice as ``new`` and none after ``closed``."""
+    child, parent, rel = network()
+    other = entity("OTHER", "Other AS")
+    moved = edge("CHILD:direct-parent:PARENT", child, other, 100.0)
+    series: list[dict[str, Any]] = []
+    for edition, parties, rels in (
+        (E1, [child, parent], [rel]),
+        (E2, [child, other], [moved]),
+        (E3, [child], []),
+        (E4, [child, parent, other], [rel]),
+    ):
+        series += run(ledger, edition, parties, rels)[0]
+    seen: dict[str, str] = {}
+    ids: set[str] = set()
+    for stmt in series:
+        assert stmt["statementId"] not in ids
+        ids.add(stmt["statementId"])
+        rid, status = stmt["recordId"], stmt["recordStatus"]
+        assert seen.get(rid) != "closed", "a statement followed closed"
+        assert (status == "new") == (rid not in seen)
+        if stmt["recordType"] == "relationship":
+            for side in ("subject", "interestedParty"):
+                assert stmt["recordDetails"][side] in seen
+        seen[rid] = status
 
 
 def test_a_statement_the_mapper_closed_is_published_closed_once(ledger):

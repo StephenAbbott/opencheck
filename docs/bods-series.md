@@ -40,6 +40,14 @@ A record keeps one `recordId` through all of these. To read a record's
 history, collect its statements across editions and order them by
 `publicationDetails.publicationDate`.
 
+**Read the editions together, oldest first.** An edition after the first is
+a set of changes, not a dataset on its own: an `updated` relationship names
+parties whose statements are in an earlier edition. BODS requires a
+relationship's `subject` and `interestedParty` to match the `recordId` of a
+statement earlier in the file, and the series meets that rule when the
+editions are joined in date order (each edition's parts in number order).
+One later edition validated alone reports those references as missing.
+
 Rules worth knowing:
 
 - **`publicationDate` is the edition**, the first of the month. It is when
@@ -56,6 +64,14 @@ Rules worth knowing:
 - **Nothing follows `closed`.** A record that comes back after closing is
   published `new` under a new `recordId`, and relationships that name it use
   the new one.
+- **A relationship whose subject or interested party changes is closed.**
+  BODS ends a relationship record there. The old record is published
+  `closed` with its last details and the new arrangement is a `new` record.
+  A change to its interests alone is `updated`.
+- **Unchanged records are not confirmed.** BODS says a publisher should
+  issue an `updated` statement when details are confirmed without changing.
+  The series does not: the absence of a statement in an edition means the
+  record was read and was the same.
 - **A `new` statement has the `statementId` a lookup gives the same content.**
   An `updated` or `closed` statement's id also depends on the edition, so a
   record that returns to an earlier state still gets a new id.
@@ -76,6 +92,21 @@ The build refuses to run when the mirror was not built from a Golden Copy
 publish of the first of a month, when an edition would close more than a
 tenth of the live records (a truncated read looks like that), or when
 relationships name parties that have no live record.
+
+## How it is checked against BODS
+
+Open Ownership's validator, lib-cove-bods, was run on 17 Nov 2026 over a
+first edition of 192,919 statements (40,000 LEIs) and over three trial
+editions holding `new`, `updated`, `closed`, corrected and returning records.
+It reported no schema error. Joined in order, the three editions raised no
+reference or lifecycle check. Two checks were raised on the data itself.
+`entity_identifiers_not_known_scheme` is on registration numbers GLEIF files
+under an authority that has no org-id.guide code; OpenCheck writes GLEIF's
+own authority code as the scheme. One entity has a dissolution date before
+its founding date, as GLEIF records it. The 40,000-LEI trial also named
+3,375 parents outside its slice; the full build names none.
+The full 16.6 million statement
+edition was not put through the validator, which reads a file into memory.
 
 Measured on the Golden Copy of 1 Nov 2026 (four cores):
 

@@ -5699,6 +5699,13 @@ re-derived otherwise:
 - **`close_missing` only for a source read whole.** It refuses past a tenth
   of the source's live records (`SuspectEditionError`); a `--limit` trial
   closes nothing.
+- **A relationship whose subject or interested party changes is closed and
+  reopened as a new record** (BODS information updates; found by the
+  compliance check of 17 Nov 2026). Only a change to its interests is
+  `updated`. Counted as `parties_changed` beside `closed` and `new`.
+- **A later edition alone is not a valid BODS file**: its relationships name
+  records published in earlier editions. Validate the editions joined in
+  date order (`docs/bods-series.md` § "How it is checked against BODS").
 - **`updated` / `closed` statement ids carry the edition**; a `new` one is
   the lookup's `content_statement_id`.
 - **The ledger rides on each release** as `ledger.sqlite.gz.part-*` (GitHub's
