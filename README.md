@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 544** — OpenCheck now calls OpenAleph's flagship at darc.zone, after the old search.openaleph.org address started redirecting there.
+**Latest: Phase 545** — OpenAleph records that match a company by name only still show on its card but are no longer mapped into its BODS.
 
 → [Full development history](docs/status.md)
 
