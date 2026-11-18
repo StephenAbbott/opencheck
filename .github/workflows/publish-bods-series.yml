@@ -42,6 +42,10 @@ on:
         type: boolean
         required: false
         default: false
+      delta_release:
+        description: "Preview only: read GLEIF's three delta zips from this release tag instead of downloading them (GLEIF's storage can refuse runners)."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -100,11 +104,23 @@ jobs:
         env:
           LIMIT: ${{ inputs.limit }}
           PREVIEW: ${{ inputs.preview }}
+          DELTA_RELEASE: ${{ inputs.delta_release }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           today="$(date -u +%Y-%m-%d)"
           extra=()
           if [ -n "$LIMIT" ]; then extra+=(--limit "$LIMIT"); fi
           if [ "$PREVIEW" = "true" ]; then extra+=(--refresh-mirror); fi
+          if [ "$PREVIEW" = "true" ] && [ -n "$DELTA_RELEASE" ]; then
+            # The delta files someone downloaded where GLEIF answers. The
+            # preview is dated by the files' own publish day, not today.
+            mkdir -p "$SERIES/deltas"
+            gh release download "$DELTA_RELEASE" --repo "$GITHUB_REPOSITORY" \
+              --pattern '*-gleif-goldencopy-*.csv.zip' --dir "$SERIES/deltas"
+            stamp="$(ls "$SERIES/deltas" | grep -m1 -oE '^[0-9]{8}')"
+            today="${stamp:0:4}-${stamp:4:2}-${stamp:6:2}"
+            extra+=(--delta-dir "$SERIES/deltas")
+          fi
           if [ "${#extra[@]}" -gt 0 ]; then extra+=(--edition "$today"); fi
           uv run python scripts/build_bods_series.py \
             --entity-pages-db "$SERIES/entity_pages.sqlite" \

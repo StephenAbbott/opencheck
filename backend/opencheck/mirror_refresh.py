@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import sqlite3
 import tempfile
 import threading
@@ -308,6 +309,78 @@ def refresh_to_latest(db_path: Path) -> dict[str, Any]:
         "delta": delta,
         "publish": publish["publish_date"],
         "rows": counts,
+    }
+
+
+#: How GLEIF spells each delta window in a Golden Copy file name
+#: (``20261118-0000-gleif-goldencopy-lei2-last-month.csv.zip``).
+_FILE_WINDOWS = {
+    "intra-day": "IntraDay",
+    "last-day": "LastDay",
+    "last-week": "LastWeek",
+    "last-month": "LastMonth",
+}
+_DELTA_FILE = re.compile(
+    r"^(\d{8})-(\d{4})-gleif-goldencopy-(lei2|rr|repex)-([a-z-]+)\.csv(?:\.zip)?$"
+)
+
+
+def refresh_from_files(db_path: Path, delta_dir: Path) -> dict[str, Any]:
+    """:func:`refresh_to_latest` for a machine GLEIF's file storage refuses
+    (HTTP 403 from GitHub's runners on 18 Nov 2026): apply the three delta
+    files someone downloaded elsewhere and put in ``delta_dir``. The publish
+    time and the window are read from GLEIF's own file names, and the three
+    must agree; a window that does not cover the gap since the mirror's
+    watermark is refused, because rows in between would be missed."""
+    found: dict[str, tuple[str, str, Path]] = {}
+    for path in sorted(Path(delta_dir).iterdir()):
+        match = _DELTA_FILE.match(path.name)
+        if not match:
+            continue
+        day, clock, kind, window = match.groups()
+        if kind in found:
+            raise MirrorNotRefreshableError(f"two {kind} delta files in {delta_dir}")
+        found[kind] = (f"{day}-{clock}", window, path)
+    missing = [kind for kind in ("lei2", "rr", "repex") if kind not in found]
+    if missing:
+        raise MirrorNotRefreshableError(
+            f"no {', '.join(missing)} delta file in {delta_dir} (GLEIF's own file names are read)"
+        )
+    stamps = {stamp for stamp, _, _ in found.values()}
+    windows = {window for _, window, _ in found.values()}
+    if len(stamps) != 1 or len(windows) != 1:
+        raise MirrorNotRefreshableError(
+            "the three delta files are not one publish and one window: "
+            + ", ".join(path.name for _, _, path in found.values())
+        )
+    delta = _FILE_WINDOWS.get(windows.pop())
+    if delta is None:
+        raise MirrorNotRefreshableError("the files are not a delta window OpenCheck knows")
+    publish_at = datetime.strptime(stamps.pop(), "%Y%m%d-%H%M").replace(tzinfo=UTC)
+    watermark = ep.EntityStore(db_path).watermark()
+    if watermark is None:
+        raise MirrorNotRefreshableError("the mirror has no date")
+    publish_date = publish_at.strftime("%Y-%m-%d %H:%M:%S")
+    gap = publish_at - watermark
+    if gap <= timedelta(0):
+        return {"mirror_refresh": "up_to_date", "publish": publish_date}
+    if gap > dict(DELTA_WINDOWS)[delta]:
+        raise MirrorNotRefreshableError(
+            f"the mirror is {gap} behind these files, wider than their {delta} window"
+        )
+    publish: dict[str, Any] = {"publish_date": publish_date}
+    for kind, (_, _, path) in found.items():
+        publish[kind] = {
+            "delta_files": {delta: {"csv": {"url": f"file://{path.resolve()}"}}}
+        }
+    counts = apply_delta(db_path, publish, delta)
+    ep.reset_store_for_tests()
+    return {
+        "mirror_refresh": "applied",
+        "delta": delta,
+        "publish": publish_date,
+        "rows": counts,
+        "from_files": True,
     }
 
 
