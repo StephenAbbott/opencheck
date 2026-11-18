@@ -564,3 +564,57 @@ def test_refresh_to_latest_refuses_a_gap_no_delta_covers(
     with pytest.raises(mr.MirrorNotRefreshableError, match="wider than any delta"):
         mr.refresh_to_latest(mirror)
     assert ep.EntityStore(mirror).watermark() == datetime(2026, 9, 7, 16, tzinfo=UTC)
+
+
+# ---------------------------------------------------------------------------
+# refresh_from_files — the same refresh where GLEIF's storage refuses the caller
+# ---------------------------------------------------------------------------
+
+
+def _supplied(tmp: Path, publish_date: str, stamp: str, window: str = "last-month") -> Path:
+    """The delta files under GLEIF's own names, as someone would upload them."""
+    publish = _delta_publish(tmp, publish_date)
+    folder = tmp / "supplied"
+    folder.mkdir()
+    for kind in ("lei2", "rr", "repex"):
+        url = publish[kind]["delta_files"]["LastMonth"]["csv"]["url"]
+        src = Path(url[len("file://"):])
+        (folder / f"{stamp}-gleif-goldencopy-{kind}-{window}.csv").write_bytes(src.read_bytes())
+    return folder
+
+
+def test_refresh_from_files_reads_the_publish_from_gleifs_file_names(
+    mirror: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def no_network() -> dict:
+        raise AssertionError("the publish API is not asked when files are supplied")
+
+    monkeypatch.setattr(mr.mb, "_latest_publish", no_network)
+    folder = _supplied(tmp_path, "2026-09-17 08:00:00", "20260917-0800")
+    result = mr.refresh_from_files(mirror, folder)
+    assert result["mirror_refresh"] == "applied" and result["delta"] == "LastMonth"
+    assert result["from_files"] is True
+    assert ep.EntityStore(mirror).watermark() == datetime(2026, 9, 17, 8, tzinfo=UTC)
+    assert mr.refresh_from_files(mirror, folder)["mirror_refresh"] == "up_to_date"
+
+
+def test_refresh_from_files_refuses_a_window_narrower_than_the_gap(
+    mirror: Path, tmp_path: Path
+) -> None:
+    folder = _supplied(tmp_path, "2026-09-17 08:00:00", "20260917-0800", "last-week")
+    with pytest.raises(mr.MirrorNotRefreshableError, match="wider than their LastWeek"):
+        mr.refresh_from_files(mirror, folder)
+    assert ep.EntityStore(mirror).watermark() == datetime(2026, 9, 7, 16, tzinfo=UTC)
+
+
+def test_refresh_from_files_refuses_files_of_two_publishes_or_a_missing_one(
+    mirror: Path, tmp_path: Path
+) -> None:
+    folder = _supplied(tmp_path, "2026-09-17 08:00:00", "20260917-0800")
+    rr = folder / "20260917-0800-gleif-goldencopy-rr-last-month.csv"
+    rr.rename(folder / "20260916-0800-gleif-goldencopy-rr-last-month.csv")
+    with pytest.raises(mr.MirrorNotRefreshableError, match="not one publish"):
+        mr.refresh_from_files(mirror, folder)
+    (folder / "20260916-0800-gleif-goldencopy-rr-last-month.csv").unlink()
+    with pytest.raises(mr.MirrorNotRefreshableError, match="no rr delta file"):
+        mr.refresh_from_files(mirror, folder)

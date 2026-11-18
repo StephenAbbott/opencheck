@@ -117,10 +117,12 @@ def edition_for(meta: dict[str, str], requested: str | None) -> str:
     return day
 
 
-def refresh_mirror(db: Path, edition: str | None) -> None:
+def refresh_mirror(db: Path, edition: str | None, delta_dir: Path | None = None) -> None:
     """Apply GLEIF's delta to the mirror before mapping — the preview of what
     the next edition would say. Refused without ``--edition``: a refreshed
-    mirror is no longer the Golden Copy of the first of a month."""
+    mirror is no longer the Golden Copy of the first of a month. With
+    ``delta_dir`` the three delta files are read from that folder instead of
+    downloaded (GLEIF's file storage refuses some datacentre addresses)."""
     if not edition:
         raise SystemExit(
             "--refresh-mirror needs --edition: the result is not a first-of-month mirror"
@@ -128,7 +130,10 @@ def refresh_mirror(db: Path, edition: str | None) -> None:
     from opencheck import mirror_refresh
 
     try:
-        result = mirror_refresh.refresh_to_latest(db)
+        if delta_dir is not None:
+            result = mirror_refresh.refresh_from_files(db, delta_dir)
+        else:
+            result = mirror_refresh.refresh_to_latest(db)
     except mirror_refresh.MirrorNotRefreshableError as exc:
         raise SystemExit(f"refresh-mirror: {exc}") from exc
     print(f"mirror: {json.dumps(result)}", flush=True)
@@ -450,11 +455,20 @@ def main(argv: list[str] | None = None) -> None:
         help="first bring the mirror up to GLEIF's latest publish with a delta "
         "(a mid-month preview; name the edition with --edition)",
     )
+    parser.add_argument(
+        "--delta-dir",
+        type=Path,
+        default=None,
+        help="with --refresh-mirror: read GLEIF's three delta zips from this "
+        "folder (their own file names) instead of downloading them",
+    )
     args = parser.parse_args(argv)
     if args.work_dir is None:
         args.work_dir = Path(args.out_dir) / "work"
+    if args.delta_dir is not None and not args.refresh_mirror:
+        raise SystemExit("--delta-dir is read only with --refresh-mirror")
     if args.refresh_mirror:
-        refresh_mirror(args.entity_pages_db, args.edition)
+        refresh_mirror(args.entity_pages_db, args.edition, args.delta_dir)
     configure(args.entity_pages_db)
     # Fail before an hour of mapping, not after it.
     edition_for(mirror_meta(args.entity_pages_db), args.edition)

@@ -120,6 +120,15 @@ edition is still compared with the last published one. Its `updated` and
 `closed` statement ids carry the preview's date and will not appear in the
 series.
 
+GLEIF's file storage can refuse a GitHub runner (HTTP 403 on 18 Nov 2026,
+from two runners, while the publish API answered). For that case the preview
+takes a **delta_release** input: the tag of a release holding GLEIF's three
+delta zips (`lei2`, `rr` and `repex` of one publish and one window, under
+GLEIF's own file names), downloaded somewhere GLEIF answers. The build reads
+the publish time and the window from the file names (`--delta-dir`), refuses
+files of two publishes or a window narrower than the gap since the mirror, and
+dates the preview by the files' publish day.
+
 ## How it is checked against BODS
 
 Open Ownership's validator, lib-cove-bods, was run on 17 Nov 2026 over a
