@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 557** — The Germany and Greece beneficial ownership access rows now record the Bundestag's passage of the Zollfinanzgerechtigkeitsgesetz and the publication of Greek Law 5354/2026.
+**Latest: Phase 558** — A closing statement in the monthly BODS series is now dated by the statement that replaces it, so an old and a new parent no longer both read as current.
 
 → [Full development history](docs/status.md)
 

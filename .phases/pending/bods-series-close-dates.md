@@ -1,6 +1,0 @@
----
-title: A closing statement in the BODS series is dated by the statement that replaces it.
-readme: A closing statement in the monthly BODS series is now dated by the statement that replaces it, so an old and a new parent no longer both read as current.
-tests: backend +4
----
-The first preview diff against the 1 November edition (18 Nov 2026) showed a false overlap in every viewer it was loaded into: Beazley America Insurance Company had two parents, Beazley plc and Zurich Insurance Group, from 10 to 18 November, because the closing statement was dated by the edition while the relationship that replaced it carried GLEIF's own date. With a monthly edition the overlap could last a month. Stephen chose to date a close by its replacement. `publication_ledger.close_day` now dates a closed relationship by the latest relationship statement the edition publishes about the same subject, and a party closed with its relationship by that relationship's closing date; the date is never before the record's own last statement and never after the edition, and it is the edition when nothing replaces the record. The closing annotation says when the date is the replacement's. `publicationDate` and the statement id still carry the edition. To check: the 2 December edition's closed relationships that have a new parent carry the new parent's date.
