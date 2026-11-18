@@ -50,6 +50,16 @@ measured disagreement rate is under 10 % **and** it has fired at least once, aft
 least two weeks of traffic. A row above 10 % is two sources answering different
 questions: it is re-aligned or dropped, never shown.
 
+Register status has a second way in (18 Nov 2026). A pair that has never disagreed
+has not shown it *can* disagree: if one side can never report a dissolved company,
+every comparison reads as agreement. So the "at least once" rule stays, and a register
+status pair with no disagreement may instead be shown when it has at least 200 decided
+comparisons **and** every register in it (every side but GLEIF) has read a company as
+ended at least once in the counted comparisons — the `terminal_readings` count on its
+`/consistencystats` row. Volume alone is not enough. Estonia's e-Business Register
+against GLEIF (520 agreements, no disagreement on 18 Nov 2026) is the pair this was
+written for.
+
 The reading of 15 Oct 2026 (41,100 lookups, 13 days 21 hours) decided what the page
 shows today. The lists are in `backend/opencheck/consistency_allowlist.py`, generated
 from that reading and pinned by a test:

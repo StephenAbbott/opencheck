@@ -41,6 +41,18 @@ top-level ``compared`` map and copied onto each row as ``compared`` with
 ``disagree_per_compared`` beside ``disagree_rate``. Same closed vocabulary,
 same file: the rows live in the ``pairs`` table under the reserved field
 ``_compared``.
+
+The liveness gate's second way in (18 Nov 2026, Stephen): a pair that has
+never disagreed has not shown it *can* disagree — one side may be unable to
+report a dissolved company at all (the Estonian index held no deleted company
+before the REST tier of 17 Oct 2026). So ``record()`` also counts, per sorted
+pair, how often each side of a liveness comparison read the company as
+ended, whatever the relation (``agree``, ``disagree`` or ``one_missing``).
+Served on each ``liveness`` row as ``terminal_readings`` (source id → n);
+stored under the reserved field ``_liveness_ended`` with relation ``a`` or
+``b`` for the sorted side. Counted from the deploy that added it, so a
+reading counts ended readings from that day on. The gate itself is
+``consistency_allowlist.passes_gate``.
 """
 
 from __future__ import annotations
@@ -54,6 +66,7 @@ from pathlib import Path
 from typing import Any
 
 from . import sqlite_schema
+from .bods import liveness as _liveness
 from .consistency import RELATIONS, ConsistencyResult
 
 log = logging.getLogger("opencheck.consistencystats")
@@ -64,6 +77,11 @@ _MAX_KEYS = 5_000
 #: under a field name no comparison can have.
 COMPARED_FIELD = "_compared"
 COMPARED = "compared"
+
+#: The liveness gate's second way in — how often each side of a liveness
+#: comparison read the company as ended. Relation ``a`` / ``b`` names the
+#: sorted side, so the file holds no value, only which side.
+ENDED_FIELD = "_liveness_ended"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -243,6 +261,16 @@ def record(result: ConsistencyResult) -> None:
                     continue
                 totals.pairs[key] += 1
                 changed.add(key)
+                if item.field == "liveness":
+                    for side, (src, value) in zip(("a", "b"), sorted(zip(item.sources, item.values))):
+                        if value != _liveness.TERMINAL:
+                            continue
+                        ended = (ENDED_FIELD, a, b, side)
+                        if ended not in totals.pairs and len(totals.pairs) >= _MAX_KEYS:
+                            totals.truncated = True
+                            continue
+                        totals.pairs[ended] += 1
+                        changed.add(ended)
             _write_through(changed)
     except Exception as exc:  # noqa: BLE001
         log.debug("consistencystats.record failed, ignoring: %s", exc)
@@ -265,9 +293,13 @@ def stats() -> dict[str, Any]:
     with totals.lock:
         rows: dict[str, dict[str, Any]] = {}
         compared: dict[str, int] = {}
+        ended: dict[str, dict[str, int]] = {}
         for (field, a, b, relation), n in totals.pairs.items():
             if field == COMPARED_FIELD:
                 compared[f"{a}|{b}"] = n
+                continue
+            if field == ENDED_FIELD:
+                ended.setdefault(f"{a}|{b}", {})[a if relation == "a" else b] = n
                 continue
             row = rows.setdefault(f"{field}|{a}|{b}", {r: 0 for r in RELATIONS})
             row[relation] = n
@@ -278,6 +310,10 @@ def stats() -> dict[str, Any]:
             n_compared = compared.get(pair)
             row["compared"] = n_compared
             row["disagree_per_compared"] = (row["disagree"] / n_compared) if n_compared else None
+            if key.startswith("liveness|"):
+                a, b = pair.split("|", 1)
+                counts = ended.get(pair, {})
+                row["terminal_readings"] = {a: counts.get(a, 0), b: counts.get(b, 0)}
         persisted = totals.path is not None
         return {
             "since": _iso(totals.started),
@@ -295,7 +331,9 @@ def stats() -> dict[str, Any]:
                 "names. 'stale'/'mirror' are pairs where one source republishes the "
                 "other (see /sources derived_from). 'compared' counts the pairs of "
                 "statements from two sources that were compared at all (Phase 337), "
-                "the denominator for identifier_clash. "
+                "the denominator for identifier_clash. 'terminal_readings' on a "
+                "liveness row counts how often each side read the company as "
+                "ended (the gate's second way in, 18 Nov 2026). "
                 + (
                     "Persisted across deploys since 'since' (Phase 268)."
                     if persisted
