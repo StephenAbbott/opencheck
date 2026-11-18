@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 558** — A closing statement in the monthly BODS series is now dated by the statement that replaces it, so an old and a new parent no longer both read as current.
+**Latest: Phase 559** — The record-consistency gate gains a second way in for register status: enough comparisons plus proof that the register can report a dissolved company.
 
 → [Full development history](docs/status.md)
 
