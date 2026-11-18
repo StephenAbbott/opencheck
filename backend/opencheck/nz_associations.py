@@ -54,6 +54,17 @@ A match where **either** side's address is ``ALTERNATIVE`` is graded at most
 office of the accountant or agent who provides it, shared by every one of
 their clients, so it corroborates a service provider, not an identity. See
 ``docs/nz-associations.md``.
+
+**From 25 November 2026** (MBIE's go-live notice of 18 Nov 2026) Role Search
+is due to return the alternative address itself in ``physicalAddress``,
+matching the Companies Register website, still with no ``addressType``. Such a
+block has address lines, so it is no longer withheld: it is graded against
+the subject as Role Search gives it, and no follow-up is made. The cap still
+holds where it matters, because the subject's own address type comes from the
+NZBN record: two records on one alternative address are the subject's
+``ALTERNATIVE`` filing on one side. What is lost is the record-side type, which
+only mattered for a residential subject address equal to someone's alternative
+one. The withheld path stays for the week before, and for any regression.
 """
 
 from __future__ import annotations

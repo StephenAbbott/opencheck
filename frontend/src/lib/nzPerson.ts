@@ -62,10 +62,10 @@ export const NZ_MATCH_CAVEAT =
   "a matching filed address makes it stronger; a name-only match may be a " +
   "different person who shares the name. From 18 November 2026 a director may " +
   "publish an alternative address instead of their home address — often an " +
-  "accountant's or agent's office shared by all of their clients. The name " +
-  "search then publishes no address for them, so it is read from each " +
-  "company's own record, and a match on an alternative address is never graded " +
-  "above medium. For review, not a determination.";
+  "accountant's or agent's office shared by all of their clients. Where the " +
+  "name search publishes no address for them, it is read from each company's " +
+  "own record, and a match on an alternative address is never graded above " +
+  "medium. For review, not a determination.";
 
 function companiesWord(n: number): string {
   return n === 1 ? "one company" : `${n} companies`;

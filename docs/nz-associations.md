@@ -186,6 +186,41 @@ set -a && . ./.env && set +a && cd backend \
   && pytest --run-live -m live tests/test_live_smoke.py -k sandbox
 ```
 
+### In production from 18 November 2026, and the 25 November update
+
+MBIE's go-live notice (18 November 2026) confirms the shapes above for
+production: NZBN v5 `roles[x].roleAddress[x].addressType` and
+`shareholderAddress.addressType` are `ALTERNATIVE`, `PHYSICAL` or null (a
+public viewer sees `ALTERNATIVE` or null, and null is the residential address);
+the Companies v2 API spells it `Alternative` / `Physical` (OpenCheck does not
+call Companies v2); and Role Search returns an empty block for an
+alternative-address holder.
+
+The notice also says the empty block is **temporary**. An update planned for
+**25 November 2026** makes Role Search return the alternative address itself,
+as the Companies Register website does, still with **no** `addressType`. The
+sandbox already does this (checked 18 November 2026): MBIE's test director
+reads `25 The Terrace, Wellington Central` on both test entities (with `pafId`
+3161519 on …557, without one on …540), which is exactly the `ALTERNATIVE`
+block on the NZBN record, and a second test director reads `123 Alternate
+Address`.
+
+What that means here:
+
+- **Nothing breaks.** A block with an address line is not withheld, so it is
+  graded as Role Search gives it and no NZBN follow-up is made. The
+  follow-up path stays for the week before the update and for any regression.
+- **The cap still holds where it matters.** The subject's own address type
+  comes from the NZBN record, so a match on a shared alternative address is the
+  subject's `ALTERNATIVE` filing on one side and stays at most *medium*, worded
+  as a possible shared service address. What is lost is the type of the
+  *other* company's address, which only mattered when the subject filed a
+  residential address equal to someone's alternative one.
+- The sandbox smoke test that pins the withheld block now accepts either
+  shape: an empty block, or the address the company's NZBN record files as
+  `ALTERNATIVE` for that person. Anything else — a different address, which
+  could be the residential one — still fails it.
+
 ## What it returns
 
 Per director/shareholder of the subject company:
