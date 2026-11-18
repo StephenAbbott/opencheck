@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 559** — The record-consistency gate gains a second way in for register status: enough comparisons plus proof that the register can report a dissolved company.
+**Latest: Phase 560** — Bulgaria's Commercial Register is a new source, with managers, boards, partners and beneficial owners from the Registry Agency's daily open data since 2021.
 
 → [Full development history](docs/status.md)
 
