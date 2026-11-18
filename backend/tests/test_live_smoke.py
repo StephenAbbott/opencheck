@@ -569,15 +569,29 @@ async def test_role_search_sandbox_withholds_an_alternative_address():
     `physicalAddress` — `addressLines: []`, and no `pafId`, postcode or
     country. Before the fix it served the residential address (Case 00094468).
 
-    Fails if anything comes back in that block: a `pafId` or postcode there
-    would be the residential address leaking again, and `_address_withheld`
-    (which matches on neither lines nor `pafId`) would start comparing it.
+    MBIE's go-live notice (18 Nov 2026) says an update planned for
+    25 Nov 2026 will return the **alternative** address in that block instead,
+    still with no `addressType`. So two shapes pass: the empty block, or a
+    block naming the same address the company's NZBN record files as
+    `ALTERNATIVE` for that director. Anything else — a `pafId` or address
+    lines that are not the alternative address — is possibly the residential
+    address leaking again, and fails.
     """
     rs_key = get_settings().nzbn_role_search_sandbox_api_key
-    if not rs_key:
-        pytest.skip("NZBN_ROLE_SEARCH_SANDBOX_API_KEY not set — skipping")
+    nzbn_key = get_settings().nzbn_sandbox_api_key
+    if not (rs_key and nzbn_key):
+        pytest.skip("both NZ sandbox keys required — skipping")
 
-    from opencheck.nz_associations import _address_withheld
+    from opencheck.nz_associations import (
+        _address_withheld,
+        _collect_role_holders,
+        _find_record_holder,
+        _norm_addr,
+        _paf_of,
+        _phys_addr_str,
+        _record_companies,
+    )
+    from opencheck.sources.nz_companies import NzCompaniesAdapter
 
     nzbns = {_NZ_SANDBOX_DIRECTOR_NZBN, _NZ_SANDBOX_DIRECTOR_NZBN_2}
     records = _records_at(
@@ -587,15 +601,38 @@ async def test_role_search_sandbox_withholds_an_alternative_address():
         pytest.skip("Role Search returned no record for MBIE's test director")
     roles = {r.get("roleType") for r in records}
     assert "DirectorShareholder" in roles or "Director" in roles
+
+    filed: dict[str, dict] = {}
     for rec in records:
         phys = rec.get("physicalAddress")
-        leaked = {k: v for k, v in (phys or {}).items() if k != "addressLines" and v}
-        assert not leaked, (
-            f"Role Search's withheld block now carries {sorted(leaked)} for an "
-            "alternative-address holder — possibly the residential address. "
-            "Report to MBIE (Case 00094468)."
-        )
-        assert _address_withheld(phys), f"block is not withheld: {phys}"
+        if _address_withheld(phys):
+            leaked = {k: v for k, v in (phys or {}).items() if k != "addressLines" and v}
+            assert not leaked, (
+                f"Role Search's withheld block now carries {sorted(leaked)} for an "
+                "alternative-address holder — possibly the residential address. "
+                "Report to MBIE (Case 00094468)."
+            )
+            continue
+        # The 25 Nov 2026 shape: the block must be the alternative address.
+        for c in _record_companies(rec):
+            nzbn = c["nzbn"]
+            if nzbn not in nzbns:
+                continue
+            if nzbn not in filed:
+                full = await _sandbox_get(f"{_nzbn_sandbox_base()}/entities/{nzbn}", nzbn_key)
+                filed[nzbn] = NzCompaniesAdapter()._normalise("", nzbn, full, "")
+            holder = _find_record_holder(_collect_role_holders(filed[nzbn]), rec)
+            assert holder is not None, f"director not found on {nzbn}'s NZBN record"
+            assert holder["address_type"] == "ALTERNATIVE"
+            same_paf = _paf_of(phys) and _paf_of(phys) == holder.get("paf_id")
+            same_text = (_phys_addr_str(phys) and holder.get("address")
+                         and _norm_addr(_phys_addr_str(phys)) == _norm_addr(holder["address"]))
+            assert same_paf or same_text, (
+                f"Role Search serves {phys} for an alternative-address holder at "
+                f"{nzbn}, and it is not the alternative address the NZBN record "
+                f"files ({holder.get('address')}, pafId {holder.get('paf_id')}) — "
+                "possibly the residential address. Report to MBIE (Case 00094468)."
+            )
 
 
 async def test_role_search_sandbox_still_publishes_a_residential_address():

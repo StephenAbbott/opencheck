@@ -387,3 +387,42 @@ async def test_company_wide_view_makes_no_followups(monkeypatch, adapter_fetch):
     get_settings.cache_clear()
     assert calls == [_SUBJECT]
     assert res["people"][0]["withheld_not_checked"] == 1
+
+
+# --------------------------------------------------------------------------- #
+# From 25 November 2026: Role Search returns the alternative address itself
+# --------------------------------------------------------------------------- #
+#
+# MBIE's go-live notice (18 Nov 2026): the empty block is temporary; from the
+# update planned for 25 Nov 2026 Role Search returns the alternative address in
+# ``physicalAddress``, as the Companies Register website shows it, still with no
+# ``addressType``. The block is then graded as Role Search gives it.
+
+_ALT_BLOCK = {
+    "addressLines": ["25 The Terrace", "Wellington Central", "Wellington"],
+    "postCode": "6011", "countryCode": "NZ", "pafId": "3161519",
+}
+
+
+async def test_an_untyped_alternative_block_is_graded_without_a_follow_up(adapter_fetch):
+    """The shared alternative address arrives on the Role Search record: no
+    NZBN read is made, and the subject's own ALTERNATIVE filing still caps it
+    at medium with the service-address wording."""
+    _, calls = adapter_fetch
+    records = [_director("3091120", "9429050923557", phys=dict(_ALT_BLOCK))]
+    fu = await follow_up_withheld(records, _SUBJECT)
+    assert fu == {} and calls == []
+    p = summarise_person(_RH_ALT, records, _SUBJECT, followups=fu)
+    c = p["companies"][0]
+    assert (c["confidence"], c["basis"], c["address_source"]) == (
+        "medium", "Same alternative address — may be a shared service address", "role_search")
+    assert p["address_withheld_count"] == 0
+
+
+def test_an_untyped_alternative_block_without_a_paf_id_is_still_capped():
+    """The sandbox showed an alternative block with no pafId (1 Oct 2026); the
+    address text match is capped the same way."""
+    phys = {k: v for k, v in _ALT_BLOCK.items() if k != "pafId"}
+    p = summarise_person(_RH_ALT, [_director("3091120", "9429050923557", phys=phys)], _SUBJECT)
+    c = p["companies"][0]
+    assert (c["confidence"], c["basis"]) == ("medium", "Overlapping alternative address")
