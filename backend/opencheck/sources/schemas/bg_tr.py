@@ -11,6 +11,7 @@ change that let one through cannot reach a card or a BODS statement
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import field_validator
@@ -24,11 +25,17 @@ FORBIDDEN_PARTY_KEYS = frozenset({
 })
 
 
+#: A personal number or an identity document written into a filed name.
+_PERSONAL_IN_NAME = re.compile(r"(?<!\d)\d{10}(?!\d)|ЕГН|ЛНЧ|\bЛК\b|лична карта", re.IGNORECASE)
+
+
 def _check_parties(parties: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for party in parties:
         bad = FORBIDDEN_PARTY_KEYS & set(party)
         if bad:
             raise ValueError(f"personal field in a party: {sorted(bad)}")
+        if _PERSONAL_IN_NAME.search(str(party.get("name") or "")):
+            raise ValueError("personal number in a party's name")
     return parties
 
 

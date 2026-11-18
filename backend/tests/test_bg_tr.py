@@ -83,7 +83,10 @@ _OWNER = (
     "<ActualOwner>" + _person("Иван Петров Иванов", HASH_A)
     + "<Address><CountryCode>BGR</CountryCode><Settlement>СОФИЯ</Settlement>"
     "<Street>Улица на собственика</Street><StreetNumber>7</StreetNumber></Address>"
-    "<OwnedRights>Пряко притежаване на дялово участие 50 на сто</OwnedRights>"
+    "<OwnedRights>Пряко притежаване; Майка АД притежава 75 на сто</OwnedRights>"
+    "<OwnedRightsDetails><OwnedRightDetail><OwnedRightCode>CONTROL_THROUGH_OWNERSHIP</OwnedRightCode>"
+    "<OwnedRightName>Собственик на достатъчен процент дялове</OwnedRightName>"
+    "<OwnedRightSize>50 на сто</OwnedRightSize></OwnedRightDetail></OwnedRightsDetails>"
     "<CountryOfResidence><CountryCode>BGR</CountryCode><Country>БЪЛГАРИЯ</Country></CountryOfResidence>"
     "</ActualOwner>"
 )
@@ -273,6 +276,19 @@ def test_percentages_are_read_exactly_or_as_a_lower_bound() -> None:
     assert builder.parse_percent("25 % и 30 %") is None
 
 
+def test_a_percentage_is_read_from_the_right_not_the_owners_free_text(tmp_path) -> None:
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    (raw / "a.xml").write_text(FILE1, encoding="utf-8")
+    meta = builder.build_index(raw, tmp_path / "x.sqlite", min_files=0)
+    assert meta["companies"]
+    data = json.loads(sqlite3.connect(tmp_path / "x.sqlite").execute(
+        "SELECT data FROM company WHERE uic = ?", (OOD,)).fetchone()[0])
+    owner = data["ActualOwners"]["value"][0]
+    assert "percent" not in owner
+    assert owner["rights"][0]["percent"] == {"exact": 50.0}
+
+
 # --------------------------------------------------------------------------
 # The adapter
 # --------------------------------------------------------------------------
@@ -410,8 +426,36 @@ async def test_a_lower_bound_is_an_exclusive_minimum_and_an_association_holds_no
     statements = list(map_bg_tr(await _fetch(ASSOC)))
     elena = _interests(statements, "Елена Иванова")
     bo = [i for i in elena if i.get("beneficialOwnershipOrControl")]
-    assert bo[0]["share"] == {"exclusiveMinimum": 25.0}
+    # No rights code: the owner's words are quoted, never read as a share.
+    assert bo[0]["type"] == "otherInfluenceOrControl"
+    assert "share" not in bo[0]
+    assert "повече от 25 на сто" in bo[0]["details"]
     assert {i["type"] for i in elena if not i.get("beneficialOwnershipOrControl")} == {"boardMember"}
+
+
+def test_a_lower_bound_in_a_rights_size_is_an_exclusive_minimum() -> None:
+    from opencheck.bods.mappers.bulgaria import _bg_owner_interests
+
+    interests = _bg_owner_interests({"rights": [{
+        "code": "CONTROL_THROUGH_OWNERSHIP", "size": "повече от 25 на сто",
+        "percent": {"more_than": 25.0},
+    }]})
+    assert interests[0]["type"] == "shareholding"
+    assert interests[0]["share"] == {"exclusiveMinimum": 25.0}
+
+
+def test_a_name_loses_a_personal_number_or_address_written_into_it() -> None:
+    assert builder.safe_name("ПЛАМЕН СТЕФАНОВ РАДНЕВ, ЕГН 5401296246, РОСЕН") == "ПЛАМЕН СТЕФАНОВ РАДНЕВ"
+    assert builder.safe_name("ВАЛДЕМАР БРАНДНЕР, гр. Зинбах, ул. „X” №35, ЛК №8552045630") == "ВАЛДЕМАР БРАНДНЕР"
+    assert builder.safe_name("Дияна Георгиева Димитрова – Каменова") == "Дияна Георгиева Димитрова – Каменова"
+    assert builder.safe_name("ЕГН 5401296246") is None
+
+
+def test_the_schema_refuses_a_personal_number_in_a_name() -> None:
+    from opencheck.sources.schemas.bg_tr import BgTrBundle
+
+    with pytest.raises(ValueError):
+        BgTrBundle(eik="200000015", parties=[{"name": "Иван, ЕГН 5401296246", "kind": "person"}])
 
 
 async def test_a_company_sole_owner_is_an_entity_with_its_eik_and_all_the_shares(index) -> None:
@@ -457,10 +501,10 @@ def test_a_senior_manager_named_for_want_of_an_owner_is_no_owner() -> None:
 
 async def test_the_findings(index) -> None:
     live = finding_bg_tr(await _fetch(OOD))
-    assert live.startswith("Registered on 2021-01-04")
+    assert live.startswith("Registered on 4 January 2021")
     assert "1 beneficial owner filed" in live
     deleted = finding_bg_tr(await _fetch(EOOD))
-    assert deleted.startswith("Deleted from the register on 2021-01-05")
+    assert deleted.startswith("Deleted from the register on 5 January 2021")
     assert "no beneficial owners in the open data since 2021" in deleted
 
 
@@ -481,3 +525,12 @@ def test_no_owner_in_the_files_is_none_on_record_since_2021_never_not_public() -
         "parties": [{"name": "Z", "field": "SoleCapitalOwner"}]})
     assert [h["value"] for h in named] == ["none_exist"]
     assert bundle_hints("bg_tr", {"not_found": True}) == []
+
+
+def test_the_finding_counts_people_not_entries() -> None:
+    bundle = {"eik": OOD, "status_class": "live", "legal_form_code": "AD", "parties": [
+        {"name": "А", "key": "k1", "field": "Representatives"},
+        {"name": "А", "key": "k1", "field": "BoardOfManagers2"},
+        {"name": "Б", "key": "k2", "field": "BoardOfManagers2"},
+    ]}
+    assert "2 officers or board members" in finding_bg_tr(bundle)

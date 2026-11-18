@@ -2254,6 +2254,8 @@ def finding_bg_tr(bundle: dict[str, Any]) -> str | None:
     status = str(bundle.get("status") or "").strip()
     since = str(bundle.get("status_since") or "").strip()
     registered = str(bundle.get("registered_on") or "").strip()
+    since = human_date(since) or since
+    registered = human_date(registered) or registered
     if cls in ("terminal", "pending") and status:
         lead = f"{status[0].upper()}{status[1:]}" + (f" on {since}" if since and cls == "terminal" else (f" since {since}" if since else ""))
     elif registered:
@@ -2267,8 +2269,16 @@ def finding_bg_tr(bundle: dict[str, Any]) -> str | None:
         if owners else "no beneficial owners in the open data since 2021"
     )
     parties = bundle.get("parties") or []
-    officers = sum(1 for p in parties if p.get("field") not in ("Partners", "SoleCapitalOwner", "PhysicalPersonTrader"))
-    holders = sum(1 for p in parties if p.get("field") in ("Partners", "SoleCapitalOwner"))
+    # People, not entries: one person is often a representative and a board
+    # member (UBB: 22 entries, 14 people).
+    def _people(fields_in: bool, fields: tuple[str, ...]) -> int:
+        return len({
+            p.get("key") or p.get("eik") or p.get("name")
+            for p in parties if (p.get("field") in fields) is fields_in
+        })
+
+    officers = _people(False, ("Partners", "SoleCapitalOwner", "PhysicalPersonTrader"))
+    holders = _people(True, ("Partners", "SoleCapitalOwner"))
     counts = [
         f"{holders} partner{'s' if holders != 1 else ''} or owner{'s' if holders != 1 else ''}" if holders else None,
         f"{officers} officer{'s' if officers != 1 else ''} or board member{'s' if officers != 1 else ''}" if officers else None,

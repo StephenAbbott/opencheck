@@ -86,7 +86,7 @@ log = logging.getLogger("build_bg_tr_index")
 
 #: Bump when the table layout changes; the adapter refuses any other value
 #: (``bg_tr.INDEX_SCHEMA_VERSION``, pinned equal by a test).
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"
 
 DATASET_ID = "2df0c2af-e769-4397-be33-fcbe269806f3"
 DATASET_URL = f"https://data.egov.bg/data/view/{DATASET_ID}"
@@ -133,6 +133,16 @@ _UNSAFE_TEXT = re.compile(
     r"street|\bapt\b|passport|born",
     re.IGNORECASE,
 )
+#: Markers that a filed *name* carries more than a name: a personal number,
+#: an identity document or an address (found in real filings, 18 Nov 2026:
+#: "…, ЕГН 84041…", "…, ул. „Алберт Зайдел” №35, ЛК №…").
+_UNSAFE_NAME = re.compile(
+    _UNSAFE_TEXT.pattern + r"|\bЛК\b|\bл\.к\.|лична карта",
+    re.IGNORECASE,
+)
+#: Where a filer starts adding words after a name.
+_NAME_BREAK = re.compile(r",|;|\(|\s[-–—]\s?|\s?[-–—]\s")
+
 _PERCENT = re.compile(
     r"(?P<pre>повече от|над|не по-малко от|more than|over|at least)?\s*"
     r"(?P<num>\d{1,3}(?:[.,]\d+)?)\s*(?:%|на сто|процент|per cent|percent)",
@@ -254,6 +264,21 @@ def safe_text(text: str | None, limit: int = 300) -> str | None:
     return t if len(t) <= limit else t[: limit - 1].rstrip() + "…"
 
 
+def safe_name(name: str | None) -> str | None:
+    """A party's name as filed, or the words before the first break when the
+    rest carries a personal number, an identity document or an address;
+    None when even those do."""
+    n = " ".join((name or "").split())
+    if not n:
+        return None
+    if not _UNSAFE_NAME.search(n):
+        return n
+    head = _NAME_BREAK.split(n, maxsplit=1)[0].strip(" ,.;:-–—")
+    if head and not _UNSAFE_NAME.search(head):
+        return head
+    return None
+
+
 def parse_percent(*texts: str | None) -> dict[str, float] | None:
     """The one percentage a beneficial owner's texts state, as
     ``{"exact": x}`` or ``{"more_than": x}``; None when they state none or
@@ -301,7 +326,7 @@ def reduce_party(uic: str, el: ET.Element | None) -> dict[str, Any] | None:
     """One ``Subject`` / ``Person`` element, reduced to what may be published."""
     if el is None:
         return None
-    name = _text(el, "Name")
+    name = safe_name(_text(el, "Name"))
     if not name:
         return None
     itype = _text(el, "IndentType")
@@ -319,7 +344,7 @@ def reduce_party(uic: str, el: ET.Element | None) -> dict[str, Any] | None:
         or bool((el.get("LegalForm") or "").strip())
         or (itype in ("", "Undefined") and _looks_like_organisation(name))
     )
-    party: dict[str, Any] = {"name": " ".join(name.split()), "kind": "entity" if is_entity else "person"}
+    party: dict[str, Any] = {"name": name, "kind": "entity" if is_entity else "person"}
     country = (el.get("CountryCode") or "").strip()
     country_name = _text(el, "CountryName")
     if country:
@@ -365,16 +390,20 @@ def reduce_actual_owner(uic: str, item: ET.Element) -> dict[str, Any] | None:
             party["residence_name"] = res_name
     rights_text = _text(item, "OwnedRights")
     rights: list[dict[str, Any]] = []
-    texts = [rights_text]
     details = item.find("OwnedRightsDetails")
     for detail in (details if details is not None else []):
         code = _text(detail, "OwnedRightCode")
         size = _text(detail, "OwnedRightSize")
         desc = _text(detail, "OwnedRightDescription")
-        texts += [size, desc]
         entry: dict[str, Any] = {}
         if code:
             entry["code"] = code
+        # A percentage is read only from the right's own size and
+        # description. The owner's free text often states another party's
+        # holding ("KBC Bank holds 99.92 %" on a KBC director's entry).
+        percent = parse_percent(size, desc)
+        if percent:
+            entry["percent"] = percent
         name = safe_text(_text(detail, "OwnedRightName"), 200)
         if name:
             entry["name"] = name
@@ -388,9 +417,6 @@ def reduce_actual_owner(uic: str, item: ET.Element) -> dict[str, Any] | None:
     kept_rights = safe_text(rights_text)
     if kept_rights:
         party["owned_rights"] = kept_rights
-    percent = parse_percent(*texts)
-    if percent:
-        party["percent"] = percent
     return party
 
 

@@ -15,8 +15,10 @@ What each list becomes
   exception is ``SENIOR_MANAGEMENT_POSITION``: a person named because no owner
   was identified is a ``seniorManagingOfficial`` with no BO flag (record kind
   ``actual_owner_senior_manager``, the Estonian J/C rule). The extent is the
-  percentage the register's own texts state, ``exact`` or as a lower bound,
-  and nothing else. Name, nationality, country of residence and the control —
+  percentage a right's own size states, ``exact`` or as a lower bound, and
+  nothing else: an owner with no rights code is ``otherInfluenceOrControl``
+  with their words quoted, because the free text often states another
+  party's holding. Name, nationality, country of residence and the control —
   never a birth date, address or the register's person hash (Stephen,
   18 Nov 2026).
 * **Partners and the sole owner** of a company with capital → a
@@ -251,7 +253,6 @@ def _bg_role_interest(party: dict[str, Any], form: str | None) -> tuple[dict[str
 
 def _bg_owner_interests(owner: dict[str, Any]) -> list[dict[str, Any]]:
     """The interests of one beneficial owner, from the register's rights."""
-    share = _bg_share_from_percent(owner.get("percent"))
     rights = owner.get("rights") or []
     text = owner.get("owned_rights")
     out: list[dict[str, Any]] = []
@@ -271,12 +272,11 @@ def _bg_owner_interests(owner: dict[str, Any]) -> list[dict[str, Any]]:
         code = right.get("code")
         if code == _BG_SENIOR_MANAGER:
             continue
-        if code:
-            kind = _BG_RIGHT_TYPES.get(code, "otherInfluenceOrControl")
-        else:
-            # Most owners entered in 2021 carry no rights code, only the
-            # owner's own words. A percentage in them is a holding.
-            kind = "shareholding" if share else "otherInfluenceOrControl"
+        # A share only from the right's own size: the owner's free text
+        # often states another party's holding (UBB's KBC directors' entries
+        # say "KBC Bank holds 99.92 %"), so it is quoted, never read as one.
+        share = _bg_share_from_percent(right.get("percent"))
+        kind = _BG_RIGHT_TYPES.get(code, "otherInfluenceOrControl") if code else "otherInfluenceOrControl"
         words = [w for w in (right.get("name"), right.get("size")) if w]
         if not words and text:
             words = [text]

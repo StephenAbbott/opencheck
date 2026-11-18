@@ -76,7 +76,7 @@ logger = logging.getLogger(__name__)
 BG_RA_CODES: frozenset[str] = frozenset({"RA000065", "RA000730", "RA000731"})
 
 #: The table layout this adapter reads; the builder writes the same value.
-INDEX_SCHEMA_VERSION = "1"
+INDEX_SCHEMA_VERSION = "2"
 
 DATASET_URL = "https://data.egov.bg/data/view/2df0c2af-e769-4397-be33-fcbe269806f3"
 
