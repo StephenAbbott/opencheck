@@ -611,13 +611,13 @@ def _finalise(conn: sqlite3.Connection) -> dict[str, int]:
 
 
 def _stamp(moment: dt.datetime) -> str:
-    return moment.astimezone(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return moment.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def build_index(input_dir: Path, out_path: Path, *, min_files: int = MIN_FILES) -> dict[str, str]:
     """Replay every daily file in ``input_dir`` into ``out_path``. Refuses
     (``BuildRefused``) and writes nothing when the input is not the series."""
-    started = dt.datetime.now(dt.UTC)
+    started = dt.datetime.now(dt.timezone.utc)
     files = ordered_files(input_dir)
     if len(files) < min_files:
         raise BuildRefused(f"{len(files)} daily files in {input_dir}; expected at least {min_files}")
