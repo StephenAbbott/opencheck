@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 560** — Bulgaria's Commercial Register is a new source, with managers, boards, partners and beneficial owners from the Registry Agency's daily open data since 2021.
+**Latest: Phase 561** — The monthly BODS series now counts relationships that arrive already closed separately from new records, and its release notes describe closing dates as the documentation does.
 
 → [Full development history](docs/status.md)
 

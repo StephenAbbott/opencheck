@@ -1,6 +1,0 @@
----
-title: The BODS series counts a relationship published already closed apart from new records, and its README states the closing-date rule.
-readme: The monthly BODS series now counts relationships that arrive already closed separately from new records, and its release notes describe closing dates as the documentation does.
-tests: backend +2
----
-Found by the post-deploy test of the November 2026 edition (18 Nov 2026): fourteen GLEIF relationships whose period had already ended were published `closed` on first sight and counted under `new`, which is why the manifest's 6,716,163 relationships mapped became 6,716,149 live. The ledger now counts them as `closed_on_arrival` (a new key in `publication_ledger.OUTCOMES`), and the README prints them on their own line. The README's first-edition sentence says that ended relationships are published `closed`. A `closed` statement is described as dated by the statement that replaces it, else by the edition: the rule `close_day` has followed since the closing-dates fix, which the README still gave as "the edition". A relationship whose period GLEIF ended keeps GLEIF's `endDate`. `docs/bods-series.md` says the same. No statement changes. The November README asset was left as published; the December edition is the first to carry the new count.
