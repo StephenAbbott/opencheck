@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 555** — The New Zealand associations check is ready for MBIE's 25 November change, when the name search starts publishing a director's alternative address instead of leaving it blank.
+**Latest: Phase 556** — A preview of the monthly BODS series can read GLEIF's delta files from a release when GLEIF's storage refuses the GitHub runner.
 
 → [Full development history](docs/status.md)
 

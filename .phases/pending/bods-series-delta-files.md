@@ -1,6 +1,0 @@
----
-title: A preview of the BODS series can read GLEIF's delta files from a release when GLEIF refuses the runner.
-readme: A preview of the monthly BODS series can read GLEIF's delta files from a release when GLEIF's storage refuses the GitHub runner.
-tests: backend +3
----
-The preview run of 18 Nov 2026 failed twice in two seconds: GLEIF's Golden Copy file storage answered 403 Forbidden for the LastMonth delta from two GitHub runners, as it does from other datacentre addresses, while the publish API answered and production on Render still reads the files. `mirror_refresh.refresh_from_files(db, delta_dir)` applies three delta files someone downloaded elsewhere: it reads the publish time and the window from GLEIF's own file names, requires one publish and one window across `lei2`, `rr` and `repex`, refuses a window narrower than the gap since the mirror's watermark, and never asks the publish API. `build_bods_series.py --refresh-mirror --delta-dir <folder>` uses it, and the workflow's new `delta_release` input downloads the zips from a release tag and dates the preview by the files' publish day. The monthly rebuild of the mirror (`refresh-entity-pages-db`) downloads the full files from the same storage and has no such fallback yet: check its run on 1 December.
