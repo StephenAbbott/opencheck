@@ -130,6 +130,16 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `lv_regcode` (11-digit Latvian registration number) derived from GLEIF RA code `RA000423`
 - **Note:** Latvia was the first country to publish its national beneficial ownership data in BODS format (BODS v0.2, 2021); that historical dataset is available at <https://data.gov.lv/dati/lv/dataset/plg-bods>. The current live datasets do not carry percentage thresholds for beneficial owners — they record the declared UBO without specifying the interest mechanism. Individual identity numbers are partially masked (`DDMMYY-*****`).
 
+## Bulgaria — Commercial Register and Register of Non-Profit Legal Entities (Registry Agency)
+
+- **Data:** for every company or non-profit with an entry made since 1 January 2021: name and transliteration, legal form, seat, capital, managers and representatives, boards, partners and their contributions, sole owners, procurators, liquidators, a branch's foreign trader, deletion, liquidation and insolvency entries, and beneficial owners (name, nationality, country of residence and the nature and extent of the control).
+- **Source:** the daily XML files of the dataset "Търговски регистър - списък набори данни" on data.egov.bg (<https://data.egov.bg/data/view/2df0c2af-e769-4397-be33-fcbe269806f3>). The entries for 2008–2020 are listed there but hold no file, so a field not changed since 2021 is not in the open data.
+- **How OpenCheck reads it:** every daily file is replayed in order into a SQLite index by `backend/scripts/build_bg_tr_index.py` and published as the `bg-tr-index` release asset (`scripts/refresh_bg_tr_index.sh`; data.egov.bg answers Bulgarian addresses only, so the refresh is run by hand). Each statement is dated by the latest entry the files hold.
+- **Personal data:** a person's address, the register's hash of a personal number, a raw birth date and passport fields are dropped when the index is built and are never republished; a beneficial owner keeps a country of residence only.
+- **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- **Attribution (given though not required):** "Contains data from the Commercial Register and Register of Non-Profit Legal Entities, published by the Registry Agency of Bulgaria (Агенция по вписванията) on data.egov.bg under CC0."
+- **Entry point:** `bg_eik` (9-digit ЕИК) derived from GLEIF RA codes `RA000065` (Commercial Register), `RA000730` (BULSTAT) and `RA000731` (register of public-benefit legal entities). `RA000066` (Financial Supervision Commission) files funds' codes and is not dispatched.
+
 ## JAR — Juridinių Asmenų Registras (Lithuanian Register of Legal Entities)
 
 - **Data:** entity name, code, registered address, legal form, registration date, legal status and deregistration date for every entity registered or deregistered in Lithuania — from the open data published by Registrų centras (Centre of Registers). The register withholds the names of sole proprietorships and partnerships; for those OpenCheck shows the name GLEIF holds and says so.

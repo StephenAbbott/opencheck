@@ -85,6 +85,9 @@ VERIFIED: dict[str, str] = {
     "JP": "RA000412",  # Legal Affairs Bureau — verified 2026-11-16, 2,564
     # ISSUED records filing the 12-digit company registration number; the
     # NTA's RA001075 (13 digits, 198 ISSUED) is a sameNumberAuthority
+    "BG": "RA000065",  # Commercial Register — verified 2026-11-18, 5,614 ACTIVE
+    # records filing the bare 9-digit ЕИК; BULSTAT (RA000730) and the
+    # public-benefit register (RA000731) are sameNumberAuthorities
     "UA": "RA000567",  # ЄДР — verified 2026-09-14, 238 of 303 UA records; the
     # other two authorities carrying the EDRPOU are sameNumberAuthorities
 }
@@ -260,7 +263,7 @@ def test_frontend_widens_a_french_search_to_every_inpi_authority() -> None:
     from opencheck.sources.edr_ukraine import UA_RA_CODES
 
     declared = _frontend_same_number_authorities()
-    assert set(declared) == {"FR", "UA", "AR", "PE", "JP"}, "a new sameNumberAuthorities entry needs a test"
+    assert set(declared) == {"FR", "UA", "AR", "PE", "JP", "BG"}, "a new sameNumberAuthorities entry needs a test"
     assert {RA_BY_COUNTRY["FR"], *declared["FR"]} == set(INPI_RA_CODES)
     # Ukraine (the EDR wiring): three authorities file the EDRPOU.
     assert {RA_BY_COUNTRY["UA"], *declared["UA"]} == set(UA_RA_CODES)
@@ -277,6 +280,12 @@ def test_frontend_widens_a_french_search_to_every_inpi_authority() -> None:
 
     assert {RA_BY_COUNTRY["JP"], *declared["JP"]} == set(JP_RA_CODES)
     assert JP_FUND_RA not in declared["JP"]
+    # Bulgaria (the Bulgaria wiring): the Commercial Register, BULSTAT and the
+    # public-benefit non-profit register file the ЕИК; the FSC's funds do not.
+    from opencheck.sources.bg_tr import BG_RA_CODES
+
+    assert {RA_BY_COUNTRY["BG"], *declared["BG"]} == set(BG_RA_CODES)
+    assert "RA000066" not in declared["BG"]
 
 
 def test_only_gb_declares_sub_registries() -> None:

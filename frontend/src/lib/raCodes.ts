@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 30 countries that have
+ * GLEIF Registration Authority codes for the 31 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
@@ -396,6 +396,18 @@ export const RA_CODES: Record<string, RaEntry> = {
     placeholder: "20100047218",
     formatHint: "11 digits",
     formatPattern: /^\d{11}$/,
+  },
+  BG: {
+    raCode: "RA000065",
+    sameNumberAuthorities: ["RA000730", "RA000731"],
+    // BULSTAT and the public-benefit non-profit register file the same ЕИК.
+    // RA000066 (the Financial Supervision Commission) files funds' codes and
+    // is left out.
+    countryName: "Bulgaria",
+    idLabel: "ЕИК (UIC)",
+    placeholder: "831642181",
+    formatHint: "9 digits",
+    formatPattern: /^\d{9}$/,
   },
   UA: {
     raCode: "RA000567",

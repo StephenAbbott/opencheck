@@ -53,6 +53,7 @@ from .gleif import GleifAdapter
 from .inpi import InpiAdapter
 from .sirene import SireneAdapter
 from .edr_ukraine import EdrUkraineAdapter
+from .bg_tr import BgTrAdapter
 from .jar_lithuania import JarLithuaniaAdapter
 from .cyprus_drcor import CyprusDrcorAdapter
 from .ica_israel import IcaIsraelAdapter
@@ -126,6 +127,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "sirene": SireneAdapter(),
     "jar_lithuania": JarLithuaniaAdapter(),
     "edr_ukraine": EdrUkraineAdapter(),
+    "bg_tr": BgTrAdapter(),
     "cyprus_drcor": CyprusDrcorAdapter(),
     "ica_israel": IcaIsraelAdapter(),
     "si_prs": SiPrsAdapter(),

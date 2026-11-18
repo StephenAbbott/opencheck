@@ -182,6 +182,12 @@ services:
       # answers alone.
       - key: NTA_JAPAN_DB_FILE
         value: /var/data/nta_japan.sqlite
+      # --- Bulgaria's Commercial Register (the Bulgaria ticket, 18 Nov 2026) ---
+      # bg_tr.sqlite — the bg-tr-index release asset (BG_TR_DB_URL default),
+      # rebuilt by hand on a Bulgarian connection (data.egov.bg refuses every
+      # other address). On the disk so a deploy does not re-download it.
+      - key: BG_TR_DB_FILE
+        value: /var/data/bg_tr.sqlite
       # --- Moldova's State Register index (the asp_moldova fix, 13 Nov 2026) ---
       # asp_moldova.sqlite — the weekly ASP export indexed by the adapter
       # itself, or, while dataset.gov.md is down, the asp-moldova-index

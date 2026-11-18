@@ -91,6 +91,8 @@ from opencheck.sources.dart_korea import db_path as dart_korea_db_path  # noqa: 
 from opencheck.sources.dart_korea import warm_index as warm_dart_korea_index  # noqa: E402
 from opencheck.sources.bce_belgium import warm_index as warm_bce_index  # noqa: E402
 from opencheck.sources.edr_ukraine import db_path as edr_db_path  # noqa: E402
+from opencheck.sources.bg_tr import db_path as bg_tr_db_path  # noqa: E402
+from opencheck.sources.bg_tr import warm_index as warm_bg_tr_index  # noqa: E402
 from opencheck.sources.edr_ukraine import warm_index as warm_edr_index  # noqa: E402
 from opencheck.sources.corporations_canada import db_path as canada_db_path  # noqa: E402
 from opencheck.sources.corporations_canada import warm_index as warm_canada_index  # noqa: E402
@@ -128,6 +130,7 @@ WARMERS = (
     ("dart_korea", warm_dart_korea_index, dart_korea_db_path),
     ("rna", warm_rna_index, rna_db_path),
     ("edr_ukraine", warm_edr_index, edr_db_path),
+    ("bg_tr", warm_bg_tr_index, bg_tr_db_path),
     ("cyprus_drcor", warm_cyprus_index, cyprus_db_path),
     ("estma", warm_estma_index, estma_db_path),
     ("ica_israel", warm_ica_israel_index, ica_israel_db_path),

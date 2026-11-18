@@ -249,6 +249,7 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         "jar_lithuania": PROBES["jar_lithuania"].requires_files,
         "bce_belgium": PROBES["bce_belgium"].requires_files,
         "edr_ukraine": PROBES["edr_ukraine"].requires_files,
+        "bg_tr": PROBES["bg_tr"].requires_files,
         "cyprus_drcor": PROBES["cyprus_drcor"].requires_files,
         "sunbiz_florida": PROBES["sunbiz_florida"].requires_files,
         "dart_korea": PROBES["dart_korea"].requires_files,

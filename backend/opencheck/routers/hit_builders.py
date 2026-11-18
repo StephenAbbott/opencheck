@@ -1027,6 +1027,38 @@ def _bh_edr_ukraine(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
         identifiers={"ua_edrpou": local_id}, raw=r,
     )
 
+def _bh_bg_tr(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Bulgaria's Commercial Register, from the index.
+
+    * **A company.** Asserts the ЕИК the register published (``bg_eik``),
+      with a deletion or proceedings on the summary.
+    * **No entry since 2021.** A note card: no identifier, no degradation.
+      The open data holds entries since 1 January 2021 only, so the company
+      may still be on the register.
+    """
+    from ..findings import finding_bg_tr
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "bg_tr", local_id,
+            name=ctx.legal_name or "",
+            summary=f"BG {local_id} · no entry in the open data since 2021",
+            finding=finding_bg_tr(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    summary = f"BG {local_id}"
+    if r.get("status_class") in ("terminal", "pending") and r.get("status"):
+        summary += f" · {r['status']}"
+    return _hit(
+        "bg_tr", local_id,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=summary,
+        finding=finding_bg_tr(r),
+        identifiers={"bg_eik": local_id}, raw=r,
+    )
+
+
 def _bh_cyprus_drcor(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Cyprus's Registrar of Companies, from the index
     (the Cyprus wiring, 29 Oct 2026).

@@ -687,6 +687,26 @@ PROBES: dict[str, SourceProbe] = {
             "Registrų centras stopped publishing."
         ),
     ),
+    "bg_tr": _p(
+        tier="index",
+        subject="ОБЕДИНЕНА БЪЛГАРСКА БАНКА (BG-EIK 000694959)",
+        args=("000694959",),
+        kwargs={"legal_name": "ОБЕДИНЕНА БЪЛГАРСКА БАНКА"},
+        expect_fields=("eik", "parties"),
+        requires_files=("bg_tr.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt by hand on a Bulgarian connection (data.egov.bg is
+        # geo-blocked); a month is a missed rebuild, not a broken source.
+        snapshot_max_age_days=45,
+        anchor_lei="5299000PCY1EP8QJFV48",
+        bods_mapper="map_bg_tr",
+        notes=(
+            "An index of the Registry Agency's daily open-data files since "
+            "1 January 2021, built on a Bulgarian connection because "
+            "data.egov.bg refuses every address outside Bulgaria. A "
+            "refresh-due amber means refresh_bg_tr_index.sh has not been run."
+        ),
+    ),
     "edr_ukraine": _p(
         tier="index",
         subject="ТОВ «КИЇВ-АРТ» (UA-EDR 35265987)",

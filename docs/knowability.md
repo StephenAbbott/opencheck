@@ -219,7 +219,7 @@ Data generated 2026-11-18T09:18:27+00:00; sentences rendered as of 2026-11-18. *
 
 ### Bulgaria (BG) — verified 2026-09-18
 
-> Bulgaria Commercial Register is accessible to authorities and obliged entities, and to others on legitimate interest, since 4 Jun 2025. OpenCheck reads no Bulgaria register, so an owner absent from this report says nothing about what Bulgaria holds.
+> Bulgaria Commercial Register is accessible to authorities and obliged entities, and to others on legitimate interest, since 4 Jun 2025. OpenCheck reads beneficial owners from Commercial Register — Bulgaria (Registry Agency).
 
 | Field | Value |
 |---|---|
@@ -235,7 +235,7 @@ Data generated 2026-11-18T09:18:27+00:00; sentences rendered as of 2026-11-18. *
 | 6AMLD LIA / BORIS | No / No |
 | Pending changes | Draft law amending the ЗМИП (submitted by ДАНС), stated to be in line with Directive (EU) 2024/1640: three access levels including persons who can prove a legitimate interest (Art. 63д). Public consultation No. 12770 on strategy.bg ran 02.10.2026–02.11.2026 and is closed; no report on comments and no submission to the Narodno sabranie as of 4 Nov 2026. Entry into force reportedly 10.07.2027 (per a consultation comment; not verified in the draft text). |
 | Next FATF/FSRB assessment | MONEYVAL; onsite 2030-04-01; plenary 2030-12-01 |
-| OpenCheck reads | *no adapter for this jurisdiction* |
+| OpenCheck reads | `bg_tr` (BO) |
 | Notes | On 4th June 2025, Bulgaria adopted a law (decree no 92) amending its national law on measures against the financing of terrorism which introduces LIA for all entries in the commercial register for “any person or organization that can demonstrate a legitimate interest” (see article 63b). However it doesn’t spell out the categories of organisations which are deemed to have legitimate interest. |
 
 ### Canada (CA) — verified 2026-09-18

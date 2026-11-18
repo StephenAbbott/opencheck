@@ -352,6 +352,75 @@ _add(BORegime(
 
 
 # ----------------------------------------------------------------------
+# Bulgaria — Commercial Register (Registry Agency)
+# ----------------------------------------------------------------------
+_add(BORegime(
+    source_id="bg_tr",
+    jurisdiction="Bulgaria",
+    jurisdiction_code="BG",
+    register_name=(
+        "Commercial Register and Register of Non-Profit Legal Entities "
+        "(Registry Agency)"
+    ),
+    regime_kind="bo_register",
+    legal_basis=(
+        "Закон за мерките срещу изпирането на пари (ЗМИП — Law on Measures "
+        "against Money Laundering), Supplementary Provisions § 2 (definition "
+        "of действителен собственик)",
+        "ЗМИП Art. 63 (entry of beneficial owners in the Commercial Register "
+        "and the Register of Non-Profit Legal Entities)",
+        "ЗМИП Art. 63b (access restricted to persons with a legitimate "
+        "interest, in force June 2025)",
+    ),
+    bo_definition=(
+        "The natural person who ultimately owns or controls the legal entity: "
+        "directly or indirectly holding a sufficient percentage of the shares, "
+        "votes or capital — at least 25 per cent — or exercising control by "
+        "other means. Where no such person is identified, the person holding "
+        "a senior management position is named instead."
+    ),
+    threshold_wording="at least 25 per cent (най-малко 25 на сто)",
+    threshold_operator=">=",
+    threshold_value=25.0,
+    reporting_basis=(
+        "ULTIMATE beneficial owner, entered as a list on the company's file "
+        "with coded rights (control through ownership, voting rights, other "
+        "means, senior management position) and the owner's own description"
+    ),
+    natural_person_only=True,
+    fallback="senior managing official (SENIOR_MANAGEMENT_POSITION)",
+    record_kinds={
+        "actual_owner": "assert_true",                # ActualOwners
+        "actual_owner_senior_manager": "assert_false",  # named because no owner was identified (the Estonian J/C rule)
+        "sole_owner": "omit",                         # SoleCapitalOwner — equity
+        "partner": "omit",                            # Partners — equity or partnership
+        "officer": "omit",                            # managers, representatives, liquidators, procurators
+        "member": "omit",                             # boards and their chair
+        "trader": "omit",                             # the natural person behind a sole trader
+    },
+    pending_changes=(
+        "Access to beneficial owners restricted to a legitimate interest "
+        "under Art. 63b from June 2025; the Registry Agency's CC0 open data "
+        "still carried them on 18 Nov 2026",
+    ),
+    notes=(
+        "The open data are daily deltas since 1 January 2021: an owner list "
+        "entered before 2021 and never changed is not in it, so absence is "
+        "unknown, never 'none filed'",
+        "Republished: name, nationality, country of residence, the coded "
+        "rights and the stated extent. Never the birth date, home address, "
+        "passport or the register's personal-number hash (Stephen, 18 Nov 2026)",
+    ),
+    sources=(
+        "https://data.egov.bg/data/view/2df0c2af-e769-4397-be33-fcbe269806f3",
+        "https://lex.bg/laws/ldoc/2137184200",
+    ),
+    last_verified="2026-11-18",
+    review_status="draft",
+))
+
+
+# ----------------------------------------------------------------------
 # Latvia — Uzņēmumu reģistrs (UR)
 # ----------------------------------------------------------------------
 _add(BORegime(

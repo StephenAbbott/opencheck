@@ -100,6 +100,10 @@ RA_BY_COUNTRY: dict[str, str] = {
     "RS": "RA000517",  # APR — Business Registers Agency (Serbia)
     "TW": "RA000551",  # Ministry of Economic Affairs company register (Taiwan).
     # RA001009 (Financial Supervisory Commission) files funds' tax numbers.
+    "BG": "RA000065",  # Commercial Register (Registry Agency, Bulgaria) — the
+    # 9-digit ЕИК; RA000730 (BULSTAT) and RA000731 (public-benefit non-profits)
+    # file the same number; GleifAdapter.search_by_local_id widens a Bulgarian
+    # scope to all three. RA000066 (FSC funds) is never included.
     "UA": "RA000567",  # ЄДР — Unified State Register (Ukraine). RA001026 (NSSMC)
     # and RA001027 (National Bank) file the same EDRPOU — 15 % of Ukrainian
     # LEIs; GleifAdapter.search_by_local_id widens a Ukrainian scope to all

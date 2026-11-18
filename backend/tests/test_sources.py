@@ -155,6 +155,8 @@ _IDENTIFIER_KEYED = {
     # edr_ukraine: the same shape over the ЄДР index, reached from the EDRPOU
     # GLEIF files under three authorities; no stub row without an index.
     "edr_ukraine",
+    # bg_tr (the Bulgaria wiring): a LIKE over the local index; none in tests.
+    "bg_tr",
     # cyprus_drcor (the Cyprus wiring): the same LIKE over the local index;
     # a fresh test process has none.
     "cyprus_drcor",

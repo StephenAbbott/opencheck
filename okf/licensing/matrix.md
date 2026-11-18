@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-11-16"
+timestamp: "2026-11-18"
 ---
 
 # Source licence matrix
@@ -22,6 +22,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | ASP — State Register of Legal Entities (Moldova) (`asp_moldova`) | `DATASET.GOV.MD-Reuse` | yes | yes | no |
 | AusTender — Australian Government contracts (`austender`) | `CC-BY-3.0-AU` | yes | yes | no |
 | Belgian Crossroads Bank for Enterprises (BCE/KBO) (`bce_belgium`) | `Custom-KBO-Reuse` | conditional | yes | no |
+| Commercial Register — Bulgaria (Registry Agency) (`bg_tr`) | `CC0-1.0` | yes | no | no |
 | Bolagsverket — Swedish Companies Registration Office (`bolagsverket`) | `SE-PSI` | yes | yes | no |
 | Brønnøysundregistrene — Norwegian Register Centre (`brreg`) | `NLOD-2.0` | yes | yes | no |
 | Nigeria CAC — Persons with Significant Control register (`cac_nigeria`) | `Public register (bor.cac.gov.ng)` | conditional | yes | no |

@@ -879,6 +879,22 @@ class Settings(BaseSettings):
         alias="EDR_UKRAINE_DB_URL",
     )
 
+    # --- Bulgaria Commercial Register (data.egov.bg open data, CC0) ---
+    # One XML file a day since 1 Jan 2021; data.egov.bg refuses every address
+    # outside Bulgaria, so the index is built on a Bulgarian connection by
+    # scripts/refresh_bg_tr_index.sh and shipped as the ``bg-tr-index``
+    # release asset. Unset: the data-root default (``bg_tr.sqlite``).
+    bg_tr_db_file: str | None = Field(default=None, alias="BG_TR_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    bg_tr_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "bg-tr-index/bg_tr.sqlite.gz"
+        ),
+        alias="BG_TR_DB_URL",
+    )
+
     # --- Moldova ASP State Register of Legal Entities (dataset.gov.md) ---
     # No API and no key. A weekly full XLSX snapshot, indexed into SQLite by
     # the adapter itself: on a live deployment it downloads the newest export
