@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 554** — The monthly BODS series workflow gained a preview mode that builds, without publishing, what the next edition would say today.
+**Latest: Phase 555** — The New Zealand associations check is ready for MBIE's 25 November change, when the name search starts publishing a director's alternative address instead of leaving it blank.
 
 → [Full development history](docs/status.md)
 
