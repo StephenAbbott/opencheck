@@ -105,6 +105,21 @@ publish of the first of a month, when an edition would close more than a
 tenth of the live records (a truncated read looks like that), or when
 relationships name parties that have no live record.
 
+### A preview between editions
+
+The same workflow can be run by hand with **preview** ticked. It brings the
+mirror up to GLEIF's latest publish with GLEIF's own delta files
+(`--refresh-mirror`), builds an edition dated that day against the ledger of
+the last published edition, and keeps the result as a workflow artifact
+(`bods-series-preview`) for thirty days. It shows what the next edition would
+say if it were cut that day: which records are new, which changed and which
+closed since the first of the month.
+
+A preview is never published and its ledger is thrown away, so the next real
+edition is still compared with the last published one. Its `updated` and
+`closed` statement ids carry the preview's date and will not appear in the
+series.
+
 ## How it is checked against BODS
 
 Open Ownership's validator, lib-cove-bods, was run on 17 Nov 2026 over a

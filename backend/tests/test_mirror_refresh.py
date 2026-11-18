@@ -538,3 +538,29 @@ def test_download_honours_file_urls(tmp_path: Path) -> None:
     out.mkdir()
     dest = mb._download(f"file://{src}", out, "x")
     assert dest == out / "delta.csv" and dest.read_text() == "LEI\n"
+
+
+# ---------------------------------------------------------------------------
+# refresh_to_latest — the build scripts' way to a mirror newer than the asset
+# ---------------------------------------------------------------------------
+
+
+def test_refresh_to_latest_applies_the_delta_that_covers_the_gap(
+    mirror: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    publish = _delta_publish(tmp_path, "2026-09-17 08:00:00")
+    monkeypatch.setattr(mr.mb, "_latest_publish", lambda: publish)
+    result = mr.refresh_to_latest(mirror)
+    assert result["mirror_refresh"] == "applied" and result["delta"] == "LastMonth"
+    assert ep.EntityStore(mirror).watermark() == datetime(2026, 9, 17, 8, tzinfo=UTC)
+    assert mr.refresh_to_latest(mirror)["mirror_refresh"] == "up_to_date"
+
+
+def test_refresh_to_latest_refuses_a_gap_no_delta_covers(
+    mirror: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    publish = _delta_publish(tmp_path, "2026-11-17 08:00:00")
+    monkeypatch.setattr(mr.mb, "_latest_publish", lambda: publish)
+    with pytest.raises(mr.MirrorNotRefreshableError, match="wider than any delta"):
+        mr.refresh_to_latest(mirror)
+    assert ep.EntityStore(mirror).watermark() == datetime(2026, 9, 7, 16, tzinfo=UTC)

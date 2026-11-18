@@ -276,6 +276,41 @@ def _refresh_once(settings: Any, publish: dict | None, now: datetime | None) -> 
     )
 
 
+class MirrorNotRefreshableError(RuntimeError):
+    """A mirror file a delta cannot bring up to date: it carries no publish
+    date, or it is further behind GLEIF than the widest delta."""
+
+
+def refresh_to_latest(db_path: Path) -> dict[str, Any]:
+    """Bring the mirror file at ``db_path`` up to GLEIF's latest Golden Copy
+    publish with the smallest delta that covers the gap, outside the server:
+    the build scripts' way to a mirror newer than the monthly release asset
+    (the Estonia dataset, a mid-month preview of the BODS series). Raises
+    :class:`MirrorNotRefreshableError` rather than guessing."""
+    watermark = ep.EntityStore(db_path).watermark()
+    publish = mb._latest_publish()
+    publish_at = parse_publish_datetime(publish.get("publish_date"))
+    if watermark is None or publish_at is None:
+        raise MirrorNotRefreshableError("the mirror or the publish API has no date")
+    gap = publish_at - watermark
+    if gap <= timedelta(0):
+        return {"mirror_refresh": "up_to_date", "publish": publish["publish_date"]}
+    delta = choose_delta(gap)
+    if delta is None:
+        raise MirrorNotRefreshableError(
+            f"the mirror is {gap} behind GLEIF, wider than any delta; "
+            "download a fresh entity-pages-latest asset first"
+        )
+    counts = apply_delta(db_path, publish, delta)
+    ep.reset_store_for_tests()
+    return {
+        "mirror_refresh": "applied",
+        "delta": delta,
+        "publish": publish["publish_date"],
+        "rows": counts,
+    }
+
+
 def apply_delta(db_path: Path, publish: dict, delta: str) -> dict[str, int]:
     """Download the ``delta`` files named by the publish entry and upsert them
     into ``db_path``; write the watermark last. Returns the row counts.

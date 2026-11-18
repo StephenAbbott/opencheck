@@ -121,33 +121,12 @@ def refresh_mirror(db_path: Path) -> dict[str, Any]:
     smallest delta that covers the gap — ``mirror_refresh.apply_delta``, the
     code the server runs every few hours. A gap wider than a month needs a
     fresh release asset; this says so rather than guessing."""
-    from opencheck import entity_pages as ep
-    from opencheck import mirror_build as mb
     from opencheck import mirror_refresh as mr
 
-    store = ep.EntityStore(db_path)
-    watermark = store.watermark()
-    publish = mb._latest_publish()
-    publish_at = mr.parse_publish_datetime(publish.get("publish_date"))
-    if watermark is None or publish_at is None:
-        raise SystemExit("refresh-mirror: the mirror or the publish API has no date")
-    gap = publish_at - watermark
-    if gap <= dt.timedelta(0):
-        return {"mirror_refresh": "up_to_date", "publish": publish["publish_date"]}
-    delta = mr.choose_delta(gap)
-    if delta is None:
-        raise SystemExit(
-            f"refresh-mirror: the mirror is {gap} behind GLEIF, wider than any delta; "
-            "download a fresh entity-pages-latest asset first"
-        )
-    counts = mr.apply_delta(db_path, publish, delta)
-    ep.reset_store_for_tests()
-    return {
-        "mirror_refresh": "applied",
-        "delta": delta,
-        "publish": publish["publish_date"],
-        "rows": counts,
-    }
+    try:
+        return mr.refresh_to_latest(db_path)
+    except mr.MirrorNotRefreshableError as exc:
+        raise SystemExit(f"refresh-mirror: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------

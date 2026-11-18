@@ -21,6 +21,12 @@ name: Publish the monthly BODS series (GLEIF)
 # `new` again. Re-running a month that is already published fails (editions
 # are applied once, in order).
 #
+# A preview (Run workflow → preview) is the same build over the mirror brought
+# up to GLEIF's latest publish by a delta, dated today: what the next edition
+# would say if it were cut now. It is kept as an artifact for a month and is
+# never published — neither the statements nor the ledger it wrote — so the
+# next real edition is still compared with the last published one.
+#
 # Sizes measured on the 1 Nov 2026 Golden Copy are in docs/bods-series.md.
 on:
   schedule:
@@ -31,6 +37,11 @@ on:
         description: "Trial: map only the first N LEIs. Nothing is published."
         required: false
         default: ""
+      preview:
+        description: "Preview: apply GLEIF's delta to the mirror and build what the next edition would say today. Nothing is published."
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -88,12 +99,18 @@ jobs:
         working-directory: backend
         env:
           LIMIT: ${{ inputs.limit }}
+          PREVIEW: ${{ inputs.preview }}
         run: |
+          today="$(date -u +%Y-%m-%d)"
+          extra=()
+          if [ -n "$LIMIT" ]; then extra+=(--limit "$LIMIT"); fi
+          if [ "$PREVIEW" = "true" ]; then extra+=(--refresh-mirror); fi
+          if [ "${#extra[@]}" -gt 0 ]; then extra+=(--edition "$today"); fi
           uv run python scripts/build_bods_series.py \
             --entity-pages-db "$SERIES/entity_pages.sqlite" \
             --ledger "$SERIES/ledger.sqlite" \
             --out-dir "$SERIES/out" \
-            ${LIMIT:+--limit "$LIMIT" --edition "$(date -u +%Y-%m-%d)"}
+            "${extra[@]}"
           rm -rf "$SERIES/out/work" "$SERIES/entity_pages.sqlite"
           {
             echo "### BODS series"
@@ -101,7 +118,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Pack the ledger
-        if: ${{ inputs.limit == '' }}
+        if: ${{ inputs.limit == '' && inputs.preview != true }}
         run: |
           # GitHub caps a release asset at 2 GB.
           gzip -1 -c "$SERIES/ledger.sqlite" | split -b 1900m - "$SERIES/out/ledger.sqlite.gz.part-"
@@ -109,7 +126,7 @@ jobs:
           ls -l "$SERIES/out"
 
       - name: Publish the release
-        if: ${{ inputs.limit == '' }}
+        if: ${{ inputs.limit == '' && inputs.preview != true }}
         run: |
           edition="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['edition'])" "$SERIES/out/manifest.json")"
           tag="bods-series-${edition%-*}"
@@ -130,10 +147,10 @@ jobs:
           done
           gh release edit "$tag" --draft=false
 
-      - name: Keep a trial's output as an artifact
-        if: ${{ inputs.limit != '' }}
+      - name: Keep a trial's or a preview's output as an artifact
+        if: ${{ inputs.limit != '' || inputs.preview == true }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: bods-series-trial
+          name: ${{ inputs.preview == true && 'bods-series-preview' || 'bods-series-trial' }}
           path: ${{ env.SERIES }}/out
-          retention-days: 7
+          retention-days: ${{ inputs.preview == true && 30 || 7 }}
