@@ -172,6 +172,20 @@ def test_the_release_notes_never_state_ownership():
         assert word not in text
 
 
+def test_the_release_notes_count_records_closed_on_arrival_and_date_closings():
+    manifest = {
+        "edition": "2026-11-01", "previous_edition": None, "partial": False,
+        "statements": {"new": 10, "closed_on_arrival": 2}, "statements_published": 12,
+        "sources": {"gleif": {"golden_copy_publish": "2026-11-01 08:00:00", "leis_in_mirror": 3}},
+    }
+    text = series.render_readme(manifest)
+    assert "every record is published `new`." not in text
+    assert "already closed (a relationship whose period GLEIF ended): 2" in text
+    assert "dated by the statement that replaces the record" in text
+    assert "(for a `closed` statement, the edition)" not in text
+    assert "keeps GLEIF's `endDate`" in text
+
+
 def test_a_refreshed_mirror_needs_a_named_edition(tmp_path) -> None:
     """A mirror brought forward by a delta is not the Golden Copy of the first
     of a month, so the preview must say which day it is — before any download."""

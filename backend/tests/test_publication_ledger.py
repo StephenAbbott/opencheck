@@ -308,6 +308,22 @@ def test_a_statement_the_mapper_closed_is_published_closed_once(ledger):
     assert out == []
 
 
+def test_a_relationship_closed_on_first_sight_is_counted_apart_from_new(ledger):
+    # GLEIF's ended relationships (14 in the November 2026 edition) arrive
+    # already closed: published once, ``closed``, and counted under their own
+    # key so the README's "new records" is not overstated.
+    child, parent, rel = network()
+    ended = copy.deepcopy(rel)
+    ended["recordStatus"] = "closed"
+    ended["recordDetails"]["interests"][0]["endDate"] = "2019-12-31"
+    out, counts = run(ledger, E1, [child, parent], [ended])
+    assert [s["recordStatus"] for s in out] == ["new", "new", "closed"]
+    assert out[2]["recordDetails"]["interests"][0]["endDate"] == "2019-12-31"
+    assert counts == {"gleif|new": 2, "gleif|closed_on_arrival": 1}
+    out, _ = run(ledger, E2, [child, parent], [ended])
+    assert out == []
+
+
 def test_a_record_seen_twice_in_one_edition_is_published_once(ledger):
     child, parent, rel = network()
     out, counts = run(ledger, E1, [child, parent, copy.deepcopy(parent)], [rel])

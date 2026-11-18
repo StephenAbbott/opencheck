@@ -142,8 +142,12 @@ def _iso(day: int) -> str:
 
 
 #: The outcomes ``Edition.counts`` is keyed on, per source: ``<source>|<outcome>``.
+#: ``closed_on_arrival`` is a record published for the first time already
+#: closed (a GLEIF relationship whose period ended): neither ``new`` nor a
+#: closing of something published before.
 OUTCOMES = (
-    "new", "returned", "updated", "corrected", "closed", "unchanged", "duplicate",
+    "new", "returned", "updated", "corrected", "closed", "closed_on_arrival",
+    "unchanged", "duplicate",
 )
 
 
@@ -371,7 +375,10 @@ class Edition:
                         day, day, 1, ledger.pack(out),
                     ),
                 )
-                self._count(source_id, "new" if row is None else "returned")
+                if row is not None:
+                    self._count(source_id, "returned")
+                else:
+                    self._count(source_id, "closed_on_arrival" if status == "closed" else "new")
                 if record_type == "relationship":
                     self._relationships_applied = True
                     if status != "closed":

@@ -39,14 +39,15 @@ Licence: CC0 1.0. GLEIF's data is CC0 and OpenCheck adds no restriction.
 
 ## What an edition holds
 
-The first edition holds every record, `new`. Each later edition holds **only
-what changed**. A record that is unchanged has no statement in it.
+The first edition holds every record, `new`, except a relationship whose
+period GLEIF had already ended, which is published `closed`. Each later
+edition holds **only what changed**. A record that is unchanged has no statement in it.
 
 | `recordStatus` | When |
 |---|---|
 | `new` | A record OpenCheck has not published before. |
 | `updated` | The record's `recordDetails` differ from its last statement. |
-| `closed` | The Golden Copy no longer carries the record: a parent relationship that ended, a reporting exception withdrawn or replaced. The statement repeats the last details published and carries a note. GLEIF gives no end date, so none is written. |
+| `closed` | The Golden Copy no longer carries the record: a parent relationship that ended, a reporting exception withdrawn or replaced. The statement repeats the last details published and carries a note. No end date is written, because GLEIF gives none. A relationship whose period GLEIF ended is published `closed` the first time it appears, with GLEIF's `endDate`; the README counts those apart from records that closed. |
 
 A record keeps one `recordId` through all of these. To read a record's
 history, collect its statements across editions and order them by

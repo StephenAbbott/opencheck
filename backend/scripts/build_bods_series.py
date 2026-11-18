@@ -393,7 +393,9 @@ def render_readme(manifest: dict[str, Any]) -> str:
         "accounting-consolidation parents, and the reporting exceptions filed in their place.",
         "",
         (
-            "This is the first edition: every record is published `new`."
+            "This is the first edition: every record is published for the first time, "
+            "`new`, except a relationship whose period GLEIF had already ended, which is "
+            "published `closed`."
             if first
             else f"This edition holds only what changed since {manifest['previous_edition']}. "
             "A record that is unchanged has no statement here."
@@ -405,6 +407,8 @@ def render_readme(manifest: dict[str, Any]) -> str:
         f"- New records: {s.get('new', 0):,}; returned after closing: {s.get('returned', 0):,}",
         f"- Updated: {s.get('updated', 0):,}; updated with a correction note: {s.get('corrected', 0):,}",
         f"- Closed: {s.get('closed', 0):,}",
+        f"- Published for the first time already closed (a relationship whose period GLEIF "
+        f"ended): {s.get('closed_on_arrival', 0):,}",
         f"- Relationships closed and reopened as a new record because a party changed: "
         f"{s.get('parties_changed', 0):,} (counted in new and closed above)",
         f"- Unchanged (not published): {s.get('unchanged', 0):,}",
@@ -418,13 +422,16 @@ def render_readme(manifest: dict[str, Any]) -> str:
         "- A record keeps one `recordId` across editions. Its first statement is "
         "`recordStatus: new`, a later change `updated`, its last `closed`.",
         "- `publicationDetails.publicationDate` is the edition; `statementDate` is GLEIF's "
-        "own date for the record (for a `closed` statement, the edition).",
+        "own date for the record. A `closed` statement is dated by the statement that "
+        "replaces the record in the same edition, where there is one; otherwise by the "
+        "edition.",
         "- An `updated` statement with a `correcting` annotation was published after "
         "OpenCheck changed how it reads GLEIF: what differs may be OpenCheck's reading "
         "and not GLEIF's record.",
         "- A `closed` statement means the Golden Copy no longer carries the record — a "
         "parent relationship that ended, a reporting exception withdrawn or replaced. "
-        "GLEIF gives no end date, so none is written.",
+        "No end date is written for it, because GLEIF gives none. A relationship whose "
+        "period GLEIF ended is published `closed` and keeps GLEIF's `endDate`.",
         "- A record that returns after closing has a new `recordId`.",
         "- GLEIF Level 2 is accounting consolidation, not shareholding: no statement "
         "here states a percentage.",
