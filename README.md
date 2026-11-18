@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 553** — Cached KvK answers now survive deploys for 30 days, so Dutch cards ask KvK's shared rate limit less often.
+**Latest: Phase 554** — The monthly BODS series workflow gained a preview mode that builds, without publishing, what the next edition would say today.
 
 → [Full development history](docs/status.md)
 
