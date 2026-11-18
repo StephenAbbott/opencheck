@@ -150,6 +150,14 @@ services:
       # re-check. Without it the meip source covers nothing.
       - key: OPENCHECK_MEIP_DB_FILE
         value: /var/data/meip.sqlite
+      # --- KvK answers on the disk (17 Nov 2026) ---
+      # KvK's open data allows one request a minute per IP and 200 every five
+      # minutes across all its users. On the ephemeral data root every deploy
+      # wiped every cached Dutch answer; here they are kept 30 days
+      # (OPENCHECK_KVK_CACHE_MAX_AGE_DAYS default). Small: one JSON file per
+      # KvK number read.
+      - key: OPENCHECK_KVK_CACHE_DIR
+        value: /var/data/kvk
       # --- The Florida wiring (30 Oct 2026): the Sunbiz index ---
       # sunbiz_florida.sqlite (~1.2 GB; ~350 MB gzipped) — every active record
       # and every record an LEI names, built quarterly from the Division of

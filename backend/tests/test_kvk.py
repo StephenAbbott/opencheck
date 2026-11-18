@@ -344,3 +344,54 @@ def test_knowability_says_kvk_publishes_no_people():
     sentence = statement_for("NL").sentence
     assert "officers and registered holdings" not in sentence
     assert "no officers or owners are published" in sentence
+
+
+async def test_answers_are_kept_in_the_kvk_cache_dir(adapter, monkeypatch, tmp_path):
+    """OPENCHECK_KVK_CACHE_DIR puts KvK's answers on the persistent disk, so a
+    deploy (which wipes the data root on Render) does not ask KvK again."""
+    disk = tmp_path / "disk"
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path / "ephemeral"))
+    monkeypatch.setenv("OPENCHECK_KVK_CACHE_DIR", str(disk))
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    from opencheck.config import get_settings
+
+    get_settings.cache_clear()
+    with respx.mock:
+        route = respx.get(f"{_URL}/33011433").mock(
+            return_value=Response(200, json={"kvkNummer": "33011433"})
+        )
+        await adapter.fetch("33011433", legal_name="Heineken N.V.")
+        # A fresh adapter, as after a deploy, reads the disk and sends nothing.
+        await KvKAdapter().fetch("33011433", legal_name="Heineken N.V.")
+    assert route.call_count == 1
+    assert (disk / "cache" / "live" / "kvk" / "number" / "33011433.json").is_file()
+    assert not (tmp_path / "ephemeral" / "cache" / "live" / "kvk").exists()
+    get_settings.cache_clear()
+
+
+async def test_a_cached_answer_older_than_the_limit_is_asked_again(
+    adapter, monkeypatch, tmp_path
+):
+    import json
+    import time
+
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    from opencheck.config import get_settings
+
+    get_settings.cache_clear()
+    assert get_settings().kvk_cache_max_age_days == 30.0
+    path = tmp_path / "cache" / "live" / "kvk" / "number" / "33011433.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps(
+            {"_cached_at": time.time() - 31 * 86_400, "payload": {"kvkNummer": "33011433"}}
+        )
+    )
+    with respx.mock:
+        route = respx.get(f"{_URL}/33011433").mock(
+            return_value=Response(200, json={"kvkNummer": "33011433"})
+        )
+        await adapter.fetch("33011433", legal_name="Heineken N.V.")
+    assert route.call_count == 1
+    get_settings.cache_clear()

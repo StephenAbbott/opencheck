@@ -11,6 +11,18 @@ reporting exceptions filed in their place. Other layers (the registers
 OpenCheck holds whole, then records re-read when a change is reported) are
 planned and will join the same series.
 
+**The Netherlands' register (KvK) is not in the series and will not join
+it.** KvK's open data can be read only one company at a time: one request a
+minute from each address, and 200 every five minutes shared by all its users.
+A pass over the roughly 111,700 Dutch LEIs would take about 78 days even if no
+request were refused, and would take much of a pool every KvK user depends
+on. KvK publishes no change feed to re-read only what changed, and its daily
+bulk file carries no KvK number to link a row to a company (Dutch law keeps
+personal data in public registers out of re-use; see
+[KvK in sources.md](sources.md#kvk-netherlands-what-the-open-data-can-and-cannot-carry)).
+Changes to Dutch companies reach the series only through GLEIF and, later,
+OpenSanctions.
+
 ## Where it is
 
 One GitHub release a month, tagged `bods-series-YYYY-MM`, on
