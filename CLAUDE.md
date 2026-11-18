@@ -5737,6 +5737,14 @@ re-derived otherwise:
 - **A later edition alone is not a valid BODS file**: its relationships name
   records published in earlier editions. Validate the editions joined in
   date order (`docs/bods-series.md` § "How it is checked against BODS").
+- **A closing statement is dated by its replacement** (Stephen, 18 Nov 2026;
+  `close_day`): the latest relationship statement the edition publishes about
+  the same subject, and for a party closed with its relationship, that
+  relationship's closing date; never before the record's last statement,
+  never after the edition, and the edition when nothing replaces it. Dated by
+  the edition, the preview of 18 Nov showed Beazley America with two parents
+  from 10 to 18 Nov. `publicationDate` and the statement id still carry the
+  edition.
 - **`updated` / `closed` statement ids carry the edition**; a `new` one is
   the lookup's `content_statement_id`.
 - **The ledger rides on each release** as `ledger.sqlite.gz.part-*` (GitHub's

@@ -378,3 +378,52 @@ def test_the_ledgers_migrations_are_contiguous():
     from opencheck import sqlite_schema
 
     sqlite_schema.check_contiguous(pl.MIGRATIONS)
+
+
+# -- the date of a closing statement (Stephen, 18 Nov 2026) ------------------
+
+
+def test_a_close_is_dated_by_the_statement_that_replaces_it(ledger):
+    """Beazley America, preview of 18 Nov 2026: GLEIF recorded the new parent
+    on 10 Nov and the edition closed the old one on the 18th, so both were
+    current for eight days."""
+    child, old, new = entity("c", "Child"), entity("o", "Old parent"), entity("n", "New parent")
+    run(ledger, E1, [child, old, new], [edge("c:direct-parent:o", child, old)])
+    moved = edge("c:direct-parent:n", child, new)
+    moved["statementDate"] = "2026-11-10"
+    out, _ = run(ledger, E2, [child, old, new], [moved])
+    closed = [s for s in out if s["recordStatus"] == "closed"]
+    assert [s["statementDate"] for s in closed] == ["2026-11-10"]
+    assert closed[0]["publicationDetails"]["publicationDate"] == E2
+    note = closed[0]["annotations"][0]["description"]
+    assert "dated 2026-11-10" in note
+    assert validate_annotations(closed[0]) == []
+
+
+def test_a_close_with_no_replacement_is_dated_by_the_edition(ledger):
+    child, old = entity("c", "Child"), entity("o", "Old parent")
+    run(ledger, E1, [child, old], [edge("c:direct-parent:o", child, old)])
+    out, _ = run(ledger, E2, [child, old], [])
+    closed = [s for s in out if s["recordStatus"] == "closed"]
+    assert [s["statementDate"] for s in closed] == [E2]
+    assert "dated" not in closed[0]["annotations"][0]["description"]
+
+
+def test_a_party_closed_with_its_relationship_shares_its_date(ledger):
+    """A reporting-exception party goes when a real parent replaces it."""
+    child, stand_in, new = entity("c", "Child"), entity("x", "Exception"), entity("n", "Parent")
+    run(ledger, E1, [child, stand_in, new], [edge("c:exception", child, stand_in)])
+    moved = edge("c:direct-parent:n", child, new)
+    moved["statementDate"] = "2026-11-16"
+    out, _ = run(ledger, E2, [child, new], [moved])
+    closed = {s["recordType"]: s["statementDate"] for s in out if s["recordStatus"] == "closed"}
+    assert closed == {"relationship": "2026-11-16", "entity": "2026-11-16"}
+
+
+def test_close_day_stays_between_the_last_statement_and_the_edition():
+    assert pl.close_day("2026-10-20", "2026-11-10", E2) == "2026-11-10"
+    # a replacement dated before the record's own last statement
+    assert pl.close_day("2026-11-12", "2019-11-12", E2) == "2026-11-12"
+    # a replacement dated after the edition
+    assert pl.close_day("2026-10-20", "2026-12-05", E2) == E2
+    assert pl.close_day("2026-10-20", None, E2) == E2
