@@ -43,10 +43,38 @@ lookups, persisted counters) decided:
   canonical-form fix (also this phase) before its rows mean anything.
   Counted and logged; not shown.
 
+**The second way in for liveness (18 Nov 2026, Stephen).** The 18 Nov reading
+found ``ariregister|gleif`` at 520 agree / 0 disagree: under 10 %, but it has
+never fired. The "at least one disagreement" rule stays — a pair that has
+never disagreed has not shown it *can*; until the REST tier of 17 Oct the
+Estonian index held no deleted company, so ariregister could only ever say
+"live" and every comparison read as agreement. A pair with no disagreement
+may now enter instead when it has at least :data:`ZERO_DISAGREE_MIN_DECIDED`
+decided comparisons **and** every register side of it (every side but GLEIF)
+read the company as ended at least once in the counted comparisons
+(``terminal_readings`` on the ``/consistencystats`` row, counted from the
+deploy that added it). That is the proof the comparison can disagree; volume
+alone is not. :func:`passes_gate` is the whole rule; a reading applies it and
+writes the result here by hand, as before.
+
 Pairs are stored sorted, as the counters key them.
 """
 
 from __future__ import annotations
+
+from typing import Any
+
+#: The Phase 337 gate: a row's ``disagree / (agree + disagree)`` must be
+#: under this.
+MAX_DISAGREE_RATE = 0.10
+
+#: The second way in for a liveness pair that has never disagreed: at least
+#: this many decided comparisons, with an ended reading on every register side.
+ZERO_DISAGREE_MIN_DECIDED = 200
+
+#: A source that is not a register for this purpose: its side need not show
+#: an ended reading (GLEIF's INACTIVE is rare and is not what is being tested).
+NOT_A_REGISTER_SIDE = frozenset({"gleif"})
 
 #: The ``/consistencystats`` reading these lists were generated from.
 READING = "2026-10-15"
@@ -162,3 +190,26 @@ def is_shown(field: str, source_a: str, source_b: str) -> bool:
         return False
     a, b = sorted((source_a, source_b))
     return (a, b) in pairs
+
+
+def passes_gate(field: str, source_a: str, source_b: str, row: dict[str, Any]) -> bool:
+    """Whether a ``/consistencystats`` row passes the gate (the reading's
+    rule, never consulted at request time).
+
+    The Phase 337 gate: ``disagree / (agree + disagree)`` under 10 % and at
+    least one disagreement. For ``liveness`` only, a second way in: no
+    disagreement, at least :data:`ZERO_DISAGREE_MIN_DECIDED` decided
+    comparisons, and at least one ended reading on every register side.
+    """
+    agree = int(row.get("agree") or 0)
+    disagree = int(row.get("disagree") or 0)
+    decided = agree + disagree
+    if not decided:
+        return False
+    if disagree >= 1:
+        return disagree / decided < MAX_DISAGREE_RATE
+    if field != "liveness" or decided < ZERO_DISAGREE_MIN_DECIDED:
+        return False
+    readings = row.get("terminal_readings") or {}
+    sides = [s for s in (source_a, source_b) if s not in NOT_A_REGISTER_SIDE]
+    return bool(sides) and all(int(readings.get(s) or 0) >= 1 for s in sides)
