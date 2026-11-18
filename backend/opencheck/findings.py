@@ -2229,6 +2229,53 @@ def finding_jar_lithuania(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence([lead, form, withheld])
 
 
+def finding_bg_tr(bundle: dict[str, Any]) -> str | None:
+    """What Bulgaria's Commercial Register's open data says (the Bulgaria
+    Commercial Register ticket, 18 Nov 2026).
+
+    * **No entry since 2021** says exactly that — the open data begins on
+      1 January 2021 — never that the company is not registered (rule 6).
+    * A deletion, insolvency or liquidation leads, dated.
+    * Counts say what the files hold: beneficial owners, owners and
+      managers **filed since 2021**. An absent list is unknown, so the
+      sentence never says "no beneficial owners"; it says the open data holds
+      none, which is a statement about the files.
+    """
+    from .sources.bg_tr import form_label
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        return (
+            "No entry in the Commercial Register's open data, which holds the "
+            "entries made since 1 January 2021 only."
+        )
+    cls = bundle.get("status_class")
+    status = str(bundle.get("status") or "").strip()
+    since = str(bundle.get("status_since") or "").strip()
+    registered = str(bundle.get("registered_on") or "").strip()
+    if cls in ("terminal", "pending") and status:
+        lead = f"{status[0].upper()}{status[1:]}" + (f" on {since}" if since and cls == "terminal" else (f" since {since}" if since else ""))
+    elif registered:
+        lead = f"Registered on {registered}"
+    else:
+        lead = "On the register, with entries since 2021"
+    form = form_label(bundle.get("legal_form_code"))
+    owners = len(bundle.get("beneficial_owners") or [])
+    bo = (
+        f"{owners} beneficial owner{'s' if owners != 1 else ''} filed"
+        if owners else "no beneficial owners in the open data since 2021"
+    )
+    parties = bundle.get("parties") or []
+    officers = sum(1 for p in parties if p.get("field") not in ("Partners", "SoleCapitalOwner", "PhysicalPersonTrader"))
+    holders = sum(1 for p in parties if p.get("field") in ("Partners", "SoleCapitalOwner"))
+    counts = [
+        f"{holders} partner{'s' if holders != 1 else ''} or owner{'s' if holders != 1 else ''}" if holders else None,
+        f"{officers} officer{'s' if officers != 1 else ''} or board member{'s' if officers != 1 else ''}" if officers else None,
+    ]
+    return clauses_to_sentence([lead, bo, *counts, form])
+
+
 def finding_bce_belgium(bundle: dict[str, Any]) -> str | None:
     """What Belgium's Crossroads Bank for Enterprises says: that the entity is
     on the register and since when, its juridical situation where it is not

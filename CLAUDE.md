@@ -2015,6 +2015,58 @@ otherwise:
   until the asset exists `covers_lei` is False and the source is never
   announced.
 
+## Bulgaria is an index of the Commercial Register's daily files (the Bulgaria Commercial Register ticket, 18 Nov 2026)
+
+`sources/bg_tr.py`, `scripts/build_bg_tr_index.py`, `scripts/fetch_bg_tr.py`,
+`scripts/refresh_bg_tr_index.sh`, `bods/mappers/bulgaria.py`,
+`sources/schemas/bg_tr.py`. Things that will be re-derived otherwise:
+
+- **data.egov.bg answers Bulgarian addresses only** (a VPN to Bulgaria is
+  enough; every datacentre and the UK are refused). So the refresh is by hand:
+  `refresh_bg_tr_index.sh` fetches, builds `--gzip` and replaces the
+  `bg-tr-index` release asset; `warm_index` downloads it at boot
+  (`BG_TR_DB_URL` / `BG_TR_DB_FILE`). It cannot be a workflow. Dataset
+  `2df0c2af-…`, **CC0**.
+- **Daily deltas, replayed.** One XML file per publication day since
+  1 January 2021 (1,784 on 18 Nov 2026); the 2008–2020 entries are listed on
+  the portal and hold no file. A `Deed` (one ЕИК) holds `SubDeed`s holding
+  field entries, `FieldOperation` Add / Erase, ordered by `FieldEntryNumber`.
+  A list Add carries the **whole** list; a list Erase names no `RecordID` and
+  clears it. Files are ordered by the header's `CreateDate`, never the name
+  (some names carry impossible dates), and a republished message (same `ID`)
+  is read once. **A field not entered since 2021 is not in the files**: an
+  absent list is unknown, never "none" — the finding, the coverage note on
+  the company statement and the disclosure status (`none_filed`, detail
+  `BG_SINCE_2021`, never `restricted`) all say so. A company with no entry
+  since 2021 is a note card (`not_found`), not a stub.
+- **Personal data is dropped in the builder** (Stephen, 18 Nov 2026):
+  beneficial owners keep name, nationality, country of residence and the
+  control and its extent. Never an address of a person, the `Indent` (a
+  salted hash of the ЕГН/ЛНЧ, or for some foreigners a raw birth date),
+  passport fields, or a free text that could carry either (`safe_text`). One
+  person on two lists of one company is one party through a company-scoped
+  key derived from the hash (`person_key`) — never the hash, and no key from a
+  birth date. A sole trader's seat keeps the place only. `BgTrBundle` refuses
+  a party carrying a personal key.
+- **Three RA codes file the same ЕИК**: RA000065 (the register, 5,614 ACTIVE
+  LEIs), RA000730 (BULSTAT), RA000731 (public-benefit register) → one deriver,
+  `BG-EIK` by RA, `RA_BY_COUNTRY["BG"]` RA000065 with the other two as
+  `sameNumberAuthorities`. **RA000066 (FSC) files funds' codes** and is never
+  dispatched. No name gate on the code join.
+- **Beneficial owners**: the rights code where filed (`_RIGHT_TYPES`);
+  most 2021 entries carry none, only words — a percentage in them makes a
+  `shareholding` (exact, or "повече от 25 на сто" as `exclusiveMinimum`),
+  else `otherInfluenceOrControl`. `SENIOR_MANAGEMENT_POSITION` is a senior
+  manager with `beneficialOwnershipOrControl: false` (the Estonian J/C rule).
+  `directOrIndirect` is unknown. Partners' percentages only where the filed
+  contributions reconcile to the capital within 1 %, annotated as
+  OpenCheck's arithmetic; non-profits hold no shares; liquidators and
+  procurators are officer-marked. The register's entry date of a list is
+  never a `startDate`.
+- The index is the default data-root path; nothing touches the response
+  `Cache` (the Phase 325 rule). Until the asset exists `covers_lei` is False
+  and the source is never announced.
+
 ## Pennsylvania is a live read of data.pa.gov (the Pennsylvania ticket, 12 Nov 2026)
 
 `sources/pa_dos.py`, `bods/mappers/us_pa.py`, `finding_pa_dos`, `_bh_pa_dos`.

@@ -101,6 +101,7 @@ DISCLOSES: dict[str, tuple[str, ...]] = {
     "companies_house": ("beneficial_owners",),
     "ariregister": ("beneficial_owners", "shareholders"),
     "edr_ukraine": ("beneficial_owners", "shareholders"),
+    "bg_tr": ("beneficial_owners", "shareholders"),
     "ur_latvia": ("beneficial_owners", "shareholders"),
     "rpvs_slovakia": ("beneficial_owners",),
     "cac_nigeria": ("beneficial_owners",),
@@ -149,6 +150,39 @@ _OFFICER_TYPES = frozenset({"seniorManagingOfficial", "boardMember", "boardChair
 # --- per-bundle facts the statements do not carry ---------------------------
 
 
+#: Bulgaria's open data holds the entries made since 1 January 2021 only.
+BG_SINCE_2021 = "none entered since 1 January 2021; earlier entries are not in the open data"
+
+
+def _bg_tr_hints(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Bulgaria's Commercial Register publishes beneficial owners in its open
+    data although the register restricts them on its own site, so a company
+    with none in the files is "None on record" with the reason the files give
+    — they start in 2021 — never "Not public". A list of people named because
+    no owner was identified (``SENIOR_MANAGEMENT_POSITION``) is ``none_exist``,
+    the Estonian rule."""
+    if raw.get("is_stub") or raw.get("not_found"):
+        return []
+    entries: list[dict[str, Any]] = []
+    owners = list(raw.get("beneficial_owners") or [])
+    if not owners:
+        entries.append(_entry("none_filed", "beneficial_owners", detail=BG_SINCE_2021))
+    else:
+        codes = [r.get("code") for o in owners for r in (o.get("rights") or []) if r.get("code")]
+        if codes and all(c == "SENIOR_MANAGEMENT_POSITION" for c in codes) and all(
+            o.get("rights") for o in owners
+        ):
+            n = len(owners)
+            entries.append(_entry(
+                "none_exist", "beneficial_owners",
+                detail=f"no owner identified; {n} senior manager{'' if n == 1 else 's'} named",
+            ))
+    holders = [p for p in raw.get("parties") or [] if p.get("field") in ("Partners", "SoleCapitalOwner")]
+    if not holders:
+        entries.append(_entry("none_filed", "shareholders", detail=BG_SINCE_2021))
+    return entries
+
+
 def bundle_hints(source_id: str, raw: Mapping[str, Any] | None) -> list[dict[str, Any]]:
     """Entries a source's raw bundle says and its statements cannot.
 
@@ -164,6 +198,8 @@ def bundle_hints(source_id: str, raw: Mapping[str, Any] | None) -> list[dict[str
         return []
     if source_id == "companies_house":
         return _companies_house_hints(raw)
+    if source_id == "bg_tr":
+        return _bg_tr_hints(raw)
     if source_id != "ariregister":
         return []
     if raw.get("bo_not_read"):

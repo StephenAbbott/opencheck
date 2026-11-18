@@ -634,6 +634,24 @@ from .mappers.ukraine import (  # noqa: F401  (re-exported, Phase 246)
     founder_is_placeholder,
     map_edr_ukraine,
 )
+from .mappers.bulgaria import (  # noqa: F401  (re-exported: the Bulgaria Commercial Register ticket)
+    BG_COVERAGE_NOTE,
+    _BG_PARTNER_SHARE_NOTE,
+    _BG_RIGHT_TYPES,
+    _BG_ROLE_INTERESTS,
+    _BG_SCHEME,
+    _BG_SCHEME_NAME,
+    _BG_SENIOR_MANAGER,
+    _BG_SOURCE,
+    _bg_amount,
+    _bg_owner_interests,
+    _bg_party_key,
+    _bg_party_statement,
+    _bg_role_interest,
+    _bg_share_from_percent,
+    bg_partner_shares,
+    map_bg_tr,
+)
 from .mappers.romania import (  # noqa: F401  (re-exported, Phase 246)
     RO_CUI_SCHEME,
     RO_CUI_SCHEME_NAME,
@@ -890,6 +908,13 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000567": ("UA-EDR", "EDRPOU — Unified State Register (Ukraine)"),
     "RA001026": ("UA-EDR", "EDRPOU — Unified State Register (Ukraine)"),
     "RA001027": ("UA-EDR", "EDRPOU — Unified State Register (Ukraine)"),
+    # Bulgaria — the Commercial Register (RA000065), BULSTAT (RA000730, the
+    # same number) and the public-benefit non-profit register (RA000731) all
+    # file the 9-digit ЕИК. RA000066 (the Financial Supervision Commission)
+    # files funds' codes and keeps its own RA code as the scheme.
+    "RA000065": ("BG-EIK", "ЕИК — Unified Identification Code (Bulgaria, Registry Agency)"),
+    "RA000730": ("BG-EIK", "ЕИК — Unified Identification Code (Bulgaria, Registry Agency)"),
+    "RA000731": ("BG-EIK", "ЕИК — Unified Identification Code (Bulgaria, Registry Agency)"),
     # ── Phase 239: every RA code an OpenCheck adapter dispatches on ──────
     # Until then these fell through to ``scheme: ""`` — Equinor exported
     # ``{"id": "923 609 016", "scheme": ""}`` — so a GLEIF record and the

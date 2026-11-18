@@ -302,6 +302,22 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # The Bulgarian Commercial Register index: built on a Bulgarian
+    # connection (data.egov.bg is geo-blocked) and downloaded here. Until it
+    # lands ``bg_tr`` is not announced (``covers_lei``).
+    try:
+        from .sources.bg_tr import warm_index as warm_bg_tr_index
+
+        stats = await asyncio.to_thread(warm_bg_tr_index)
+        log.info("BG Commercial Register index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "BG Commercial Register index warm-up failed (the source is not "
+            "announced until present): %s",
+            exc,
+        )
     # The Ukrainian ЄДР index — the same arrangement as Lithuania's: built
     # off-datacentre (data.gov.ua refuses the download from every datacentre
     # address) and downloaded here when absent or when the asset changed,

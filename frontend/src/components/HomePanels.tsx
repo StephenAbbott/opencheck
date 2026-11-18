@@ -311,7 +311,7 @@ export function ExampleLeiPicker({
  * panel's figure read this one constant. The hero subline in App.tsx carries
  * its own copy (see CLAUDE.md's new-adapter checklist).
  */
-const HOW_IT_WORKS_SOURCE_COUNT = 72;
+const HOW_IT_WORKS_SOURCE_COUNT = 73;
 
 /** The summary panel's figures, each taken from a step's own text. */
 const HOW_IT_WORKS_FIGURES = [
