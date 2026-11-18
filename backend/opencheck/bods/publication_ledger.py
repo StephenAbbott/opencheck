@@ -207,23 +207,47 @@ def _parties(stmt: dict[str, Any]) -> tuple[str, str]:
     )
 
 
-def parties_changed_note(edition: str) -> dict[str, Any]:
+def _dated_sentence(closed_on: str, edition: str) -> str:
+    """How a closing statement was dated, said on the statement."""
+    if closed_on == edition:
+        return ""
+    return (
+        f" The statement is dated {closed_on}, the date of the statement that replaces "
+        "it in this edition."
+    )
+
+
+def close_day(last: str | None, replacement: str | None, edition: str) -> str:
+    """The ``statementDate`` of a closing statement. The day of the statement
+    that replaces the record in this edition, where there is one: a close
+    dated by the edition beside a replacement dated by the source leaves both
+    current in between. Never before the record's own last statement, never
+    after the edition, and the edition when nothing replaces it."""
+    if not replacement:
+        return edition
+    day = replacement[:10]
+    if last and last[:10] > day:
+        day = last[:10]
+    return edition if day > edition else day
+
+
+def parties_changed_note(edition: str, closed_on: str | None = None) -> dict[str, Any]:
     return commenting(
         "/recordStatus",
         f"Closed in the edition of {edition} because the relationship's subject or "
         "interested party changed. BODS ends a relationship record when either party "
         "changes; the new arrangement is published as a new record. The details are the "
-        "last ones published.",
+        "last ones published." + _dated_sentence(closed_on or edition, edition),
         creation_date=edition,
     )
 
 
-def closure_note(source_id: str, edition: str) -> dict[str, Any]:
+def closure_note(source_id: str, edition: str, closed_on: str | None = None) -> dict[str, Any]:
     return commenting(
         "/recordStatus",
         f"Closed because the source ({source_id}), read whole for the edition of {edition}, "
         "no longer carries this record. The source gives no end date; the details are the "
-        "last ones published.",
+        "last ones published." + _dated_sentence(closed_on or edition, edition),
         creation_date=edition,
     )
 
@@ -236,9 +260,34 @@ class Edition:
     edition: str
     counts: dict[str, int] = field(default_factory=dict)
     _relationships_applied: bool = False
+    #: subject recordId → the latest ``statementDate`` among the relationship
+    #: statements this edition published about it. What a closing statement
+    #: about the same subject is dated by (``close_day``).
+    _replaced_on: dict[str, str] = field(default_factory=dict)
+    #: party recordId → the latest day a relationship naming it was closed in
+    #: this edition, so a party closed with its relationship shares its date.
+    _closed_on: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self._day = _day(self.edition)
+
+    def _note_published(self, stmt: dict[str, Any]) -> None:
+        """Remember a published, live relationship statement's date under its
+        subject."""
+        subject = (stmt.get("recordDetails") or {}).get("subject")
+        date = stmt.get("statementDate")
+        if (
+            isinstance(subject, str)
+            and isinstance(date, str)
+            and date[:10] > self._replaced_on.get(subject, "")
+        ):
+            self._replaced_on[subject] = date[:10]
+
+    def _note_closed(self, stmt: dict[str, Any], closed_on: str) -> None:
+        details = stmt.get("recordDetails") or {}
+        for ref in (details.get("subject"), details.get("interestedParty")):
+            if isinstance(ref, str) and closed_on > self._closed_on.get(ref, ""):
+                self._closed_on[ref] = closed_on
 
     def _count(self, source_id: str, outcome: str, n: int = 1) -> None:
         key = f"{source_id}|{outcome}"
@@ -325,6 +374,8 @@ class Edition:
                 self._count(source_id, "new" if row is None else "returned")
                 if record_type == "relationship":
                     self._relationships_applied = True
+                    if status != "closed":
+                        self._note_published(out)
                 yield out
                 continue
 
@@ -355,9 +406,13 @@ class Edition:
                 last = ledger.unpack(body_row["body"])
                 if _parties(last) != _parties(stmt):
                     last["recordType"] = record_type
-                    last["statementDate"] = self.edition
+                    closed_on = close_day(
+                        last.get("statementDate"), stmt.get("statementDate"), self.edition
+                    )
+                    last["statementDate"] = closed_on
                     closed = self._publish(last, "closed", record_id)
-                    closed["annotations"] = [parties_changed_note(self.edition)]
+                    closed["annotations"] = [parties_changed_note(self.edition, closed_on)]
+                    self._note_closed(closed, closed_on)
                     life = int(row["life"]) + 1
                     new_id = life_record_id(base, life)
                     aliases[base] = new_id
@@ -376,6 +431,7 @@ class Edition:
                     self._count(source_id, "closed")
                     self._count(source_id, "new")
                     self._count(source_id, "parties_changed")
+                    self._note_published(out)
                     yield closed
                     yield out
                     continue
@@ -399,6 +455,8 @@ class Edition:
             self._count(
                 source_id, "closed" if incoming_closed else ("corrected" if corrected else "updated")
             )
+            if record_type == "relationship" and not incoming_closed:
+                self._note_published(out)
             yield out
 
     def missing(self, source_id: str) -> tuple[int, int]:
@@ -436,9 +494,17 @@ class Edition:
             record_id = base if row["record_id"] is None else _unkey(row["record_id"])
             body = ledger.unpack(row["body"])
             body["recordType"] = row["record_type"]
-            body["statementDate"] = self.edition
+            if row["record_type"] == "relationship":
+                subject = (body.get("recordDetails") or {}).get("subject")
+                replacement = self._replaced_on.get(subject) if isinstance(subject, str) else None
+            else:
+                replacement = self._closed_on.get(record_id)
+            closed_on = close_day(body.get("statementDate"), replacement, self.edition)
+            body["statementDate"] = closed_on
             out = self._publish(body, "closed", record_id)
-            out["annotations"] = [closure_note(source_id, self.edition)]
+            out["annotations"] = [closure_note(source_id, self.edition, closed_on)]
+            if row["record_type"] == "relationship":
+                self._note_closed(out, closed_on)
             conn.execute(
                 "UPDATE records SET status = 'closed', statement_id = ?, last_edition = ?, "
                 "statements = statements + 1, body = ? WHERE base_id = ?",

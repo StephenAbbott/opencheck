@@ -64,7 +64,15 @@ Rules worth knowing:
 
 - **`publicationDate` is the edition**, the first of the month. It is when
   OpenCheck published the statement. `statementDate` is GLEIF's own date for
-  the record; on a `closed` statement it is the edition.
+  the record. A `closed` statement is dated by the statement that replaces
+  the record in the same edition, where there is one: the latest
+  relationship statement the edition publishes about the same company, and
+  for a party closed with its relationship, that relationship's closing
+  date. Dated by the edition, the old parent and the new one would both read
+  as current from the day GLEIF recorded the change until the edition (found
+  in the preview of 18 Nov 2026). The date is never before the record's own
+  last statement and never after the edition; with no replacement it is the
+  edition. The statement's annotation says which.
 - **A change in dates alone is not a change.** `statementDate`, the `source`
   block and annotations are not compared, so a record GLEIF re-stamped
   without changing publishes nothing.
