@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 556** — A preview of the monthly BODS series can read GLEIF's delta files from a release when GLEIF's storage refuses the GitHub runner.
+**Latest: Phase 557** — The Germany and Greece beneficial ownership access rows now record the Bundestag's passage of the Zollfinanzgerechtigkeitsgesetz and the publication of Greek Law 5354/2026.
 
 → [Full development history](docs/status.md)
 

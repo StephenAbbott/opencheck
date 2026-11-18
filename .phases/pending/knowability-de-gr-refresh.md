@@ -1,5 +1,0 @@
----
-title: Germany and Greece knowability rows re-synced after the 18 Nov 2026 weekly watch.
-readme: The Germany and Greece beneficial ownership access rows now record the Bundestag's passage of the Zollfinanzgerechtigkeitsgesetz and the publication of Greek Law 5354/2026.
----
-Stephen accepted four proposals from the EU legitimate interest weekly watch of 18 Nov 2026 and they were applied to the Notion table. Germany: the Zollfinanzgerechtigkeitsgesetz (BT-Drs. 21/8282), which transposes AMLD6 Arts 11–13 and 15 as §§23/23a GwG, passed the Bundestag on 12 Nov 2026 on the Finanzausschuss recommendation (Drs. 21/9136); the Bundesrat and BGBl publication are still to come, planned in force 1 Jan 2027 (pending changes and 6AMLD details). Greece: the omnibus bill is Law 5354/2026, published in ΦΕΚ Α΄ 184/9.11.2026 (pending changes and 6AMLD details); access status stays authorities_and_obliged_entities_only and 6AMLD LIA stays No until the start of the AADE access route is read in the ΦΕΚ. Both rows are stamped Last verified 18 Nov 2026. Only the DE and GR rows were taken from this pull: the Notion SQL export drops the page and date mentions other rows carry.
