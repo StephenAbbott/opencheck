@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 567** — The History tab now says the Latvian register withholds joint-stock companies' shareholders from the public, rather than reporting a failed read.
+**Latest: Phase 568** — Latvia's knowability statement now records that joint-stock company shareholders who are natural persons moved to the non-public part of the register on 19 November 2026.
 
 → [Full development history](docs/status.md)
 
