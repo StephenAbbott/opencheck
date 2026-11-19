@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 566** — The related-party screens no longer match a person to a record that shares their other names but not their given name.
+**Latest: Phase 567** — The History tab now says the Latvian register withholds joint-stock companies' shareholders from the public, rather than reporting a failed read.
 
 → [Full development history](docs/status.md)
 
