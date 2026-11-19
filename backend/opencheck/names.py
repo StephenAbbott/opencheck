@@ -721,6 +721,75 @@ def patronymics_conflict(
         return False
     return not any(_father_keys_agree(a, b) for a in mine for b in theirs)
 
+# ----------------------------------------------------------------------
+# Given names (the Bulgarian PEP ticket, 19 Nov 2026)
+# ----------------------------------------------------------------------
+# A token-sort score ignores order, so two three-part names that share two
+# tokens clear the gate whatever the third says: "Елица Петрова Рускова"
+# scored 0.905 against "НЕЛИ РУСКОВА ПЕТРОВА" — the patronymic and family
+# name swapped, the given names (Елица, Нели) different. In Bulgarian order
+# they are two people with different fathers, and a Bulgarian patronymic
+# (-ов / -ова, -ев / -ева) is shaped like a surname, so the patronymic gate
+# cannot see it. The rule here is order-free: two names conflict when each
+# carries a name token that agrees with nothing in the other. A shorter name
+# whose tokens all appear in the longer one ("Anna Ivanova" beside "Anna
+# Petrova Ivanova") is a subset, never a conflict.
+
+#: Whole-token similarity above which two given names are spellings of one
+#: name for this gate ("Mohammed" / "Muhammad" 0.75). Deliberately loose: the
+#: gate drops a match only when a token on *each* side has no near partner.
+_GIVEN_NAME_FLOOR = 0.75
+
+
+def _loosely_agrees(token: str, candidates: list[str]) -> bool:
+    if _person_token_agrees(token, candidates):
+        return True
+    key = _father_key(token)
+    for c in candidates:
+        if len(token) >= 3 and len(c) >= 3 and (
+            c.startswith(token) or token.startswith(c)
+        ):
+            return True  # Alex / Alexander
+        if difflib.SequenceMatcher(None, token, c).ratio() >= _GIVEN_NAME_FLOOR:
+            return True
+        # Ukrainian and Russian spellings of one given name (Serhii / Sergei,
+        # Kyrylo / Kirill) — the fold the patronymic gate uses.
+        if len(key) >= 3 and key == _father_key(c):
+            return True
+    return False
+
+
+def _name_tokens(name: str | None) -> list[str]:
+    return [
+        t for t in normalise_name(strip_person_prefixes(name)).split() if len(t) > 1
+    ]
+
+
+def person_names_conflict(ours: str | None, their_names: Iterable[str | None]) -> bool:
+    """True when *ours* and every multi-part name the record carries each
+    hold a name token the other side lacks — two different people who share
+    the rest of their names.
+
+    Names of fewer than two tokens (initials ignored) cannot conflict and are
+    skipped; a record with no multi-part name keeps the match. One record
+    name that does not conflict keeps it too.
+    """
+    mine = _name_tokens(ours)
+    if len(mine) < 2:
+        return False
+    compared = False
+    for name in their_names:
+        theirs = _name_tokens(name)
+        if len(theirs) < 2:
+            continue
+        compared = True
+        only_mine = any(not _loosely_agrees(t, theirs) for t in mine)
+        only_theirs = any(not _loosely_agrees(t, mine) for t in theirs)
+        if not (only_mine and only_theirs):
+            return False
+    return compared
+
+
 def despace(comparable: str) -> str:
     """Space-stripped variant of an already-comparable form, used as a
     secondary merge key so tokenisation artefacts still collide
