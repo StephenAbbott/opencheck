@@ -479,19 +479,31 @@ async def fetch_timeline(lei: str) -> Timeline:
     # only for people: the register publishes no end dates, and the tab says
     # so. Best-effort; never sinks the timeline.
     lv_events = []
+    lv_unavailable: str | None = None
     if lv_regcode and settings.allow_live:
+        from ..sources import REGISTRY
+        from ..sources.ur_latvia import UrLatviaUnavailable
+
         try:
-            from ..sources import REGISTRY
             lv_adapter: Any = REGISTRY["ur_latvia"]
             data = await lv_adapter.fetch_timeline_data(lv_regcode, legal_name=legal_name or "")
+        except UrLatviaUnavailable as exc:
+            # Phase 262: a register that did not answer is said on the tab
+            # (``registers_unavailable``), never dropped as if it had nothing.
+            log.warning("timeline: UR Latvia did not answer for %s: %s", lv_regcode, exc.reason)
+            data, lv_unavailable = None, exc.reason
         except Exception:  # noqa: BLE001
-            data = None
+            log.warning("timeline: UR Latvia read failed for %s", lv_regcode, exc_info=True)
+            data, lv_unavailable = None, "upstream_error"
         if data:
             if data.get("unavailable"):
                 log.warning(
                     "timeline: UR Latvia tables did not answer for %s: %s",
                     lv_regcode, ", ".join(data["unavailable"]),
                 )
+                # Some tables answered and some did not: what was read is
+                # shown, and the tab says the rest is unchecked.
+                lv_unavailable = "partial"
             lv_events = ur_latvia_change_events(data)
 
     # Israel — the Corporations Authority's change log, from the index (no
@@ -624,7 +636,11 @@ async def fetch_timeline(lei: str) -> Timeline:
         timeline.registers_kept_since = {"ica_israel": il_kept_since}
     unavailable = {
         source_id: reason
-        for source_id, reason in (("bodacc", bodacc_unavailable), ("joafe", joafe_unavailable))
+        for source_id, reason in (
+            ("bodacc", bodacc_unavailable),
+            ("joafe", joafe_unavailable),
+            ("ur_latvia", lv_unavailable),
+        )
         if reason
     }
     if unavailable:
