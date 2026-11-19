@@ -62,6 +62,7 @@ from typing import Any
 
 from .. import degradation, provenance
 from ..config import get_settings
+from ..findings import human_date
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.bg_tr import BgTrBundle
@@ -258,7 +259,7 @@ def cut_date(meta: dict[str, str] | None = None) -> datetime | None:
 
 def declare_snapshot(meta: dict[str, str] | None = None) -> None:
     meta = read_meta() if meta is None else meta
-    cut = meta.get("cut") or ""
+    cut = human_date(meta.get("cut"))
     provenance.record_snapshot(
         retrieved_at=provenance.parse_moment(meta.get("built_at")),
         source_as_of=cut_date(meta),

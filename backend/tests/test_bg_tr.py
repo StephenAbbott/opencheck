@@ -534,3 +534,21 @@ def test_the_finding_counts_people_not_entries() -> None:
         {"name": "Б", "key": "k2", "field": "BoardOfManagers2"},
     ]}
     assert "2 officers or board members" in finding_bg_tr(bundle)
+
+
+def test_the_snapshot_detail_writes_the_cut_in_words() -> None:
+    """The data-as-of line says "17 November 2026", like OPEN_DATA_SINCE,
+    never the ISO cut (post-deploy test, 19 Nov 2026)."""
+    from opencheck import provenance
+
+    with provenance.recording() as recorder:
+        bg_tr.declare_snapshot({"cut": "2026-11-17", "built_at": "2026-11-18T09:00:00Z"})
+    detail = recorder.resolve().detail
+    assert detail == (
+        "Commercial Register open data, entries 1 January 2021 to 17 November 2026"
+    )
+    assert "2026-11-17" not in detail
+
+    with provenance.recording() as recorder:
+        bg_tr.declare_snapshot({})
+    assert recorder.resolve().detail == "Commercial Register open data"
