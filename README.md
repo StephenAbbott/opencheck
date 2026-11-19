@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 565** — A company missing from Bulgaria's open data, and from eleven other registers' indexes, now reads as "no record" rather than "beneficial owners not public".
+**Latest: Phase 566** — The related-party screens no longer match a person to a record that shares their other names but not their given name.
 
 → [Full development history](docs/status.md)
 
