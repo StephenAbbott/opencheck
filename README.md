@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 564** — The Bulgaria card's data-as-of line now gives the cut as a date in words, like the date beside it.
+**Latest: Phase 565** — A company missing from Bulgaria's open data, and from eleven other registers' indexes, now reads as "no record" rather than "beneficial owners not public".
 
 → [Full development history](docs/status.md)
 
