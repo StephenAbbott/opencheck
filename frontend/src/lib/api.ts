@@ -1073,6 +1073,9 @@ export interface HistoryResponse {
   registers_unavailable?: Record<string, string>;
   /** `{source_id: true}` — a register's list cut at OpenCheck's cap. */
   registers_truncated?: Record<string, boolean>;
+  /** `{source_id: [table]}` — part of a register's data it refuses to the
+   *  public (UR Latvia's AS stockholders, from 19 Nov 2026). Not a failure. */
+  registers_withheld?: Record<string, string[]>;
 }
 
 /** Fetch the merged change history for an LEI — every register OpenCheck

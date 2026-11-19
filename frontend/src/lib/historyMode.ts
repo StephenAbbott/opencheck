@@ -295,6 +295,28 @@ export function unavailableRegisterLines(data: HistoryResponse): string[] {
     );
 }
 
+/** What a register withholds from the public, by table (`registers_withheld`). */
+const WITHHELD_WORDS: Record<string, string> = {
+  stockholders:
+    "no longer lets the public read the shareholders of a joint-stock company (akciju sabiedrība), so no shareholder of one is shown here and their arrivals are not dated",
+};
+
+/**
+ * A sentence per register that withholds part of its data from the public.
+ * It is the register's choice, said apart from a register that did not
+ * answer: trying again will not bring it back.
+ */
+export function withheldRegisterLines(data: HistoryResponse): string[] {
+  return Object.entries(data.registers_withheld ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .flatMap(([s, tables]) =>
+      tables.map(
+        (t) =>
+          `${historySourceLabel(s)} ${WITHHELD_WORDS[t] ?? `withholds its ${t} from the public, so they are not shown here`}. That is the register's restriction, not a finding about the company.`,
+      ),
+    );
+}
+
 /**
  * Whether a row's date is one of INSEE's processing dates, whose year is right
  * and whose day is not (the Sirene history ticket, decision C): the emitter

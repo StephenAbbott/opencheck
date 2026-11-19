@@ -288,6 +288,7 @@ The Time Machine: how the company's records changed, merged across every registe
 | `registers_kept_since` | `dict[str, str]` | `{}` | `{source_id: ISO day}` — for a register whose own change log keeps a limited window (the Israel Corporations Authority publishes one year), the earliest day OpenCheck's kept copy reaches. Before it, an empty timeline from that register says nothing. |
 | `registers_unavailable` | `dict[str, str]` | `{}` | `{source_id: reason}` for a register that was asked and did not answer (BODACC, the JOAFE, UR Latvia: `timeout` / `rate_limited` / `upstream_error`; `partial` when UR Latvia answered for some tables and not others). Its silence on the timeline is unchecked, not empty. |
 | `registers_truncated` | `dict[str, bool]` | `{}` | `{source_id: true}` for a register whose list was cut at OpenCheck's cap (BODACC reads 1,000 notices, newest first: the oldest are missing). |
+| `registers_withheld` | `dict[str, list[str]]` | `{}` | `{source_id: [table, …]}` for a register that refuses part of its data to the public (UR Latvia: `stockholders`, the AS shareholders, from 19 Nov 2026). Withheld by the register, not a failure to retry. |
 
 #### `HistoryEntry`
 

@@ -480,6 +480,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     # so. Best-effort; never sinks the timeline.
     lv_events = []
     lv_unavailable: str | None = None
+    lv_withheld: list[str] = []
     if lv_regcode and settings.allow_live:
         from ..sources import REGISTRY
         from ..sources.ur_latvia import UrLatviaUnavailable
@@ -504,6 +505,9 @@ async def fetch_timeline(lei: str) -> Timeline:
                 # Some tables answered and some did not: what was read is
                 # shown, and the tab says the rest is unchecked.
                 lv_unavailable = "partial"
+            # A table the register refuses to the public is said as withheld,
+            # never as a failure to try again.
+            lv_withheld = list(data.get("withheld") or [])
             lv_events = ur_latvia_change_events(data)
 
     # Israel — the Corporations Authority's change log, from the index (no
@@ -647,6 +651,8 @@ async def fetch_timeline(lei: str) -> Timeline:
         timeline.registers_unavailable = unavailable
     if bodacc_truncated:
         timeline.registers_truncated = {"bodacc": True}
+    if lv_withheld:
+        timeline.registers_withheld = {"ur_latvia": lv_withheld}
     timeline.filings_truncated = ch_filings_truncated
     # Phase 198: whether the officers list was READ, not whether it had rows.
     # An empty board stream means one of two very different things and the tab

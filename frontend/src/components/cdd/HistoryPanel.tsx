@@ -48,6 +48,7 @@ import {
   noiseEventsOf,
   silentRegisters,
   unavailableRegisterLines,
+  withheldRegisterLines,
   VISIBLE_ROWS,
 } from "../../lib/historyMode";
 import { describeFetchFailure, panelError, type PanelError, type PanelId } from "../../lib/panelErrors";
@@ -256,6 +257,11 @@ export default function HistoryPanel({
               >
                 {line}
               </div>
+            ))}
+            {withheldRegisterLines(data).map((line) => (
+              <p key={line} className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[82ch]">
+                {line}
+              </p>
             ))}
             {registerReadNotes(data).map((note) => (
               <p key={note} className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[82ch]">
