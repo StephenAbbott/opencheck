@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 561** — The monthly BODS series now counts relationships that arrive already closed separately from new records, and its release notes describe closing dates as the documentation does.
+**Latest: Phase 562** — When data.gov.lv does not answer, the Latvian register now reads as not answering instead of caching an empty answer that showed owners as "none filed".
 
 → [Full development history](docs/status.md)
 
