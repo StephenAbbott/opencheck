@@ -507,3 +507,46 @@ def test_subject_ids_from_other_sources_fall_back_to_the_stamped_subject() -> No
     entries = disclosure.entries_from_statements(
         "companies_house", _ch(payload), AS_OF, subject_ids=["gleif-only"])
     assert [e["value"] for e in entries] == ["declared"]
+
+
+# --- a note card is "no record", never "Not public" ------------------------------
+
+_NOTE_CARD_BUILDERS = (
+    "ariregister", "onrc_romania", "jar_lithuania", "edr_ukraine", "bg_tr",
+    "cyprus_drcor", "ica_israel", "si_prs", "nta_japan", "oece_rnp",
+    "bce_belgium", "corporations_canada",
+)
+
+
+@pytest.mark.parametrize("source_id", _NOTE_CARD_BUILDERS)
+def test_an_index_miss_note_card_carries_not_found(source_id: str) -> None:
+    """Coverage, the MCP ``sources`` row and the disclosure status all read
+    ``raw.not_found`` to tell a note card from a record. Bulgaria's card left
+    it out, so a company missing from the open data counted as "with data"
+    and its beneficial owners fell through to "Not public" (19 Nov 2026)."""
+    from opencheck.routers import hit_builders
+    from opencheck.routers.lookup import _LookupCtx
+
+    builder = getattr(hit_builders, f"_bh_{source_id}")
+    raw = {"not_found": True, "is_stub": False, "coverage_note": "not in the index"}
+    hit = builder(raw, "831391124", _LookupCtx(lei="254900GJOBKSEBN2NA75", legal_name="X"))
+    assert hit.raw.get("not_found") is True
+    assert hit.identifiers == {}
+
+
+def test_a_bulgarian_company_missing_from_the_open_data_is_no_record() -> None:
+    """СДРУЖЕНИЕ БЪЛГАРСКА СТОПАНСКА КАМАРА (254900GJOBKSEBN2NA75): the index
+    holds no entry since 2021. Bulgaria's register access is restricted, but
+    the open data publishes owners, so the honest value is the source's
+    absence of a record — not "restricted"."""
+    from opencheck.routers.hit_builders import _bh_bg_tr
+    from opencheck.routers.lookup import _LookupCtx
+
+    card = _bh_bg_tr(
+        {"not_found": True, "is_stub": False, "coverage_note": "no entry since 2021"},
+        "831391124", _LookupCtx(lei="254900GJOBKSEBN2NA75", legal_name="X"),
+    ).model_dump()
+    knowability = {"code": "BG", "access": "legitimate_interest", "stated_absence": False}
+    hints = {"bg_tr": disclosure.bundle_hints("bg_tr", card["raw"])}
+    out = _lookup([], [card], knowability=knowability, hints=hints, countries={"bg_tr": "BG"})
+    assert out["sources"]["bg_tr"]["entries"] == [{"value": "no_record", "covers": None}]
