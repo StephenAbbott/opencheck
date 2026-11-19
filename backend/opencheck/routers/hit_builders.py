@@ -260,7 +260,7 @@ def _bh_ariregister(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"EE-ARIREGISTER {local_id} · not in the register",
             finding=finding_ariregister(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note"), "cut": r.get("cut")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True, "cut": r.get("cut")},
         )
     return _hit(
         "ariregister", local_id,
@@ -690,7 +690,7 @@ def _bh_onrc_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"RO {local_id} · not in the index",
             finding=finding_onrc_romania(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
 
     company = r.get("company") or {}
@@ -976,7 +976,7 @@ def _bh_jar_lithuania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"LT-JAR {local_id} · not in the index",
             finding=finding_jar_lithuania(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     summary = f"LT-JAR {local_id}"
     if r.get("deregistered"):
@@ -1013,7 +1013,7 @@ def _bh_edr_ukraine(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"UA-EDR {local_id} · not in the index",
             finding=finding_edr_ukraine(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     summary = f"UA-EDR {local_id}"
     stan = ((r.get("entity") or {}).get("stan") or "").strip()
@@ -1045,7 +1045,7 @@ def _bh_bg_tr(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"BG {local_id} · no entry in the open data since 2021",
             finding=finding_bg_tr(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     summary = f"BG {local_id}"
     if r.get("status_class") in ("terminal", "pending") and r.get("status"):
@@ -1082,7 +1082,7 @@ def _bh_cyprus_drcor(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"CY {number} · not in the index",
             finding=finding_cyprus_drcor(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     summary = f"CY {number}"
     cls = status_class(r.get("status"))
@@ -1119,7 +1119,7 @@ def _bh_ica_israel(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"IL {local_id} · not in the index",
             finding=finding_ica_israel(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     summary = f"IL {local_id}"
     cls = r.get("status_class") or "unknown"
@@ -1155,7 +1155,7 @@ def _bh_si_prs(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"SI {local_id} · not in the index",
             finding=finding_si_prs(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     return _hit(
         "si_prs", local_id,
@@ -1187,7 +1187,7 @@ def _bh_nta_japan(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"JP {local_id} · not in the index",
             finding=finding_nta_japan(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     number = r.get("number") or local_id
     segments = [f"JP {number}"]
@@ -1262,7 +1262,7 @@ def _bh_oece_rnp(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"PE RUC {local_id} · not a registered supplier",
             finding=finding_oece_rnp(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     ruc = r.get("ruc") or local_id
     return _hit(
@@ -1397,7 +1397,7 @@ def _bh_bce_belgium(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             summary=f"BE {dotted} · not in the index",
             finding=finding_bce_belgium(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     summary = f"BE {dotted}"
     if (r.get("status_class") or "live") != "live":
@@ -1438,7 +1438,7 @@ def _bh_corporations_canada(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHi
             summary=f"CA-CC {corp_id} · not on the federal register",
             finding=finding_corporations_canada(r),
             identifiers={},
-            raw={"coverage_note": r.get("coverage_note")},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
         )
     corp = r.get("corporation") or {}
     row = r.get("index") or {}
