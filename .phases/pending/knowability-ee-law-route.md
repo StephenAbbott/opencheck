@@ -1,5 +1,0 @@
----
-title: Estonia knowability row re-synced: the beneficial ownership restriction now needs a change to the law.
-readme: The Estonia beneficial ownership access row now records that the Ministry of Finance will amend the law, not issue a regulation, before restricting public access.
----
-ERR's radio news of 2 Nov 2026 (transcribed and translated 19 Nov 2026) reported that the Ministry of Finance still plans to restrict public access to Estonian beneficial ownership data, but will now amend the law rather than use the faster ministerial regulation it planned for 10 Jul 2026, after feedback from the Ministries of Justice and Digital Affairs. No draft or date was announced, Latvia's keep-it-public model was rejected, and the Ministry would vet applications itself, prioritising journalists. Access status stays public: the data stays open until a law is passed and in force. The Estonia row's pending changes and sources gain the ERR story, and Stephen stamped it Last verified 19 Nov 2026. Only the EE row was taken from the Notion pull: the SQL export drops the page and date mentions other rows carry.

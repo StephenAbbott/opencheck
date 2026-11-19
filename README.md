@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 562** — When data.gov.lv does not answer, the Latvian register now reads as not answering instead of caching an empty answer that showed owners as "none filed".
+**Latest: Phase 563** — The Estonia beneficial ownership access row now records that the Ministry of Finance will amend the law, not issue a regulation, before restricting public access.
 
 → [Full development history](docs/status.md)
 
