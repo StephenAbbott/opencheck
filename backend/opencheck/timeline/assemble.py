@@ -133,8 +133,9 @@ class Timeline:
     #: for the Israel Corporations Authority, whose file holds one year.
     registers_kept_since: dict[str, str] = field(default_factory=dict)
     #: ``{source_id: reason}`` for a register that was asked and did not
-    #: answer (BODACC, the JOAFE: ``timeout`` / ``rate_limited`` / ``upstream_error``),
-    #: so its silence is never read as "no notices".
+    #: answer (BODACC, the JOAFE, UR Latvia: ``timeout`` / ``rate_limited`` /
+    #: ``upstream_error``, or ``partial`` for a read that answered only in
+    #: part), so its silence is never read as "no notices".
     registers_unavailable: dict[str, str] = field(default_factory=dict)
     #: ``{source_id: True}`` for a register whose list was cut at OpenCheck's
     #: page cap (BODACC reads 1,000 notices, newest first).

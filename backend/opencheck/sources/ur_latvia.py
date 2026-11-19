@@ -63,6 +63,7 @@ import logging
 from typing import Any
 from urllib.parse import quote
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -98,6 +99,44 @@ _CACHE_NS = "ur_latvia"
 
 # GLEIF Registration Authority code for Latvia's UR.
 LV_RA_CODE: str = "RA000423"
+
+#: Phase 262: a table that did not answer is never read as an empty one. The
+#: sentences name the register, never the company (``degradation.record``).
+_ENTITY_FAILED_DETAIL = (
+    "The Latvian Register of Enterprises (data.gov.lv) did not answer, so the "
+    "company's record was not read."
+)
+_TABLES_FAILED_DETAIL = (
+    "The Latvian Register of Enterprises (data.gov.lv) answered only in part: "
+    "{tables} could not be read, so an empty list there is unchecked."
+)
+#: The lookup's tables, in the words the degradation sentence uses.
+_TABLE_WORDS = {
+    "historical_names": "former names",
+    "beneficial_owners": "beneficial owners",
+    "officers": "officers",
+    "members": "members",
+}
+
+
+class UrLatviaUnavailable(Exception):
+    """The register did not answer the History tab's read of the company.
+
+    ``reason`` is in the degradation reason vocabulary.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+def _failure_label(failure: Any) -> str:
+    """A short label for a response or exception ("HTTP 503", "ReadTimeout")."""
+    status = getattr(failure, "status_code", None)
+    if isinstance(status, int):
+        return f"HTTP {status}"
+    return type(failure).__name__
+
 
 # CKAN datastore_search page size — keep generous for officers/members.
 _PAGE = 100
@@ -363,35 +402,57 @@ class UrLatviaAdapter(SourceAdapter):
         if cached is not None:
             return cached[0]
 
-        # ----------------------------------------------------------
-        # Fetch all five datasets in parallel-ish (sequential for now
-        # since httpx async context is per-call; refactor if needed).
-        # ----------------------------------------------------------
+        # Phase 262: a table that did not answer is ``None`` here, never ``[]``,
+        # and a bundle built while any part failed is not cached — data.gov.lv
+        # answering 502/503 once must not make a company read "none filed"
+        # until the cache expires (AS "Remars-Rīga", 19 Nov 2026).
+        failures: list[str] = []
         async with build_client() as client:
-            entity = await self._fetch_entity(client, regcode)
-            hist_names = await self._name_history(client, regcode)
-            bowners = await self._fetch_resource(
-                client, _RES_BOWNERS, "legal_entity_registration_number", regcode
+            entity = await self._fetch_entity(client, regcode, failures)
+            if entity is None:
+                reason = degradation.reason_for_failure(failures[-1] if failures else "")
+                degradation.record(self.id, _ENTITY_FAILED_DETAIL, reason=reason)
+                stub = self._stub_payload(regcode, legal_name)
+                stub["read_failed"] = reason
+                return stub
+            hist_names = await self._name_history(client, regcode, failures)
+            bowners = await self._fetch_rows(
+                client, _RES_BOWNERS, "legal_entity_registration_number", regcode, failures
             )
-            officers = await self._fetch_resource(
-                client, _RES_OFFICERS, "at_legal_entity_registration_number", regcode
+            officers = await self._fetch_rows(
+                client, _RES_OFFICERS, "at_legal_entity_registration_number", regcode, failures
             )
-            members = await self._fetch_resource(
-                client, _RES_MEMBERS, "at_legal_entity_registration_number", regcode
+            members = await self._fetch_rows(
+                client, _RES_MEMBERS, "at_legal_entity_registration_number", regcode, failures
             )
 
+        tables = {
+            "historical_names": hist_names,
+            "beneficial_owners": bowners,
+            "officers": officers,
+            "members": members,
+        }
+        unread = [name for name, rows in tables.items() if rows is None]
         payload: dict[str, Any] = {
             "source_id": self.id,
             "hit_id": regcode,
             "lv_regcode": regcode,
             "legal_name": legal_name,
             "entity": entity,
-            "historical_names": hist_names,
-            "beneficial_owners": bowners,
-            "officers": officers,
-            "members": members,
+            **{name: rows or [] for name, rows in tables.items()},
             "is_stub": False,
         }
+        if unread:
+            payload["unread"] = unread
+            degradation.record(
+                self.id,
+                _TABLES_FAILED_DETAIL.format(
+                    tables=", ".join(_TABLE_WORDS[name] for name in unread)
+                ),
+                check=degradation.CHECK_SOURCE_READ,
+                reason=degradation.reason_for_failure(failures[-1] if failures else ""),
+            )
+            return payload
         self._cache.put(cache_key, payload)
         return payload
 
@@ -407,16 +468,20 @@ class UrLatviaAdapter(SourceAdapter):
         path only — never per lookup. Returns ``None`` when not live or the
         register holds no such entity. ``unavailable`` names the tables
         that did not answer, so a thin history can be told from a refused
-        one; a table that answered with no rows is simply empty.
+        one; a table that answered with no rows is simply empty. Raises
+        :class:`UrLatviaUnavailable` when the company's own record could not
+        be read, so the tab says the register did not answer.
         """
         regcode = normalise_regcode(regcode)
         payload = await self.fetch(regcode, legal_name=legal_name)
+        if payload and payload.get("read_failed"):
+            raise UrLatviaUnavailable(payload["read_failed"])
         if not payload or payload.get("is_stub"):
             return None
         if not payload.get("entity"):
             return None
         tables: dict[str, list[dict[str, Any]]] = {}
-        unavailable: list[str] = []
+        unavailable: list[str] = list(payload.get("unread") or [])
         async with build_client() as client:
             for name, resource, field in (
                 ("stockholders", _RES_STOCKHOLDERS, "at_legal_entity_registration_number"),
@@ -461,9 +526,15 @@ class UrLatviaAdapter(SourceAdapter):
 
     async def _fetch_rows(
         self, client: Any, resource_id: str, filter_field: str, regcode: str,
+        failures: list[str] | None = None,
     ) -> list[dict[str, Any]] | None:
-        """``_fetch_resource`` that says when the table did not answer
-        (``None``) rather than reading a refusal as an empty table."""
+        """Every row of a table matching the regcode, or ``None`` when the
+        table did not answer — never a refusal read as an empty table.
+
+        The filter value may be stored as integer or string in the CKAN
+        datastore, so the integer is tried first, then the string. A failure's
+        label is appended to ``failures`` when given.
+        """
         try:
             filter_val: int | str = int(regcode)
         except (ValueError, TypeError):
@@ -479,25 +550,31 @@ class UrLatviaAdapter(SourceAdapter):
                 resp = await client.get(url)
                 if not resp.is_success:
                     _log.warning(
-                        "UR Latvia history table did not answer: %s (resource=%s, regcode=%s)",
+                        "UR Latvia table did not answer: %s (resource=%s, regcode=%s)",
                         resp.status_code, resource_id, regcode,
                     )
+                    if failures is not None:
+                        failures.append(_failure_label(resp))
                     return None
                 records = ((resp.json().get("result") or {}).get("records")) or []
                 if records:
                     return records
             return []
         except Exception as exc:  # noqa: BLE001 — a failed table is said, never read as empty
-            _log.warning("UR Latvia history table failed: %s (resource=%s)", type(exc).__name__, resource_id)
+            _log.warning("UR Latvia table failed: %s (resource=%s)", type(exc).__name__, resource_id)
+            if failures is not None:
+                failures.append(_failure_label(exc))
             return None
 
-    async def _name_history(self, client: Any, regcode: str) -> list[dict[str, Any]]:
+    async def _name_history(
+        self, client: Any, regcode: str, failures: list[str] | None = None,
+    ) -> list[dict[str, Any]] | None:
         """The entity's former names from UR's daily raw file (cached a day),
         falling back to the CKAN datastore copy — which stopped being
         reloaded on 24 March 2025 — when the download fails."""
         rows = await self._name_history_file(client)
         if rows is None:
-            return await self._fetch_resource(client, _RES_HIST_NAMES, "regcode", regcode)
+            return await self._fetch_rows(client, _RES_HIST_NAMES, "regcode", regcode, failures)
         code = str(int(regcode)) if regcode.isdigit() else regcode
         return [r for r in rows if str(r.get("regcode") or "").lstrip("0") == code.lstrip("0")]
 
@@ -529,69 +606,31 @@ class UrLatviaAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def _fetch_entity(
-        self, client: Any, regcode: str
-    ) -> dict[str, Any]:
-        """Fetch a single entity record from the business register."""
+        self, client: Any, regcode: str, failures: list[str] | None = None,
+    ) -> dict[str, Any] | None:
+        """The entity's business-register row; ``{}`` when the register holds
+        no such entity, ``None`` when it did not answer."""
         filters = json.dumps({"regcode": int(regcode)})
         url = (
             f"{_CKAN_BASE}/datastore_search"
             f"?resource_id={_RES_BUSINESS}"
             f"&filters={quote(filters)}&limit=1"
         )
-        resp = await client.get(url)
-        if not resp.is_success:
-            _log.warning("UR Latvia entity fetch failed: %s (regcode=%s)", resp.status_code, regcode)
-            return {}
-        data = resp.json()
+        try:
+            resp = await client.get(url)
+            if not resp.is_success:
+                _log.warning("UR Latvia entity fetch failed: %s (regcode=%s)", resp.status_code, regcode)
+                if failures is not None:
+                    failures.append(_failure_label(resp))
+                return None
+            data = resp.json()
+        except Exception as exc:  # noqa: BLE001 — a failed read is said, never read as "no record"
+            _log.warning("UR Latvia entity fetch failed: %s (regcode=%s)", type(exc).__name__, regcode)
+            if failures is not None:
+                failures.append(_failure_label(exc))
+            return None
         records = (data.get("result") or {}).get("records") or []
         return records[0] if records else {}
-
-    async def _fetch_resource(
-        self,
-        client: Any,
-        resource_id: str,
-        filter_field: str,
-        regcode: str,
-    ) -> list[dict[str, Any]]:
-        """Fetch all rows from a resource matching the regcode filter field.
-
-        The filter value may be stored as integer or string in the CKAN
-        datastore, so we try integer first then fall back to string.
-        """
-        try:
-            filter_val: int | str = int(regcode)
-        except (ValueError, TypeError):
-            filter_val = regcode
-
-        filters = json.dumps({filter_field: filter_val})
-        url = (
-            f"{_CKAN_BASE}/datastore_search"
-            f"?resource_id={resource_id}"
-            f"&filters={quote(filters)}&limit={_PAGE}"
-        )
-        resp = await client.get(url)
-        if not resp.is_success:
-            _log.warning(
-                "UR Latvia resource fetch failed: %s (resource=%s, regcode=%s)",
-                resp.status_code, resource_id, regcode,
-            )
-            return []
-        data = resp.json()
-        records = (data.get("result") or {}).get("records") or []
-
-        # If integer filter returned nothing, try string (some tables differ).
-        if not records and isinstance(filter_val, int):
-            filters_str = json.dumps({filter_field: str(regcode)})
-            url2 = (
-                f"{_CKAN_BASE}/datastore_search"
-                f"?resource_id={resource_id}"
-                f"&filters={quote(filters_str)}&limit={_PAGE}"
-            )
-            resp2 = await client.get(url2)
-            if resp2.is_success:
-                records = (resp2.json().get("result") or {}).get("records") or []
-
-        return records
 
     # ------------------------------------------------------------------
     # Hit factory

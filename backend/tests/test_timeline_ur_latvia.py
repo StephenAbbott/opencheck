@@ -318,3 +318,133 @@ async def test_a_failed_name_file_falls_back_to_the_ckan_copy(live, httpx_mock, 
     httpx_mock.add_callback(handler, is_reusable=True)
     payload = await _adapter(tmp_path).fetch(REG)
     assert [n["name"] for n in payload["historical_names"]] == ['Sabiedrība ar ierobežotu atbildību "RTS UG"']
+
+
+# ---------------------------------------------------------------------------
+# A failed read is never cached as "no record" (the Latvia caching ticket,
+# 19 Nov 2026: data.gov.lv answered 502/503 and AS "Remars-Rīga" read "none
+# filed" from a cached empty bundle — the Phase 262 rule).
+# ---------------------------------------------------------------------------
+
+
+def _failing(*, entity_status: int = 200, failing: frozenset[str] = frozenset()):
+    """A portal that answers the entity with ``entity_status`` and refuses
+    the resource ids in ``failing`` with 502."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url.startswith(lv._NAME_HISTORY_URL):
+            return httpx.Response(200, text=_NAME_FILE)
+        rid = request.url.params.get("resource_id")
+        if rid == lv._RES_BUSINESS:
+            if entity_status != 200:
+                return httpx.Response(entity_status, text="Bad gateway")
+            return _ckan([_DATA["entity"]])
+        if rid in failing:
+            return httpx.Response(502, text="Bad gateway")
+        table = {
+            lv._RES_BOWNERS: "beneficial_owners", lv._RES_OFFICERS: "officers", lv._RES_MEMBERS: "members",
+        }.get(rid)
+        return _ckan(_DATA[table] if table else [])
+
+    return handler
+
+
+async def test_a_register_that_did_not_answer_is_a_stub_and_a_degradation_never_cached(live, httpx_mock, tmp_path):
+    from opencheck import degradation
+
+    httpx_mock.add_callback(_failing(entity_status=503), is_reusable=True)
+    adapter = _adapter(tmp_path)
+    with degradation.recording() as recorded:
+        payload = await adapter.fetch(REG)
+    assert payload["is_stub"] is True
+    assert payload["read_failed"] == "upstream_error"
+    assert [(d.source_id, d.check) for d in recorded] == [("ur_latvia", "source_fetch")]
+    assert "Remars" not in recorded[0].detail
+    assert not adapter._cache.has(f"ur_latvia/entity/{REG}")
+
+
+async def test_a_table_that_did_not_answer_is_said_and_the_bundle_is_not_cached(live, httpx_mock, tmp_path):
+    from opencheck import degradation
+
+    httpx_mock.add_callback(_failing(failing=frozenset({lv._RES_BOWNERS})), is_reusable=True)
+    adapter = _adapter(tmp_path)
+    with degradation.recording() as recorded:
+        payload = await adapter.fetch(REG)
+    assert payload["is_stub"] is False
+    assert payload["unread"] == ["beneficial_owners"]
+    assert payload["beneficial_owners"] == []
+    assert payload["officers"] == _DATA["officers"]
+    assert [(d.source_id, d.check) for d in recorded] == [("ur_latvia", "source_read")]
+    assert "beneficial owners" in recorded[0].detail
+    assert not adapter._cache.has(f"ur_latvia/entity/{REG}")
+
+
+async def test_an_exception_on_a_table_is_a_failure_not_an_empty_table(live, httpx_mock, tmp_path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.params.get("resource_id") == lv._RES_MEMBERS:
+            raise httpx.ReadTimeout("slow", request=request)
+        return _failing()(request)
+
+    httpx_mock.add_callback(handler, is_reusable=True)
+    payload = await _adapter(tmp_path).fetch(REG)
+    assert payload["unread"] == ["members"]
+
+
+async def test_a_full_answer_is_cached_as_before(live, httpx_mock, tmp_path):
+    httpx_mock.add_callback(_failing(), is_reusable=True)
+    adapter = _adapter(tmp_path)
+    payload = await adapter.fetch(REG)
+    assert "unread" not in payload
+    assert adapter._cache.has(f"ur_latvia/entity/{REG}")
+
+
+async def test_the_history_read_raises_when_the_register_did_not_answer(live, httpx_mock, tmp_path):
+    httpx_mock.add_callback(_failing(entity_status=502), is_reusable=True)
+    with pytest.raises(lv.UrLatviaUnavailable) as raised:
+        await _adapter(tmp_path).fetch_timeline_data(REG)
+    assert raised.value.reason == "upstream_error"
+
+
+async def test_the_history_read_names_a_lookup_table_that_did_not_answer(live, httpx_mock, tmp_path):
+    httpx_mock.add_callback(_failing(failing=frozenset({lv._RES_OFFICERS})), is_reusable=True)
+    data = await _adapter(tmp_path).fetch_timeline_data(REG)
+    assert data and data["unavailable"] == ["officers"]
+
+
+def _latvian_registration(monkeypatch) -> None:
+    from opencheck.timeline import service
+
+    async def registration(_client, _lei):
+        return (None,) * 5 + (REG, None, 'SIA "GAISMA"', None)
+
+    async def modifications(_client, _lei):
+        return [], []
+
+    monkeypatch.setattr(service, "_gleif_registration", registration)
+    monkeypatch.setattr(service, "_gleif_modifications", modifications)
+
+
+@pytest.mark.parametrize(
+    ("outcome", "expected"),
+    [
+        (lv.UrLatviaUnavailable("timeout"), {"ur_latvia": "timeout"}),
+        (RuntimeError("boom"), {"ur_latvia": "upstream_error"}),
+        ({**_DATA, "unavailable": ["officers"]}, {"ur_latvia": "partial"}),
+        ({**_DATA, "unavailable": []}, {}),
+    ],
+)
+async def test_the_history_tab_says_when_the_latvian_register_did_not_answer(live, monkeypatch, outcome, expected):
+    from opencheck.sources import REGISTRY
+    from opencheck.timeline import service
+
+    _latvian_registration(monkeypatch)
+
+    async def fetch_timeline_data(_regcode, **_k):
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    monkeypatch.setattr(REGISTRY["ur_latvia"], "fetch_timeline_data", fetch_timeline_data)
+    timeline = await service.fetch_timeline("2138001ABCDEFGHIJK12")
+    assert timeline.registers_unavailable == expected

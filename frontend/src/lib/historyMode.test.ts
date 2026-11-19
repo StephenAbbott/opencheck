@@ -678,6 +678,24 @@ describe("BODACC on History (the BODACC ticket)", () => {
   });
 });
 
+describe("the Latvian register on the History tab", () => {
+  it("says a read that answered only in part apart from one that did not answer", () => {
+    const data = {
+      ...RESP,
+      sources: ["gleif", "ur_latvia"],
+      registry_numbers: { ur_latvia: "40003229495" },
+      registers_unavailable: { ur_latvia: "partial" },
+    };
+    expect(silentRegisters(data)).toEqual([]);
+    expect(unavailableRegisterLines(data)).toEqual([
+      "Register of Enterprises (LV) answered only in part, so some of its records were not read. A change missing from it is unchecked, not a finding that nothing changed — try again later.",
+    ]);
+    const down = { ...data, sources: ["gleif"], registers_unavailable: { ur_latvia: "upstream_error" } };
+    expect(silentRegisters(down)).toEqual([]);
+    expect(unavailableRegisterLines(down)[0]).toMatch(/^Register of Enterprises \(LV\) returned an error/);
+  });
+});
+
 describe("JOAFE on the History tab", () => {
   it("links a notice row by the RNA number and an accounts row by the SIREN", () => {
     expect(recordUrl("joafe", "x", { joafe: "W922001074" })).toBe(

@@ -271,7 +271,10 @@ export function registerReadNotes(data: HistoryResponse): string[] {
     .filter((n): n is string => Boolean(n));
 }
 
-/** Words for why a register did not answer (`registers_unavailable`). */
+/**
+ * Words for why a register did not answer (`registers_unavailable`).
+ * `partial` (UR Latvia: some tables answered, some did not) has its own line.
+ */
 const UNAVAILABLE_WORDS: Record<string, string> = {
   timeout: "did not answer in time",
   rate_limited: "is limiting requests",
@@ -285,9 +288,10 @@ const UNAVAILABLE_WORDS: Record<string, string> = {
 export function unavailableRegisterLines(data: HistoryResponse): string[] {
   return Object.entries(data.registers_unavailable ?? {})
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(
-      ([s, reason]) =>
-        `${historySourceLabel(s)} ${UNAVAILABLE_WORDS[reason] ?? "returned an error"}, so its notices were not read. An empty timeline from it is unchecked, not a quiet company — try again later.`,
+    .map(([s, reason]) =>
+      reason === "partial"
+        ? `${historySourceLabel(s)} answered only in part, so some of its records were not read. A change missing from it is unchecked, not a finding that nothing changed — try again later.`
+        : `${historySourceLabel(s)} ${UNAVAILABLE_WORDS[reason] ?? "returned an error"}, so its notices were not read. An empty timeline from it is unchecked, not a quiet company — try again later.`,
     );
 }
 
