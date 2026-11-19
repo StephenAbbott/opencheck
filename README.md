@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 563** — The Estonia beneficial ownership access row now records that the Ministry of Finance will amend the law, not issue a regulation, before restricting public access.
+**Latest: Phase 564** — The Bulgaria card's data-as-of line now gives the cut as a date in words, like the date beside it.
 
 → [Full development history](docs/status.md)
 
