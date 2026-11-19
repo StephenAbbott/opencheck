@@ -769,6 +769,8 @@ def _signals_from_os(
         return []
     if not _patronymic_compatible(target, hit):
         return []
+    if not id_match and not _given_names_compatible(target, hit):
+        return []
     # Distinctive-token gate — the ICIJ screen's Phase 120 rule, on this
     # surface too. A similarity score cannot tell a true organisation match
     # from two names that share only legal-form and filler text: Rosneft's
@@ -872,6 +874,8 @@ def _signal_from_ep(
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return None
     if not _patronymic_compatible(target, hit):
+        return None
+    if not _given_names_compatible(target, hit):
         return None
     # Phase 247: the record's own position, not a label for it. This used to
     # say "political office-holder" for every EveryPolitician record — an
@@ -1300,6 +1304,30 @@ def _patronymic_compatible(target: dict[str, Any], hit: SourceHit) -> bool:
     their_names = [hit.name, *_prop_values(raw, *_HIT_NAME_PROPS)]
     fathers = _prop_values(raw, "fatherName")
     return not names.patronymics_conflict(target["name"], their_names, fathers)
+
+
+def _given_names_compatible(target: dict[str, Any], hit: SourceHit) -> bool:
+    """Reject a person match where each name carries a name the other lacks
+    (the Bulgarian PEP ticket, 19 Nov 2026).
+
+    "Елица Петрова Рускова" against "НЕЛИ РУСКОВА ПЕТРОВА": the same two
+    family tokens in swapped places, two different given names — 0.905 on a
+    token-sort score, and a Bulgarian patronymic looks like a surname, so the
+    patronymic gate passes it. ``names.person_names_conflict`` reads every
+    name the record files; one that does not conflict keeps the match. A
+    birth year that agrees keeps it too: then the conflict is more likely a
+    spelling than a second person. Entities are never read here.
+    """
+    if target.get("kind") != _KIND_PERSON:
+        return True
+    raw = hit.raw or {}
+    year = target.get("birth_year")
+    if year is not None:
+        hit_years = _hit_birth_years(raw)
+        if hit_years and any(abs(y - year) <= 1 for y in hit_years):
+            return True
+    their_names = [hit.name, *_prop_values(raw, *_HIT_NAME_PROPS)]
+    return not names.person_names_conflict(target["name"], their_names)
 
 
 def _birth_year_compatible(year: int | None, hit: SourceHit) -> bool:

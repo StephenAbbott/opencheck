@@ -90,6 +90,7 @@ from .cross_check import (
     RELATED_SANCTIONS_LINKED,
     _birth_year_compatible,
     _collect_targets,
+    _given_names_compatible,
     _patronymic_compatible,
     corroborating_attributes,
     former_evidence,
@@ -485,6 +486,8 @@ def _process_results(
             if not _birth_year_compatible(target.get("birth_year"), hit):
                 continue
             if not _patronymic_compatible(target, hit):
+                continue
+            if not _given_names_compatible(target, hit):
                 continue
             hit_signals = _signals_from_percolate(
                 item, target, best_name, matched_form, score
