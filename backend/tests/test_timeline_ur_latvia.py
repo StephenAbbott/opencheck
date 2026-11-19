@@ -448,3 +448,62 @@ async def test_the_history_tab_says_when_the_latvian_register_did_not_answer(liv
     monkeypatch.setattr(REGISTRY["ur_latvia"], "fetch_timeline_data", fetch_timeline_data)
     timeline = await service.fetch_timeline("2138001ABCDEFGHIJK12")
     assert timeline.registers_unavailable == expected
+
+
+# ---------------------------------------------------------------------------
+# AS stockholders withheld by the register (19 Nov 2026: data.gov.lv answers
+# HTTP 403 "Pieeja liegta" for resource 6adabd83-…, after the Constitutional
+# Court's judgment of 9 Nov 2026). A withdrawal, not a failure to retry.
+# ---------------------------------------------------------------------------
+
+_DENIED = {
+    "success": False,
+    "error": {"message": "Pieeja liegta: Lietotājs  nav tiesīgs lasīt resursu 6adabd83-93f9-4d7f-bebd-fa109bbf794a",
+              "__type": "Authorization Error"},
+}
+
+
+def _stockholders(status: int):
+    base = _failing()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        rid = request.url.params.get("resource_id")
+        if rid == lv._RES_STOCKHOLDERS:
+            return httpx.Response(status, json=_DENIED)
+        if rid == lv._RES_SECURING and status == 403:
+            # Another table's 403 stays a failure: only the stockholders
+            # table is known to be withheld.
+            return httpx.Response(403, json=_DENIED)
+        return base(request)
+
+    return handler
+
+
+async def test_a_refused_stockholders_table_is_withheld_not_unavailable(live, httpx_mock, tmp_path):
+    httpx_mock.add_callback(_stockholders(403), is_reusable=True)
+    data = await _adapter(tmp_path).fetch_timeline_data(REG)
+    assert data
+    assert data["withheld"] == ["stockholders"]
+    assert data["unavailable"] == ["securing_measures"]
+    assert data["stockholders"] == []
+
+
+async def test_a_stockholders_table_that_failed_otherwise_is_still_unavailable(live, httpx_mock, tmp_path):
+    httpx_mock.add_callback(_stockholders(503), is_reusable=True)
+    data = await _adapter(tmp_path).fetch_timeline_data(REG)
+    assert data and data["withheld"] == [] and data["unavailable"] == ["stockholders"]
+
+
+async def test_the_history_tab_says_the_stockholders_are_withheld(live, monkeypatch):
+    from opencheck.sources import REGISTRY
+    from opencheck.timeline import service
+
+    _latvian_registration(monkeypatch)
+
+    async def fetch_timeline_data(_regcode, **_k):
+        return {**_DATA, "unavailable": [], "withheld": ["stockholders"]}
+
+    monkeypatch.setattr(REGISTRY["ur_latvia"], "fetch_timeline_data", fetch_timeline_data)
+    timeline = await service.fetch_timeline("2138001ABCDEFGHIJK12")
+    assert timeline.registers_unavailable == {}
+    assert timeline.registers_withheld == {"ur_latvia": ["stockholders"]}

@@ -110,6 +110,13 @@ _TABLES_FAILED_DETAIL = (
     "The Latvian Register of Enterprises (data.gov.lv) answered only in part: "
     "{tables} could not be read, so an empty list there is unchecked."
 )
+#: History tables whose HTTP 403 is the register withholding them from the
+#: public, not a failure: data.gov.lv answered "Pieeja liegta" (access
+#: denied) for AS stockholders from 19 Nov 2026, after the Constitutional
+#: Court's judgment of 9 Nov 2026 put natural-person shareholders of an AS in
+#: the non-public part of the file. Any other table's 403 is still a failure.
+_WITHHOLDABLE = frozenset({"stockholders"})
+
 #: The lookup's tables, in the words the degradation sentence uses.
 _TABLE_WORDS = {
     "historical_names": "former names",
@@ -468,7 +475,11 @@ class UrLatviaAdapter(SourceAdapter):
         path only — never per lookup. Returns ``None`` when not live or the
         register holds no such entity. ``unavailable`` names the tables
         that did not answer, so a thin history can be told from a refused
-        one; a table that answered with no rows is simply empty. Raises
+        one; a table that answered with no rows is simply empty. ``withheld``
+        names a table the register refuses to the public (HTTP 403 "Pieeja
+        liegta"): AS stockholders since 19 Nov 2026, after the Constitutional
+        Court's judgment of 9 Nov 2026 (case 2024-01-01) — a withdrawal, not a
+        failure to retry. Raises
         :class:`UrLatviaUnavailable` when the company's own record could not
         be read, so the tab says the register did not answer.
         """
@@ -482,6 +493,7 @@ class UrLatviaAdapter(SourceAdapter):
             return None
         tables: dict[str, list[dict[str, Any]]] = {}
         unavailable: list[str] = list(payload.get("unread") or [])
+        withheld: list[str] = []
         async with build_client() as client:
             for name, resource, field in (
                 ("stockholders", _RES_STOCKHOLDERS, "at_legal_entity_registration_number"),
@@ -490,9 +502,13 @@ class UrLatviaAdapter(SourceAdapter):
                 ("suspensions", _RES_SUSPENSIONS, "legal_entity_registration_number"),
                 ("securing_measures", _RES_SECURING, "legal_entity_registration_number"),
             ):
-                rows = await self._fetch_rows(client, resource, field, regcode)
+                failures: list[str] = []
+                rows = await self._fetch_rows(client, resource, field, regcode, failures)
                 if rows is None:
-                    unavailable.append(name)
+                    if name in _WITHHOLDABLE and failures and failures[-1] == "HTTP 403":
+                        withheld.append(name)
+                    else:
+                        unavailable.append(name)
                 tables[name] = rows or []
             # A reorganisation names the company on either side.
             reorg: list[dict[str, Any]] = []
@@ -522,6 +538,7 @@ class UrLatviaAdapter(SourceAdapter):
             "members": payload.get("members") or [],
             **tables,
             "unavailable": unavailable,
+            "withheld": withheld,
         }
 
     async def _fetch_rows(

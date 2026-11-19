@@ -33,6 +33,7 @@ import {
   recordUrl,
   silentRegisters,
   unavailableRegisterLines,
+  withheldRegisterLines,
   VISIBLE_ROWS,
 } from "./historyMode";
 
@@ -679,6 +680,15 @@ describe("BODACC on History (the BODACC ticket)", () => {
 });
 
 describe("the Latvian register on the History tab", () => {
+  it("says the AS shareholders are withheld by the register, apart from a failure", () => {
+    const data = { ...RESP, sources: ["gleif", "ur_latvia"], registers_withheld: { ur_latvia: ["stockholders"] } };
+    expect(unavailableRegisterLines(data)).toEqual([]);
+    expect(withheldRegisterLines(data)).toEqual([
+      "Register of Enterprises (LV) no longer lets the public read the shareholders of a joint-stock company (akciju sabiedrība), so no shareholder of one is shown here and their arrivals are not dated. That is the register's restriction, not a finding about the company.",
+    ]);
+    expect(withheldRegisterLines(RESP)).toEqual([]);
+  });
+
   it("says a read that answered only in part apart from one that did not answer", () => {
     const data = {
       ...RESP,

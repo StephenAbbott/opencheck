@@ -140,6 +140,10 @@ class Timeline:
     #: ``{source_id: True}`` for a register whose list was cut at OpenCheck's
     #: page cap (BODACC reads 1,000 notices, newest first).
     registers_truncated: dict[str, bool] = field(default_factory=dict)
+    #: ``{source_id: [table, …]}`` for a register that refuses part of its
+    #: data to the public (UR Latvia's AS stockholders, from 19 Nov 2026):
+    #: withheld by the register, not a failure to try again.
+    registers_withheld: dict[str, list[str]] = field(default_factory=dict)
 
 
 # --------------------------------------------------------------------------- #

@@ -134,6 +134,10 @@ class HistoryResponse(BaseModel):
     #: ``{source_id: true}`` for a register whose list was cut at OpenCheck's
     #: cap (BODACC reads 1,000 notices, newest first: the oldest are missing).
     registers_truncated: dict[str, bool] = {}
+    #: ``{source_id: [table, …]}`` for a register that refuses part of its
+    #: data to the public (UR Latvia: ``stockholders``, the AS shareholders,
+    #: from 19 Nov 2026). Withheld by the register, not a failure to retry.
+    registers_withheld: dict[str, list[str]] = {}
 
 
 @router.get("/history", response_model=HistoryResponse)
@@ -229,4 +233,5 @@ async def history(
         registers_kept_since=tl.registers_kept_since,
         registers_unavailable=tl.registers_unavailable,
         registers_truncated=tl.registers_truncated,
+        registers_withheld=tl.registers_withheld,
     )
