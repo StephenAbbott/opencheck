@@ -28,6 +28,7 @@ Visual language (matches the on-screen BOVS styling):
 
 from __future__ import annotations
 
+import textwrap
 from dataclasses import dataclass, field
 from typing import Any
 from xml.sax.saxutils import escape
@@ -733,6 +734,7 @@ def _render(
     layer: dict[str, int] | None = None,
     view_w: int = _VIEW_W,
     max_h: float | None = 980,
+    note: str | None = None,
 ) -> tuple[str, str]:
     """Draw ``nodes`` / ``edges``. ``layer`` (Phase 340, the ownership map)
     gives each node its column — 0 the subject, rightmost — instead of the
@@ -744,7 +746,11 @@ def _render(
     in 980 units — the MCP testing, 7 Nov 2026). An edge that runs from a
     column to one at or left of it — the company holding shares in one of its
     own owners — is drawn as a curve, so it never lies on the owner's edge
-    back into the company."""
+    back into the company.
+
+    ``note`` is a line printed in the image, above the legend, and added to
+    its description — what the picture leaves out, so an image passed on alone
+    says it is not the whole map (the MCP ownership map's cut)."""
     layer = layer if layer is not None else _layer_nodes(nodes, edges)
     max_layer = max(layer.values())
     # Columns: layer 0 (subjects) rightmost.
@@ -793,6 +799,13 @@ def _render(
             for i, n in enumerate(ns):
                 pos[n] = (col_x[lyr], top + offset + row_h * i)
 
+    note_y = None
+    note_lines: list[str] = []
+    if note:
+        # ~6 units a character at 11px; wrap to the canvas, one line per 15.
+        note_lines = textwrap.wrap(note, width=max(40, int((view_w - 80) / 6)))
+        note_y = height + 4
+        height += 15 * len(note_lines) + 7
     parts: list[str] = [
         f'<svg viewBox="0 0 {view_w} {int(height)}" role="img" '
         f'aria-labelledby="dt ds" xmlns="http://www.w3.org/2000/svg">',
@@ -800,6 +813,8 @@ def _render(
     ]
     # Build accessible description.
     summary = _summary(nodes, edges)
+    if note:
+        summary = f"{summary} {note}"
     parts.append(f'<desc id="ds">{escape(summary)}</desc>')
     # Arrowheads: one per edge kind drawn, and a hollow twin in the lighter
     # ended tint for an ended edge (Phase 219 / 243).
@@ -825,7 +840,8 @@ def _render(
         degree[e["from"]] = degree.get(e["from"], 0) + 1
         degree[e["to"]] = degree.get(e["to"], 0) + 1
     avoid = _node_boxes(pos, nodes)
-    view: Box = (0, 0, view_w, height - 16)  # clear of the legend row
+    # Clear of the legend row, and of the note above it.
+    view: Box = (0, 0, view_w, (note_y - 14) if note_y is not None else height - 16)
     labels: list[str] = []
 
     def is_return(e: dict) -> bool:
@@ -868,6 +884,11 @@ def _render(
         nd = nodes[n]
         parts.append(_node_svg(cx, cy, nd["kind"], nd["label"], nd.get("sublabel", "")))
     parts.extend(labels)
+    for i, line in enumerate(note_lines):
+        parts.append(
+            f'<text x="40" y="{note_y + 15 * i:.0f}" font-size="11" fill="{_MUTE}" '
+            f'class="map-note">{escape(line)}</text>'
+        )
     # Legend — only the kinds this diagram draws, in the canvas legend's names
     # and line styles, laid out left to right.
     ly = height - 6
