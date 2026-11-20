@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 578** — Connecticut's business registry is now Public Domain for all three datasets OpenCheck reads, after the Secretary of the State updated their terms on request.
+**Latest: Phase 579** — OpenCheck has a blog at opencheck.world/blog, republishing the OpenCheck posts from Medium with their publication dates and an RSS feed.
 
 → [Full development history](docs/status.md)
 
