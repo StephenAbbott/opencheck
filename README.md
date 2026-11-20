@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 583** — The blog's list of posts now shows each post's lead image beside its title, and the Nigeria post links Nestle Nigeria to its own LEI.
+**Latest: Phase 584** — The blog's pages now use the same header, footer and logo as the rest of OpenCheck.
 
 → [Full development history](docs/status.md)
 
