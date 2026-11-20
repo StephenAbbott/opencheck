@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 589** — A Connecticut business recorded as merged or consolidated now shows that ending on its History tab even when the merger certificate sits on the surviving business's record.
+**Latest: Phase 590** — The Italy beneficial ownership access row now records the Ministry of Economy and Finance's consultation on the decree that would re-enact legitimate-interest access from 10 July 2027.
 
 → [Full development history](docs/status.md)
 
