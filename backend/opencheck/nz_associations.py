@@ -81,6 +81,7 @@ from .config import get_settings
 from .http import build_client
 from .secret_scrub import describe_exception
 from .sources import REGISTRY
+from .sources.nz_companies import NZ_CACHE_MAX_AGE_DAYS
 
 _LOG = logging.getLogger(__name__)
 
@@ -627,7 +628,7 @@ async def assemble_associations(company_number: str) -> dict[str, Any]:
                 "reason": "Companies Entity Role Search not configured", "people": []}
 
     cache_key = f"{_CACHE_NS}/v2/{number}"
-    cached = _cache.get_payload(cache_key)
+    cached = _cache.get_payload(cache_key, max_age_days=NZ_CACHE_MAX_AGE_DAYS)
     if cached is not None:
         return cached[0]
 
@@ -735,10 +736,12 @@ async def person_associations(company_number: str, name: str) -> dict[str, Any]:
                 "reason": "Companies Entity Role Search not configured"}
 
     cache_key = f"{_CACHE_NS}/person-v2/{number}/{_holder_key(name)}"
-    cached = _cache.get_payload(cache_key)
+    cached = _cache.get_payload(cache_key, max_age_days=NZ_CACHE_MAX_AGE_DAYS)
     if cached is not None:
         return cached[0]
-    whole = _cache.get_payload(f"{_CACHE_NS}/v2/{number}")
+    whole = _cache.get_payload(
+        f"{_CACHE_NS}/v2/{number}", max_age_days=NZ_CACHE_MAX_AGE_DAYS
+    )
     if whole is not None and whole[0].get("available"):
         for p in whole[0].get("people") or []:
             # The company-wide view makes no NZBN follow-ups, so it answers for

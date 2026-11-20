@@ -1,0 +1,6 @@
+---
+title: New Zealand register answers expire after a week, so an address a director has replaced with an alternative one stops showing within seven days.
+readme: Cached New Zealand company records and director associations now expire after seven days, so a replaced residential address stops showing within a week.
+tests: backend +4
+---
+Found by the post-go-live check of the Companies (Address Information) Amendment Act 2025 (20 Nov 2026), which otherwise found the NZ sources healthy: six companies read live through production with directors and shareholders mapped as before, no ALTERNATIVE address types filed yet, and Role Search tiers as expected. The `nz_companies` bundle cache and both `nz_associations` caches (company-wide and per person) were read with no maximum age, so an entry lived until the next deploy or restart; a director who has replaced the residential address on the public register with an alternative one could have kept showing at home. Stephen chose a seven-day expiry (`NZ_CACHE_MAX_AGE_DAYS` in `sources/nz_companies.py`, read by `nz_associations.py`). `tests/test_nz_cache_expiry.py` pins the value, a re-read past a week and none before it, and that every Role Search cache read passes the limit. Still to check after 25 Nov 2026: Role Search returning the alternative address itself, untyped, in production.
