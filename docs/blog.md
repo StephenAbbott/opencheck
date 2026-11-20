@@ -15,8 +15,7 @@ where the post first appeared.
 | Routes | `backend/opencheck/routers/blog.py` |
 | Importer | `backend/scripts/import_medium.py` |
 
-Routes: `/blog` (every post, newest first, grouped by month; `?topic=<slug>`
-filters and is not indexed), `/blog/<slug>`, `/blog/feed.xml` (RSS 2.0, full
+Routes: `/blog` (every post, newest first, grouped by month), `/blog/<slug>`, `/blog/feed.xml` (RSS 2.0, full
 text), `/blog/sitemap.xml` (named in `robots.txt`) and
 `/blog/media/<slug>/<file>`.
 
@@ -36,6 +35,10 @@ image: "/blog/media/<slug>/01.webp"      # the hero image
 image_alt: ""
 ---
 ```
+
+`topics` are kept in the frontmatter, the JSON-LD `keywords`, the
+`article:tag` meta and the feed's `<category>` lines, but no page shows them:
+the blog has no topic chips or filters (Stephen, 20 Nov 2026).
 
 The file name is the slug. Body headings start at `##` (the page's `h1` is the
 title); each `##` joins the post's Contents list. A paragraph holding only an

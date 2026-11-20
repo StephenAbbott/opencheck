@@ -133,12 +133,17 @@ def test_unknown_post_is_a_404_and_a_capitalised_slug_redirects(client: TestClie
     assert r.status_code == 301 and r.headers["location"] == post.path
 
 
-def test_topic_filter_narrows_the_list_and_is_not_indexed(client: TestClient, posts) -> None:
-    r = client.get("/blog?topic=estonia")
-    assert r.status_code == 200
-    assert 'content="noindex,follow"' in r.text
-    with_topic = [p for p in posts if "estonia" in map(blog.topic_slug, p.topics)]
-    assert r.text.count('class="card"') == len(with_topic)
+def test_no_topic_chips_or_filters(client: TestClient, posts) -> None:
+    """Topics stay in the frontmatter and the feed, but no page shows them
+    (Stephen, 20 Nov 2026): no filter row, no chips, no Topics row."""
+    index = client.get("/blog")
+    post = client.get(posts[0].path)
+    for page in (index.text, post.text):
+        assert 'class="chip"' not in page and "?topic=" not in page
+    assert "Filter by topic" not in index.text
+    assert "<dt>Topics</dt>" not in post.text
+    old = client.get("/blog?topic=estonia")
+    assert old.status_code == 200 and old.text.count('class="card"') == len(posts)
 
 
 def test_media_refuses_anything_but_an_importer_file_name(client: TestClient, posts) -> None:

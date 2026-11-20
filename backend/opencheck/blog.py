@@ -38,7 +38,7 @@ from .cache import data_root
 from .entity_pages import FONTS_STYLESHEET, _goatcounter_snippet
 
 #: Bump when the rendered HTML changes materially (part of every ETag).
-TEMPLATE_VERSION = "1"
+TEMPLATE_VERSION = "2"
 
 AUTHOR = "Stephen Abbott Pugh"
 AUTHOR_URL = "https://www.beneficialownership.co.uk/"
@@ -49,8 +49,6 @@ BLOG_DESCRIPTION = (
 )
 #: Words a minute for the reading-time estimate.
 _WORDS_PER_MINUTE = 230
-#: A topic gets a filter chip on the index once this many posts carry it.
-_CHIP_MIN_POSTS = 3
 
 _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _MEDIA_RE = re.compile(r"^[0-9]{2}\.(?:webp|png|jpe?g|gif)$")
@@ -278,19 +276,6 @@ def get_post(slug: str) -> Post | None:
     return next((p for p in all_posts() if p.slug == slug), None)
 
 
-def topics(posts: tuple[Post, ...]) -> list[tuple[str, str, int]]:
-    """``(label, slug, count)`` for each topic, most used first."""
-    counts: dict[str, tuple[str, int]] = {}
-    for post in posts:
-        for topic in post.topics:
-            label, n = counts.get(topic_slug(topic), (topic, 0))
-            counts[topic_slug(topic)] = (label, n + 1)
-    return sorted(
-        ((label, slug, n) for slug, (label, n) in counts.items()),
-        key=lambda row: (-row[2], row[0]),
-    )
-
-
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
@@ -330,13 +315,6 @@ header.site nav a[aria-current]{color:#fff;font-weight:500;box-shadow:inset 0 -2
 padding-bottom:18px;border-bottom:1px solid #dcdde3;margin-bottom:8px}
 .head h1{font:700 30px/1.2 Bitter,Georgia,serif;margin:0}
 .head p{margin:6px 0 0;color:var(--muted);font-size:15px;max-width:560px;line-height:1.55}
-.filters{display:flex;gap:6px;flex-wrap:wrap;margin:0;padding:0;list-style:none}
-.chip{display:inline-block;font:500 12px/1.4 "DM Sans",sans-serif;padding:5px 10px;
-border-radius:999px;background:var(--soft);border:1px solid var(--soft-border);
-color:var(--blue);text-decoration:none}
-.filters .chip{padding:8px 12px}
-.filters .chip:not([aria-current]){background:#fff;border-color:var(--rule);color:var(--muted)}
-.filters .chip:hover{border-color:var(--blue);color:var(--blue)}
 .month{display:grid;grid-template-columns:150px 1fr;gap:0 28px;margin-top:22px}
 .month h2{font:700 15px Bitter,Georgia,serif;margin:14px 0 0;position:sticky;top:12px;align-self:start}
 .month h2 small{display:block;font:400 12px "DM Sans",sans-serif;color:var(--muted);margin-top:2px}
@@ -469,33 +447,11 @@ def _absolute(url: str, frontend: str) -> str:
     return f"{frontend}{url}" if url.startswith("/") else url
 
 
-def _chips(topics_: tuple[str, ...], n: int = 3) -> str:
-    return "".join(
-        f'<a class="chip" href="/blog?topic={topic_slug(t)}">{html.escape(t)}</a>'
-        for t in topics_[:n]
-    )
-
-
-def render_index(posts: tuple[Post, ...], *, frontend: str, topic: str | None = None) -> str:
+def render_index(posts: tuple[Post, ...], *, frontend: str) -> str:
     """The /blog page: posts grouped by month on a dated rail."""
     e = html.escape
-    all_topics = topics(posts)
-    shown = tuple(p for p in posts if topic is None or topic in map(topic_slug, p.topics))
-    topic_label = next((label for label, slug, _ in all_topics if slug == topic), None)
-
-    chips = [
-        '<li><a class="chip" href="/blog"'
-        + ("" if topic else ' aria-current="page"')
-        + ">All</a></li>"
-    ]
-    for label, slug, n in all_topics:
-        if n < _CHIP_MIN_POSTS and slug != topic:
-            continue
-        current = ' aria-current="page"' if slug == topic else ""
-        chips.append(f'<li><a class="chip" href="/blog?topic={slug}"{current}>{e(label)}</a></li>')
-
     months: dict[str, list[Post]] = {}
-    for post in shown:
+    for post in posts:
         months.setdefault(post.day.strftime("%Y-%m"), []).append(post)
     sections = []
     for items in months.values():
@@ -506,24 +462,22 @@ def render_index(posts: tuple[Post, ...], *, frontend: str, topic: str | None = 
             f'<time datetime="{p.published.isoformat()}">{p.day.isoformat()}</time></div>'
             f'<h3><a href="{p.path}">{e(p.title)}</a></h3>'
             f"<p>{e(p.description)}</p>"
-            f'<div class="row">{_chips(p.topics)}<span>· {p.reading_minutes} min read</span></div></li>'
+            f'<div class="row"><span>{p.reading_minutes} min read</span></div></li>'
             for p in items
         )
         sections.append(
             f'<section class="month" aria-label="{heading}"><h2>{heading}<small>{count}</small></h2>'
             f'<ol class="rail">{cards}</ol></section>'
         )
-    body = "".join(sections) or '<p class="empty">No posts on this topic yet.</p>'
+    body = "".join(sections) or '<p class="empty">No posts yet.</p>'
 
-    title = f"{topic_label} - {BLOG_TITLE}" if topic_label else f"{BLOG_TITLE} - OpenCheck"
     head = _head(
-        title=title,
+        title=f"{BLOG_TITLE} - OpenCheck",
         description=BLOG_DESCRIPTION,
         canonical=f"{frontend}/blog",
         frontend=frontend,
-        noindex=topic is not None,
     )
-    intro = (f"Posts about {e(topic_label)}. " if topic_label else "") + (
+    intro = (
         "Each post is dated the way OpenCheck dates a statement: when it was "
         "published, where it first appeared, and what it is about."
     )
@@ -531,8 +485,7 @@ def render_index(posts: tuple[Post, ...], *, frontend: str, topic: str | None = 
 <body>
 {_header(frontend)}
 <main id="main" class="wrap">
-<div class="head"><div><h1>{BLOG_TITLE}</h1><p>{intro}</p></div>
-<nav aria-label="Filter by topic"><ul class="filters">{"".join(chips)}</ul></nav></div>
+<div class="head"><div><h1>{BLOG_TITLE}</h1><p>{intro}</p></div></div>
 {body}
 </main>
 {_footer(frontend)}
@@ -599,7 +552,6 @@ def render_post(post: Post, *, frontend: str) -> str:
         if post.updated
         else ""
     )
-    topics_dd = ", ".join(f'<a href="/blog?topic={topic_slug(t)}">{e(t)}</a>' for t in post.topics)
     toc = (
         '<nav class="toc" aria-label="Contents"><h2>Contents</h2><ol>'
         + "".join(f'<li><a href="#{h.id}">{e(h.text)}</a></li>' for h in post.headings)
@@ -628,8 +580,7 @@ def render_post(post: Post, *, frontend: str) -> str:
 <aside aria-label="About this post"><h2>About this post</h2><dl>
 <dt>Published</dt><dd><time datetime="{published_iso}">{long_date(post.day)}</time></dd>
 {updated}<dt>Reading</dt><dd>{post.reading_minutes} minutes</dd>
-{medium}<dt>Author</dt><dd>{e(AUTHOR)}</dd>
-<dt>Topics</dt><dd>{topics_dd or "—"}</dd></dl>{toc}</aside>
+{medium}<dt>Author</dt><dd>{e(AUTHOR)}</dd></dl>{toc}</aside>
 <main id="main"><article>
 <div class="eyebrow"><a href="/blog">← All posts</a></div>
 <h1>{e(post.title)}</h1>{dek}
