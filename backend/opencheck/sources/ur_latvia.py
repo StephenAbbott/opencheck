@@ -117,6 +117,18 @@ _TABLES_FAILED_DETAIL = (
 #: the non-public part of the file. Any other table's 403 is still a failure.
 _WITHHOLDABLE = frozenset({"stockholders"})
 
+#: Register types whose shareholders are AS stockholders (akcionāri). Only
+#: these are told the stockholders table is withheld: an SIA's members are a
+#: separate, still public table, and saying "the shareholders of a
+#: joint-stock company are not public" on an SIA's History tab read as its
+#: own shareholders being hidden (SIA UDEA, 20 Nov 2026).
+JOINT_STOCK_TYPES = frozenset({"AS"})
+
+
+def is_joint_stock(entity: dict[str, Any] | None) -> bool:
+    """Whether the register's own record types the company an AS."""
+    return str((entity or {}).get("type") or "").strip().upper() in JOINT_STOCK_TYPES
+
 #: The lookup's tables, in the words the degradation sentence uses.
 _TABLE_WORDS = {
     "historical_names": "former names",
@@ -494,6 +506,7 @@ class UrLatviaAdapter(SourceAdapter):
         tables: dict[str, list[dict[str, Any]]] = {}
         unavailable: list[str] = list(payload.get("unread") or [])
         withheld: list[str] = []
+        joint_stock = is_joint_stock(payload.get("entity"))
         async with build_client() as client:
             for name, resource, field in (
                 ("stockholders", _RES_STOCKHOLDERS, "at_legal_entity_registration_number"),
@@ -506,7 +519,13 @@ class UrLatviaAdapter(SourceAdapter):
                 rows = await self._fetch_rows(client, resource, field, regcode, failures)
                 if rows is None:
                     if name in _WITHHOLDABLE and failures and failures[-1] == "HTTP 403":
-                        withheld.append(name)
+                        # The register's withdrawal is said only where it
+                        # applies: an AS. Any other company has no AS
+                        # stockholders to withhold, so the refusal says
+                        # nothing about it and is neither withheld nor
+                        # unavailable.
+                        if joint_stock:
+                            withheld.append(name)
                     else:
                         unavailable.append(name)
                 tables[name] = rows or []

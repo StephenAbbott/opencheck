@@ -327,7 +327,7 @@ async def test_a_failed_name_file_falls_back_to_the_ckan_copy(live, httpx_mock, 
 # ---------------------------------------------------------------------------
 
 
-def _failing(*, entity_status: int = 200, failing: frozenset[str] = frozenset()):
+def _failing(*, entity_status: int = 200, failing: frozenset[str] = frozenset(), entity_type: str = "SIA"):
     """A portal that answers the entity with ``entity_status`` and refuses
     the resource ids in ``failing`` with 502."""
 
@@ -339,7 +339,7 @@ def _failing(*, entity_status: int = 200, failing: frozenset[str] = frozenset())
         if rid == lv._RES_BUSINESS:
             if entity_status != 200:
                 return httpx.Response(entity_status, text="Bad gateway")
-            return _ckan([_DATA["entity"]])
+            return _ckan([{**_DATA["entity"], "type": entity_type}])
         if rid in failing:
             return httpx.Response(502, text="Bad gateway")
         table = {
@@ -463,8 +463,8 @@ _DENIED = {
 }
 
 
-def _stockholders(status: int):
-    base = _failing()
+def _stockholders(status: int, entity_type: str = "AS"):
+    base = _failing(entity_type=entity_type)
 
     def handler(request: httpx.Request) -> httpx.Response:
         rid = request.url.params.get("resource_id")
@@ -486,6 +486,18 @@ async def test_a_refused_stockholders_table_is_withheld_not_unavailable(live, ht
     assert data["withheld"] == ["stockholders"]
     assert data["unavailable"] == ["securing_measures"]
     assert data["stockholders"] == []
+
+
+async def test_an_sia_is_never_told_the_stockholders_are_withheld(live, httpx_mock, tmp_path):
+    # SIA UDEA (20 Nov 2026): an SIA has no AS stockholders, so the
+    # register's refusal says nothing about it — neither withheld nor
+    # unavailable. Its members stay a public table of their own.
+    httpx_mock.add_callback(_stockholders(403, entity_type="SIA"), is_reusable=True)
+    data = await _adapter(tmp_path).fetch_timeline_data(REG)
+    assert data
+    assert data["withheld"] == []
+    assert data["unavailable"] == ["securing_measures"]
+    assert data["members"] == _DATA["members"]
 
 
 async def test_a_stockholders_table_that_failed_otherwise_is_still_unavailable(live, httpx_mock, tmp_path):
