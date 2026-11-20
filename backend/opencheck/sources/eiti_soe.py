@@ -355,6 +355,9 @@ class EitiSoeAdapter(SourceAdapter):
                 reason=degradation.reason_for_failure(_failure_label(exc)),
             )
             rows = []
+            failed = True
+        else:
+            failed = False
         out: list[dict[str, Any]] = []
         for r in rows if isinstance(rows, list) else []:
             # The view carries the filed amount in its filed currency and a
@@ -375,5 +378,8 @@ class EitiSoeAdapter(SourceAdapter):
                     "project": r.get("project_name"),
                 }
             )
-        self._cache.put(cache_key, out)
+        if not failed:
+            # A failure is never cached (Phase 262): an empty list stored here
+            # read as "no payments" until the entry expired.
+            self._cache.put(cache_key, out)
         return out
