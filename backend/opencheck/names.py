@@ -870,6 +870,32 @@ _DENSE_RANGES = (
 )
 
 
+
+def register_names_agree(
+    a: str | None, b: str | None, *, threshold: float = NAME_MATCH_THRESHOLD
+) -> bool:
+    """Does a register's company name agree with the name the lookup holds?
+
+    The one name gate the register adapters share (``acra_singapore``,
+    ``cr_hongkong``, ``ct_sots``, ``dlcp_dc``, ``ny_dos``, ``sunbiz_florida``,
+    ``pa_dos``, ``rues_colombia`` and ``opencorporates`` each kept a copy until the codebase review
+    of 20 Nov 2026). Agreement is any of: the same comparable form (legal-form
+    words set aside), the same form with spaces removed, distinctive tokens
+    agreeing, or ``name_similarity`` at or above ``threshold``. An empty
+    name on either side does not agree; each adapter decides beforehand
+    what a missing name means for it.
+    """
+    if not a or not b:
+        return False
+    ca, cb = org_comparable_name(a), org_comparable_name(b)
+    if ca and ca == cb:
+        return True
+    if ca and despace(ca) == despace(cb):
+        return True
+    if distinctive_token_agreement(a, b):
+        return True
+    return name_similarity(a, b) >= threshold
+
 def has_dense_script(text: str) -> bool:
     """True when the text contains characters from a script that does not
     separate name parts with spaces (CJK, kana, Hangul).

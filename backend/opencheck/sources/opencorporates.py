@@ -145,17 +145,6 @@ def _comparable(text: str) -> bool:
     return bool(re.search(r"[a-z]", names.normalise_name(text)))
 
 
-def _names_match(a: str, b: str) -> bool:
-    ca, cb = names.org_comparable_name(a), names.org_comparable_name(b)
-    if ca and ca == cb:
-        return True
-    if ca and names.despace(ca) == names.despace(cb):
-        return True
-    if names.distinctive_token_agreement(a, b):
-        return True
-    return names.name_similarity(a, b) >= names.NAME_MATCH_THRESHOLD
-
-
 def names_agree(legal_name: str | None, company: dict[str, Any] | None) -> bool:
     """Does OpenCorporates' record carry the name GLEIF gave the subject?
 
@@ -174,7 +163,7 @@ def names_agree(legal_name: str | None, company: dict[str, Any] | None) -> bool:
     comparable = [c for c in candidates if _comparable(c)]
     if not comparable:
         return True
-    return any(_names_match(wanted, c) for c in comparable)
+    return any(names.register_names_agree(wanted, c) for c in comparable)
 
 
 def publishes_lei(company: dict[str, Any] | None, lei: str | None) -> bool:

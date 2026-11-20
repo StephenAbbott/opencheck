@@ -135,9 +135,6 @@ _SEARCH_RESULT_CAP = 20
 #: The register's miss, verbatim — HTTP 400, not 404.
 _NO_RESULT = "no result found."
 
-#: Similarity at or above which two Latin-script names are treated as the same
-#: company. The product-wide name-screening threshold (see ``names``).
-_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
 
 _DUMMY_BRN_RE = re.compile(r"^[A-Z]\d{7}$")
 _ID_QUERY_RE = re.compile(r"^(?:[A-Z]\d{7}|\d{7,8})$")
@@ -215,17 +212,6 @@ def _dense_key(text: str) -> str:
     return _DENSE_PUNCT_RE.sub("", folded)
 
 
-def _latin_agree(a: str, b: str) -> bool:
-    ca, cb = names.org_comparable_name(a), names.org_comparable_name(b)
-    if ca and ca == cb:
-        return True
-    if ca and names.despace(ca) == names.despace(cb):
-        return True
-    if names.distinctive_token_agreement(a, b):
-        return True
-    return names.name_similarity(a, b) >= _NAME_SIMILARITY_THRESHOLD
-
-
 def names_agree(legal_name: str | None, company: dict[str, Any]) -> bool:
     """Does the register's company carry the name GLEIF gave the subject?
 
@@ -253,7 +239,7 @@ def names_agree(legal_name: str | None, company: dict[str, Any]) -> bool:
             # reverse) cannot agree character by character; the other
             # candidate gets its turn.
             continue
-        if _latin_agree(wanted, candidate):
+        if names.register_names_agree(wanted, candidate):
             return True
     return False
 
