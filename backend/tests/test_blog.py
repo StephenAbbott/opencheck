@@ -143,7 +143,7 @@ def test_no_topic_chips_or_filters(client: TestClient, posts) -> None:
     assert "Filter by topic" not in index.text
     assert "<dt>Topics</dt>" not in post.text
     old = client.get("/blog?topic=estonia")
-    assert old.status_code == 200 and old.text.count('class="card"') == len(posts)
+    assert old.status_code == 200 and old.text.count('<li class="card') == len(posts)
 
 
 def test_media_refuses_anything_but_an_importer_file_name(client: TestClient, posts) -> None:
@@ -194,3 +194,21 @@ def test_the_site_header_links_to_the_blog() -> None:
     assert 'export const BLOG_PATH = "/blog";' in (root / "lib" / "views.ts").read_text()
     chrome = (root / "components" / "SiteChrome.tsx").read_text()
     assert chrome.count("href={BLOG_PATH}") == 2  # header nav and footer
+
+
+def test_index_shows_each_posts_lead_image(client: TestClient, posts) -> None:
+    """Each card on /blog carries its post's lead image as a decorative
+    thumbnail (Stephen, 20 Nov 2026): lazy, sized, hidden from screen readers."""
+    page = client.get("/blog").text
+    for post in posts:
+        if not post.image:
+            continue
+        assert f'<img src="{post.image}" alt=""' in page
+    assert page.count('class="thumb"') == sum(1 for p in posts if p.image)
+    assert 'aria-hidden="true"' in page and 'loading="lazy"' in page
+
+
+def test_nestle_nigeria_links_to_its_own_lei(posts) -> None:
+    post = next(p for p in posts if p.slug.startswith("showcasing-nigeria"))
+    text = (blog.posts_dir() / f"{post.slug}.md").read_text()
+    assert "[Nestle Nigeria PLC](https://opencheck.world/?lei=0292002173F4KD5E5347)" in text
