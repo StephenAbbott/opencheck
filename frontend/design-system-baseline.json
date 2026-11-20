@@ -24,7 +24,7 @@
     "hex": 0,
     "text": 14,
     "vocab": 0,
-    "palette": 9,
+    "palette": 0,
     "button": 0
   },
   "src/components/BodsGraphExplorer.tsx": {

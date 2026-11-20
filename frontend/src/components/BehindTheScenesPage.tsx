@@ -5,7 +5,17 @@
  * there: same as the API page: a static document, mounted by one line of App.
  */
 
+import {
+  BodsMiniGraph,
+  GodinNetwork,
+  LeiAnatomy,
+  LOOKUP_STEPS,
+  LookupDiagram,
+  ModeBadge,
+  STATEMENT_ICON,
+} from "./about/AboutVisuals";
 import { BtsBadge, BtsCard } from "./BtsCard";
+import { Icon } from "./ui/Icon";
 
 export function BehindTheScenesPage() {
   return (
@@ -26,71 +36,87 @@ export function BehindTheScenesPage() {
         data ecosystem it draws on.
       </p>
 
-      <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 500px), 1fr))" }}>
+      {/* How a lookup works: the diagram, then the same steps in words
+          (the only version on a phone). */}
+      <section
+        aria-labelledby="bts-lookup-heading"
+        className="bg-white border border-oo-rule rounded-oo p-6 mb-6"
+      >
+        <h3 id="bts-lookup-heading" className="font-head font-bold text-[17px] text-oo-ink mb-1 leading-snug">
+          How a lookup works
+        </h3>
+        <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-4">
+          Paste or search for a Legal Entity Identifier. OpenCheck then:
+        </p>
+        <LookupDiagram />
+        <ol className="text-[13.5px] leading-[1.6] text-oo-muted list-none grid gap-4 sm:mt-6 sm:grid-cols-2 lg:grid-cols-5">
+          {LOOKUP_STEPS.map(([n, bold, rest]) => (
+            <li key={n} className="flex gap-3 lg:flex-col lg:gap-2">
+              <span className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-oo-blue text-white font-mono text-[11px]">
+                {n}
+              </span>
+              <span><strong className="text-oo-ink font-semibold">{bold}</strong> — {rest}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-        {/* Data pipeline */}
-        <BtsCard title="How a lookup works">
-          <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-4">
-            Paste or search for a Legal Entity Identifier. OpenCheck then:
-          </p>
-          <ol className="text-[13.5px] leading-[1.75] text-oo-muted space-y-2 list-none">
-            {[
-              ["01", "Resolves the LEI via GLEIF", "gets the canonical legal name, jurisdiction, registration authority code, and related identifiers."],
-              ["02", "Derives bridge IDs", "maps the GLEIF record to national register IDs (UK company number, Dutch KvK number, Czech IČO, …) and cross-references (Wikidata Q-ID, CUSIP)."],
-              ["03", "Fans out in parallel", "each source adapter receives whichever identifier it understands and fetches independently; results stream back as they arrive."],
-              ["04", "Maps to BODS 0.4", "every source payload is run through a dedicated mapper, producing entity, person, and ownership/control statements in the Beneficial Ownership Data Standard."],
-              ["05", "Aggregates risk signals", "the unified BODS graph is inspected for structural risk patterns: layered ownership chains, trusts and nominees, high-risk jurisdictions, sanctions exposure."],
-            ].map(([n, bold, rest]) => (
-              <li key={n} className="flex gap-3">
-                <span className="font-mono text-[11px] text-oo-blue shrink-0 mt-0.5">{n}</span>
-                <span><strong className="text-oo-ink font-semibold">{bold}</strong> — {rest}</span>
-              </li>
-            ))}
-          </ol>
-        </BtsCard>
+      <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 500px), 1fr))" }}>
 
         {/* QuickCheck vs FullCheck */}
         <BtsCard title="The four checks">
-          <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
-            Every lookup opens in{" "}
-            <strong className="text-oo-ink font-semibold">QuickCheck</strong> — a
-            fast screen of the subject itself: who it is, the identifiers each
-            source independently confirms, and any risk signals on the company
-            and its immediate people. It also flags records that are{" "}
-            <strong className="text-oo-ink font-semibold">likely the same
-            entity</strong> — an exact name and jurisdiction match with no shared
-            identifier — as a suggestion to review, never a silent merge.
-          </p>
-          <p className="text-oo-small text-oo-muted leading-[1.7]">
-            Switch to{" "}
-            <strong className="text-oo-ink font-semibold">FullCheck</strong> to
-            walk the wider ownership-and-control network: OpenCheck expands
-            layer by layer through owners and subsidiaries, overlays every
-            source on one canvas, and{" "}
-            <strong className="text-oo-ink font-semibold">reconciles</strong> the
-            same real-world company across sources into a single node — so three
-            sources agreeing reads as corroboration. The network can be exported
-            as BODS v0.4 or projected to Neo4j.
-          </p>
+          <div className="flex gap-3 items-start">
+            <ModeBadge mode="quick" />
+            <p className="text-[13.5px] leading-[1.75] text-oo-muted">
+              Every lookup opens in{" "}
+              <strong className="text-oo-ink font-semibold">QuickCheck</strong> — a
+              fast screen of the subject itself: who it is, the identifiers each
+              source independently confirms, and any risk signals on the company
+              and its immediate people. It also flags records that are{" "}
+              <strong className="text-oo-ink font-semibold">likely the same
+              entity</strong> — an exact name and jurisdiction match with no shared
+              identifier — as a suggestion to review, never a silent merge.
+            </p>
+          </div>
+          <div className="flex gap-3 items-start mt-3">
+            <ModeBadge mode="full" />
+            <p className="text-oo-small text-oo-muted leading-[1.7]">
+              Switch to{" "}
+              <strong className="text-oo-ink font-semibold">FullCheck</strong> to
+              walk the wider ownership-and-control network: OpenCheck expands
+              layer by layer through owners and subsidiaries, overlays every
+              source on one canvas, and{" "}
+              <strong className="text-oo-ink font-semibold">reconciles</strong> the
+              same real-world company across sources into a single node — so three
+              sources agreeing reads as corroboration. The network can be exported
+              as BODS v0.4 or projected to Neo4j.
+            </p>
+          </div>
           {/* Phase 122: BackgroundCheck had shipped un-documented here, and
               Climate & ESG was not a mode at all — it rendered as a section
               inside QuickCheck. Both are tabs now, so both are described. */}
-          <p className="text-oo-small text-oo-muted leading-[1.7] mt-3">
-            <strong className="text-oo-ink font-semibold">BackgroundCheck</strong>{" "}
-            screens the people rather than the company: the officers, directors
-            and beneficial owners named in the records, each checked against the
-            sanctions, PEP and offshore-leaks sources that can answer for a
-            person. A person the sources could not answer for is reported as
-            unscreened, never as clear.
-          </p>
-          <p className="text-oo-small text-oo-muted leading-[1.7] mt-3">
-            <strong className="text-oo-ink font-semibold">Climate &amp; ESG</strong>{" "}
-            is a different question from the other three, which is why it sits
-            apart in the tab strip: not who owns the company, but what it does —
-            the emissions and asset records published about it and the assets it
-            controls. An empty result there is an absence of published records,
-            not a finding about its emissions.
-          </p>
+          <div className="flex gap-3 items-start mt-3">
+            <ModeBadge mode="background" />
+            <p className="text-oo-small text-oo-muted leading-[1.7]">
+              <strong className="text-oo-ink font-semibold">BackgroundCheck</strong>{" "}
+              screens the people rather than the company: the officers, directors
+              and beneficial owners named in the records, each checked against the
+              sanctions, PEP and offshore-leaks sources that can answer for a
+              person. A person the sources could not answer for is reported as
+              unscreened, never as clear.
+            </p>
+          </div>
+          <div className="flex gap-3 items-start mt-3">
+            <ModeBadge mode="esg" />
+            <p className="text-oo-small text-oo-muted leading-[1.7]">
+              <strong className="text-oo-ink font-semibold">Climate &amp; ESG</strong>{" "}
+              is a different question from the other three, which is why it sits
+              apart in the tab strip: not who owns the company, but what it does —
+              the emissions and asset records published about it and the assets it
+              controls. An empty result there is an absence of published records,
+              not a finding about its emissions.
+            </p>
+          </div>
         </BtsCard>
 
         {/* BODS spine */}
@@ -116,24 +142,33 @@ export function BehindTheScenesPage() {
             </a>
             . BODS defines three statement types:
           </p>
-          <dl className="text-oo-small space-y-2">
+          <dl className="text-oo-small space-y-3">
             {[
-              ["Entity statement", "blue", "A legal entity — company, trust, foundation."],
-              ["Person statement", "violet", "A natural person (or anonymous/unknown person)."],
-              ["Ownership/Control statement", "teal", "A relationship linking an interested party to a subject entity, with typed interests and share bands."],
-            ].map(([term, colour, def]) => (
-              // Stacked on a phone: the monospace term is too wide to share a
-              // 320px line with its definition (the self-hosted-fonts PR).
-              <div key={term as string} className="flex flex-col gap-1 sm:flex-row sm:gap-2 sm:items-baseline">
-                <dt className={`self-start shrink-0 font-semibold text-[11px] px-1.5 py-0.5 rounded border font-mono
-                  ${colour === "blue" ? "bg-blue-50 text-blue-700 border-blue-200" : ""}
-                  ${colour === "violet" ? "bg-violet-50 text-violet-700 border-violet-200" : ""}
-                  ${colour === "teal" ? "bg-teal-50 text-teal-700 border-teal-200" : ""}
-                `}>{term}</dt>
-                <dd className="text-oo-muted">{def}</dd>
+              ["Entity statement", "entity", "A legal entity — company, trust, foundation."],
+              ["Person statement", "person", "A natural person (or anonymous/unknown person)."],
+              ["Ownership/Control statement", "relationship", "A relationship linking an interested party to a subject entity, with typed interests and share bands."],
+            ].map(([term, kind, def]) => (
+              <div key={term}>
+                <dt className="flex items-center gap-3 font-semibold text-oo-ink">
+                  {/* Drawn with the icons the graph uses (BOVS); the arrow
+                      stands for the edge between them. */}
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full bg-oo-blue text-white"
+                  >
+                    {kind === "relationship" ? (
+                      <Icon name="arrowRight" size={16} strokeWidth={2.25} />
+                    ) : (
+                      <img src={STATEMENT_ICON[kind as "entity" | "person"]} alt="" width={32} height={32} />
+                    )}
+                  </span>
+                  {term}
+                </dt>
+                <dd className="text-oo-muted pl-11">{def}</dd>
               </div>
             ))}
           </dl>
+          <BodsMiniGraph />
           <p className="text-oo-small text-oo-muted mt-3 leading-[1.7]">
             Each source has a dedicated mapper in{" "}
             <code className="font-mono text-[11px] bg-oo-bg px-1 rounded">opencheck/bods/mapper.py</code>.
@@ -188,6 +223,7 @@ export function BehindTheScenesPage() {
             for Companies House) that OpenCheck uses to route to the right
             national register adapter.
           </p>
+          <LeiAnatomy />
           <p className="text-oo-small text-oo-muted leading-[1.7]">
             Name search uses the{" "}
             <a
@@ -228,6 +264,7 @@ export function BehindTheScenesPage() {
             information from 20+ independent registries into a unified,
             structured view — without any proprietary data agreements.
           </p>
+          <GodinNetwork />
         </BtsCard>
 
         {/* Tech stack */}

@@ -59,4 +59,31 @@ describe("BehindTheScenesPage", () => {
       "https://standard.openownership.org/en/0.4.0/standard/modelling/dates-guidance.html",
     );
   });
+
+  it("draws the lookup and keeps every step in words for a phone", () => {
+    // The "Make the About page more visual" ticket: the diagram is hidden
+    // under `sm`, so the numbered list must carry every step on its own.
+    render(<BehindTheScenesPage />);
+    expect(screen.getByRole("img", { name: /How a lookup works/ })).toBeTruthy();
+    const steps = screen.getByRole("heading", { name: "How a lookup works" })
+      .closest("section")!
+      .querySelectorAll("ol > li");
+    expect(steps.length).toBe(5);
+    expect(screen.getByText("Aggregates risk signals")).toBeTruthy();
+  });
+
+  it("shows no third-party logo", () => {
+    // GLEIF's and Neo4j's logos need a licence and Open Ownership's terms do
+    // not cover theirs (checked 20 Nov 2026): every picture here is
+    // OpenCheck's own (BOVS icons as data URIs, flags served by this site).
+    const { container } = render(<BehindTheScenesPage />);
+    const sources = [
+      ...Array.from(container.querySelectorAll("img")).map((i) => i.getAttribute("src") ?? ""),
+      ...Array.from(container.querySelectorAll("image")).map((i) => i.getAttribute("href") ?? ""),
+    ];
+    expect(sources.length).toBeGreaterThan(0);
+    for (const src of sources) {
+      expect(src.startsWith("data:image/svg+xml") || src.startsWith("/bods-dagre-images/flags/")).toBe(true);
+    }
+  });
 });
