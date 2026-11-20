@@ -41,7 +41,11 @@ try:  # pragma: no cover - exercised via the ftm extra in CI/prod
 
     _HAS_RIGOUR = True
 except ImportError:  # pragma: no cover - base install without the ftm extra
-    StrictFormat = None  # type: ignore[assignment]
+    # ``misc`` as well as ``assignment``: with rigour installed mypy reads
+    # StrictFormat as a class ("Cannot assign to a type"), without it as an
+    # unknown name. Both codes keep the count the same either way, so the
+    # ratchet agrees with CI whether or not the ftm extra is installed.
+    StrictFormat = None  # type: ignore[assignment, misc]
     clean_url_compare = None  # type: ignore[assignment]
     _HAS_RIGOUR = False
 
