@@ -49,13 +49,22 @@ import re
 from typing import Any
 from urllib.parse import quote
 
+from .. import degradation
 from ..config import get_settings
 from ..http import build_client
+from ..secret_scrub import describe_exception
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.abr_australia import ABRBundle
 
 logger = logging.getLogger(__name__)
+
+#: The register did not answer. Names the register, never the company
+#: (``degradation.record``).
+_FETCH_FAILED_DETAIL = (
+    "The Australian Business Register (ABR) did not answer, so the "
+    "company's record was not read."
+)
 
 # GLEIF Registration Authority codes for Australia.
 ABR_ASIC_RA_CODE: str = "RA000014"  # ASIC Register of Companies → ACN
@@ -237,10 +246,23 @@ class AbrAustraliaAdapter(SourceAdapter):
                 resp = await client.get(url)
             if not resp.is_success:
                 logger.warning("abr_australia: HTTP %s for %s", resp.status_code, ident)
+                # A failed read is never "no record" (the Phase 262 rule).
+                degradation.record(
+                    self.id,
+                    _FETCH_FAILED_DETAIL,
+                    reason=degradation.reason_for_failure(f"HTTP {resp.status_code}"),
+                )
                 return self._stub(ident, legal_name)
             data = _unwrap_jsonp(resp.text)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("abr_australia: fetch failed (%s): %s", ident, exc)
+            logger.warning(
+                "abr_australia: fetch failed (%s): %s", ident, describe_exception(exc)
+            )
+            degradation.record(
+                self.id,
+                _FETCH_FAILED_DETAIL,
+                reason=degradation.reason_for_failure(type(exc).__name__),
+            )
             return self._stub(ident, legal_name)
 
         abn = _digits(data.get("Abn") or "")

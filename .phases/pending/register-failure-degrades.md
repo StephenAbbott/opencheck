@@ -1,0 +1,6 @@
+---
+title: Poland, Australia and Austria say "did not answer" when their register fails, never "no record".
+readme: A failed read of the Polish, Australian or Austrian register now reads as a source that did not answer, not as a company with no record.
+tests: backend +6
+---
+Found by the codebase review of 20 Nov 2026 (the PR 653 class, which fixed Latvia). `krs_poland` broke out of its P/S/C loop on a 5xx or a network error and returned an empty stub; `abr_australia` did the same on any non-2xx or exception; `firmenbuch` returned a card with no extract (counted as a source with data) and put `f"{type(exc).__name__}: {exc}"` into the bundle's `soap_error`, which `/deepen` republishes raw — the `secret_scrub` rule. None recorded a degradation, so `_unanswered_outcome` never fired and coverage listed each under "Answered with no record". Each now records a `source_fetch` degradation with a fixed sentence naming the register and returns a stub, so the source reads as "Did not answer" with Try again; `soap_error` is a short label ("HTTP 503", "ReadTimeout") and the Firmenbuch failure is a stub. A 404 on every KRS register type is still an answer with no record and records nothing. `tests/test_register_failure_degrades.py` pins all three.
