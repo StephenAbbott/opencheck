@@ -1315,6 +1315,9 @@ export interface PersonMatch {
   name_score: number;
   birth_year_compatible: boolean;
   strong: boolean;
+  /** The record's name the score was measured against — the caption, or
+   * an alias / original-script name the record files. */
+  matched_name?: string | null;
 }
 
 /** Per-source outcome for a person check — powers the honest
