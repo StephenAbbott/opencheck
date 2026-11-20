@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 575** — Cached New Zealand company records and director associations now expire after seven days, so a replaced residential address stops showing within a week.
+**Latest: Phase 576** — The person check now matches a name against every name a sanctions or PEP record files, so it finds the PEPs the company lookup finds.
 
 → [Full development history](docs/status.md)
 
