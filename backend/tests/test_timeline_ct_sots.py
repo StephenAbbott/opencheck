@@ -24,7 +24,9 @@ from opencheck.sources.schemas import SourceSchemaError, validate_raw
 from opencheck.sources.schemas.ct_sots import CtSotsTimelineBundle
 from opencheck.timeline import ChangeType, Tier
 from opencheck.timeline.ct_sots import (
+    CONSOLIDATED_STATUS_WORDS,
     CONSOLIDATED_WORDS,
+    MERGED_STATUS_WORDS,
     MERGED_WORDS,
     annual_report_summary,
     ct_sots_change_events,
@@ -181,6 +183,49 @@ class TestEmitter:
         events = ct_sots_change_events(bundle)
         [succession] = [e for e in events if e.change_type is ChangeType.SUCCESSION]
         assert succession.raw_payload_ref == "B" and succession.value_new == CONSOLIDATED_WORDS
+
+    def test_a_merged_business_with_no_merger_filing_still_says_it_merged(self):
+        """ACCURATE WIRE, INC. (0222820) and TABS GROUP, INC. (0770068): Merged
+        in the Master, no certificate on their own record (20 Nov 2026)."""
+        master = {k: v for k, v in _FILINGS["merged_master"].items() if k != "dissolution_date"}
+        bundle = _bundle(
+            "merged",
+            master=master,
+            filings=[_filing("Annual Report", "Annual Report", "2021-12-08")],
+        )
+        events = ct_sots_change_events(bundle)
+        [succession] = [e for e in events if e.change_type is ChangeType.SUCCESSION]
+        assert succession.tier is Tier.IDENTITY_STATUS
+        assert succession.value_new == MERGED_STATUS_WORDS
+        assert succession.event_date is None
+        assert succession.raw_payload_ref is None
+
+    def test_the_row_takes_the_masters_dissolution_date_when_it_gives_one(self):
+        master = dict(_FILINGS["merged_master"], dissolution_date="2020-06-30T00:00:00.000")
+        bundle = _bundle("merged", master=master, filings=[])
+        [succession] = [
+            e for e in ct_sots_change_events(bundle) if e.change_type is ChangeType.SUCCESSION
+        ]
+        assert succession.event_date == "2020-06-30"
+
+    def test_a_consolidated_business_with_no_filing_is_worded_as_consolidated(self):
+        master = dict(_FILINGS["merged_master"], status="Consolidation")
+        bundle = _bundle("merged", master=master, filings=[])
+        [succession] = [
+            e for e in ct_sots_change_events(bundle) if e.change_type is ChangeType.SUCCESSION
+        ]
+        assert succession.value_new == CONSOLIDATED_STATUS_WORDS
+
+    def test_a_certificate_on_record_gives_one_succession_not_two(self):
+        events = ct_sots_change_events(_bundle("merged"))
+        assert len([e for e in events if e.change_type is ChangeType.SUCCESSION]) == 1
+
+    def test_a_foreign_business_marked_merged_gets_no_succession_row(self):
+        master = dict(_FILINGS["merged_master"], citizenship="Foreign")
+        bundle = _bundle("merged", master=master, filings=[])
+        assert not [
+            e for e in ct_sots_change_events(bundle) if e.change_type is ChangeType.SUCCESSION
+        ]
 
     def test_a_foreign_business_ends_only_its_connecticut_registration(self):
         bundle = _bundle(
