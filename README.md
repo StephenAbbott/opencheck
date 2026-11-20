@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 576** — The person check now matches a name against every name a sanctions or PEP record files, so it finds the PEPs the company lookup finds.
+**Latest: Phase 577** — Latvian joint-stock companies say their shareholders are not public instead of "None on record", and SIA companies no longer carry the joint-stock withholding note on History.
 
 → [Full development history](docs/status.md)
 
