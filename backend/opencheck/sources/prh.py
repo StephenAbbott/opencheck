@@ -43,7 +43,9 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from .. import identifiers
+import httpx
+
+from .. import degradation, identifiers
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -51,6 +53,13 @@ from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInf
 
 _API_BASE = "https://avoindata.prh.fi/opendata-ytj-api/v3"
 _CACHE_NS = "prh"
+
+#: The YTJ Open Data API did not answer (a 5xx, a timeout, an unreadable
+#: body). Names the register, never the company (``degradation.record``).
+_FETCH_FAILED_DETAIL = (
+    "The Finnish Patent and Registration Office's YTJ Open Data API did not "
+    "answer, so the company's record was not read."
+)
 
 # GLEIF Registration Authority code for the Finnish Trade Register (Kaupparekisteri).
 # All Finnish entities in GLEIF carry registeredAt.id == "RA000188".
@@ -176,7 +185,7 @@ class PrhAdapter(SourceAdapter):
             f"/companies?name={quote(query)}&maxResults=10",
             cache_key=cache_key,
         )
-        companies = payload.get("companies") or []
+        companies = (payload or {}).get("companies") or []
         return [self._company_hit(c) for c in companies if c.get("businessId")]
 
     # ------------------------------------------------------------------
@@ -214,10 +223,24 @@ class PrhAdapter(SourceAdapter):
                 "is_stub": True,
             }
 
-        payload = await self._get(
+        payload, failure = await self._get_or_failure(
             f"/companies?businessId={quote(ytunnus)}",
             cache_key=cache_key,
         )
+        if payload is None:
+            # A failed read is never "no record" (the PR 653 class).
+            degradation.record(
+                self.id,
+                _FETCH_FAILED_DETAIL,
+                reason=degradation.reason_for_failure(failure or ""),
+            )
+            return {
+                "source_id": self.id,
+                "ytunnus": ytunnus,
+                "company": None,
+                "legal_name": legal_name,
+                "is_stub": True,
+            }
         companies = payload.get("companies") or []
         company = companies[0] if companies else {}
 
@@ -233,28 +256,48 @@ class PrhAdapter(SourceAdapter):
     # HTTP with caching
     # ------------------------------------------------------------------
 
-    async def _get(self, path: str, *, cache_key: str) -> dict[str, Any]:
+    async def _get(self, path: str, *, cache_key: str) -> dict[str, Any] | None:
+        """The cached or live JSON for ``path``; ``{}`` for a 404 (no record);
+        ``None`` when the API did not answer. See ``_get_or_failure``."""
+        payload, _failure = await self._get_or_failure(path, cache_key=cache_key)
+        return payload
+
+    async def _get_or_failure(
+        self, path: str, *, cache_key: str
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        """``(payload, None)`` when the API answered — ``{}`` for a 404, no
+        record — else ``(None, failure)`` for a 5xx, a timeout or an
+        unreadable body, with a short label ("HTTP 503", "ReadTimeout"). A
+        failure is never cached (the Phase 262 rule)."""
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
-            return cached[0]
+            return cached[0], None
 
-        async with build_client() as client:
-            response = await client.get(
-                f"{_API_BASE}{path}",
-                headers={"Accept": "application/json"},
-            )
-            if not response.is_success:
-                import logging
-                logging.getLogger(__name__).warning(
-                    "PRH YTJ API returned %s — skipping (url=%s)",
-                    response.status_code,
-                    response.url,
+        import logging
+        log = logging.getLogger(__name__)
+        failure: str | None = None
+        try:
+            async with build_client() as client:
+                response = await client.get(
+                    f"{_API_BASE}{path}",
+                    headers={"Accept": "application/json"},
                 )
-                return {}
-            payload = response.json()
+            if response.status_code == 404:
+                return {}, None
+            if response.is_success:
+                payload = response.json()
+            else:
+                failure = f"HTTP {response.status_code}"
+        except httpx.HTTPError as exc:
+            failure = type(exc).__name__
+        except ValueError:
+            failure = "unreadable body"
+        if failure is not None:
+            log.warning("PRH YTJ API did not answer (%s)", failure)
+            return None, failure
 
         self._cache.put(cache_key, payload)
-        return payload
+        return payload, None
 
     # ------------------------------------------------------------------
     # Hit factory

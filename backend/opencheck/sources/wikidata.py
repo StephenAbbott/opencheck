@@ -26,7 +26,7 @@ from typing import Any
 
 import httpx
 
-from .. import identifiers
+from .. import degradation, identifiers
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -37,6 +37,26 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 _LEI_SHAPE = identifiers.LEI_PATH_SHAPE
 
 _SEARCH_API = "https://www.wikidata.org/w/api.php"
+
+#: The Query Service did not answer the main query (an HTTP error status, or
+#: a 200 carrying WDQS's own error). Names the source, never the entity
+#: (``degradation.record``).
+_FETCH_FAILED_DETAIL = (
+    "The Wikidata Query Service did not answer, so the entity's Wikidata "
+    "record was not read."
+)
+
+
+class WikidataUnavailable(RuntimeError):
+    """WDQS answered with an error instead of a result set.
+
+    ``_sparql`` returns ``{}`` for that, which a caller must not read as "no
+    match": a payload with no ``results`` key is a failed query. The message
+    is fixed, so ``describe_exception`` has nothing to scrub.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("the Wikidata Query Service did not answer")
 _CACHE_NS = "wikidata"
 
 # Single SPARQL query that yields labels, classifying P31 (instance of),
@@ -710,6 +730,11 @@ class WikidataAdapter(SourceAdapter):
             'SELECT ?item WHERE { ?item wdt:P1278 "%s" } LIMIT 1' % lei
         )
         payload = await self._sparql(query, cache_key=cache_key)
+        if "results" not in payload:
+            # An HTTP error status or a WDQS error body, not "no mapping":
+            # raised, so `_resolve_ctx` reports Wikidata as not answering
+            # (the Phase 244 path) instead of a lookup with no Wikidata card.
+            raise WikidataUnavailable()
         bindings = payload.get("results", {}).get("bindings") or []
         if not bindings:
             return None
@@ -767,10 +792,14 @@ class WikidataAdapter(SourceAdapter):
         own_bindings = own_payload.get("results", {}).get("bindings", [])
 
         if not bindings:
-            # The main SPARQL query returned nothing — most likely a WDQS
-            # timeout or transient error that wasn't cached.  Return a stub
-            # so the lookup router suppresses this source card rather than
-            # showing an entity named "Q157062" with all-null fields.
+            # The main SPARQL query returned nothing. With no ``results`` key
+            # WDQS did not answer (an HTTP error status, or a 200 carrying its
+            # own error): that is recorded, so the source reads "did not
+            # answer" rather than "no record" (the PR 653 class). Either way a
+            # stub, so the lookup router suppresses this source card rather
+            # than showing an entity named "Q157062" with all-null fields.
+            if "results" not in main_payload:
+                degradation.record(self.id, _FETCH_FAILED_DETAIL)
             import logging
             logging.getLogger(__name__).warning(
                 "Wikidata SPARQL returned empty bindings for %s — marking stub",

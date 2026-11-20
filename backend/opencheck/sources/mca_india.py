@@ -49,13 +49,22 @@ import logging
 import re
 from typing import Any
 
+from .. import degradation
 from ..config import get_settings
 from ..http import build_client
+from ..secret_scrub import describe_exception
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.mca_india import MCABundle
 
 logger = logging.getLogger(__name__)
+
+#: The OGD platform did not answer (a 5xx, a 429, a timeout, an unreadable
+#: body). Names the register, never the company (``degradation.record``).
+_FETCH_FAILED_DETAIL = (
+    "The Ministry of Corporate Affairs company master data on data.gov.in did "
+    "not answer, so the company's record was not read."
+)
 
 # GLEIF Registration Authority code for the Ministry of Corporate Affairs.
 MCA_RA_CODE: str = "RA000394"
@@ -140,9 +149,18 @@ class McaIndiaAdapter(SourceAdapter):
     async def _query(self, filters: dict[str, str], limit: int) -> list[dict[str, Any]]:
         """Run one exact-filter query; return the ``records`` list.
 
-        Returns ``[]`` on any HTTP/parse failure — including the OGD
-        platform's HTTP 429 rate-limit response — after logging.
+        Returns ``[]`` on any HTTP/parse failure, after logging — the name
+        search's contract. ``fetch`` reads ``_query_or_failure`` instead, so a
+        failed read is never mistaken for "no record".
         """
+        records, _failure = await self._query_or_failure(filters, limit)
+        return records
+
+    async def _query_or_failure(
+        self, filters: dict[str, str], limit: int
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        """``(records, None)`` when the platform answered, else ``([],
+        failure)`` with a short label ("HTTP 503", "ReadTimeout")."""
         params: dict[str, str] = {
             "api-key": self._key(),
             "format": "json",
@@ -154,21 +172,21 @@ class McaIndiaAdapter(SourceAdapter):
             async with build_client() as client:
                 resp = await client.get(_API_URL, params=params)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("mca_india: request failed: %s", exc)
-            return []
+            logger.warning("mca_india: request failed: %s", describe_exception(exc))
+            return [], type(exc).__name__
         if resp.status_code == 429:
             logger.warning("mca_india: OGD API rate limit exceeded (HTTP 429)")
-            return []
+            return [], "HTTP 429"
         if not resp.is_success:
             logger.warning("mca_india: HTTP %s from OGD API", resp.status_code)
-            return []
+            return [], f"HTTP {resp.status_code}"
         try:
             data = resp.json()
-        except ValueError as exc:
-            logger.warning("mca_india: could not parse OGD response: %s", exc)
-            return []
-        records = data.get("records")
-        return records if isinstance(records, list) else []
+        except ValueError:
+            logger.warning("mca_india: could not parse OGD response")
+            return [], "unreadable body"
+        records = data.get("records") if isinstance(data, dict) else None
+        return (records if isinstance(records, list) else []), None
 
     # ------------------------------------------------------------------
     # Search (exact company name) — used by the standalone /search path
@@ -253,7 +271,15 @@ class McaIndiaAdapter(SourceAdapter):
         if not self.info.live_available:
             return self._stub(cin, legal_name)
 
-        records = await self._query({"CIN": cin}, limit=1)
+        records, failure = await self._query_or_failure({"CIN": cin}, limit=1)
+        if failure is not None:
+            # A failed read is never "no record" (the PR 653 class).
+            degradation.record(
+                self.id,
+                _FETCH_FAILED_DETAIL,
+                reason=degradation.reason_for_failure(failure),
+            )
+            return self._stub(cin, legal_name)
         record = records[0] if records and isinstance(records[0], dict) else None
         if not record:
             return self._stub(cin, legal_name)
