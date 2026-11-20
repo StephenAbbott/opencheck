@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 585** — The blog's wordmark and text no longer look bolder than the rest of OpenCheck on a Mac.
+**Latest: Phase 586** — The sources page now opens with the same large page title as the API and features pages.
 
 → [Full development history](docs/status.md)
 
