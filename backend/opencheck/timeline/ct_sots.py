@@ -25,6 +25,11 @@ reports), at most 195, and 73% of all filings are annual reports.
   business. On a domestic business the register records as Merged or
   Consolidation, the latest such certificate is a ``SUCCESSION``; on the
   survivor it changed nothing about the survivor's status and stays Tier 3.
+  A business the register records as Merged or Consolidation with no such
+  certificate on its own record (it was filed on the survivor) still gets
+  the ``SUCCESSION`` row, from the Business Master: dated by its dissolution
+  date where it gives one, else undated — never left to end on its last
+  annual report as if it were still trading.
 * **Annual reports** — one grouped Tier 3 row per business (Stephen,
   20 Nov 2026), dated by the latest report, never one row per year.
 * **Everything else** — a Tier 3 administrative row: formations, agent and
@@ -127,6 +132,16 @@ _DOMESTICATION_FILINGS = frozenset(
 
 MERGED_WORDS = "Merged into another business; the register does not name it"
 CONSOLIDATED_WORDS = "Consolidated into another business; the register does not name it"
+#: Merged / Consolidation in the Business Master, no certificate on the record.
+MERGED_STATUS_WORDS = (
+    "Merged into another business, as the register records; no merger filing "
+    "is on this business's record, and the register does not name the other business"
+)
+CONSOLIDATED_STATUS_WORDS = (
+    "Consolidated into another business, as the register records; no "
+    "consolidation filing is on this business's record, and the register does "
+    "not name the other business"
+)
 
 
 def text(value: Any) -> str:
@@ -289,6 +304,26 @@ def ct_sots_change_events(bundle: dict[str, Any] | None) -> list[ChangeEvent]:
         for filing in filings:
             if _merger_kind(text(filing.get("type")), text(filing.get("filing_type"))) == wanted:
                 absorbed_by = filing
+
+    if domestic and status in ("Merged", "Consolidation") and absorbed_by is None:
+        dated = summary.get("dissolved_on")
+        events.append(
+            ChangeEvent(
+                source_id=_SOURCE,
+                subject_id=business_id,
+                record_type=RecordType.ENTITY,
+                raw_change_type=status,
+                raw_field="status",
+                value_new=(
+                    CONSOLIDATED_STATUS_WORDS if status == "Consolidation" else MERGED_STATUS_WORDS
+                ),
+                change_type=ChangeType.SUCCESSION,
+                tier=Tier.IDENTITY_STATUS,
+                event_date=dated,
+                date_basis=DateBasis.EFFECTIVE,
+                date_confidence=DateConfidence.MEDIUM if dated else DateConfidence.LOW,
+            )
+        )
 
     reports: list[dict[str, Any]] = []
     for filing in filings:
