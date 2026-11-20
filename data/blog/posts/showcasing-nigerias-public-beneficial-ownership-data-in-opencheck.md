@@ -34,7 +34,7 @@ You can see data on these companies by clicking the links below where the Corpor
 7. [Transcorp Hotels PLC](https://opencheck.world/?lei=0292007167E0P6YH4A58)
 8. [Zenith Bank PLC](https://opencheck.world/?lei=029200268F8M5YI5I629)
 9. [MTN Nigeria Communications PLC](https://opencheck.world/?lei=0292003626J3K6UG9D04)
-10. [Nestle Nigeria PLC](https://opencheck.world/?lei=0292003626J3K6UG9D04)
+10. [Nestle Nigeria PLC](https://opencheck.world/?lei=0292002173F4KD5E5347)
 
 ## What is OpenCheck?
 

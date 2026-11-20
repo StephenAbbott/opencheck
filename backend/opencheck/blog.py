@@ -38,7 +38,7 @@ from .cache import data_root
 from .entity_pages import FONTS_STYLESHEET, _goatcounter_snippet
 
 #: Bump when the rendered HTML changes materially (part of every ETag).
-TEMPLATE_VERSION = "2"
+TEMPLATE_VERSION = "3"
 
 AUTHOR = "Stephen Abbott Pugh"
 AUTHOR_URL = "https://www.beneficialownership.co.uk/"
@@ -328,6 +328,9 @@ border-radius:50%;background:#fff;border:3px solid var(--blue)}
 .card h3{font:700 19px/1.3 Bitter,Georgia,serif;margin:0 0 6px}
 .card h3 a{color:var(--ink);text-decoration:none}.card h3 a:hover{color:var(--blue);text-decoration:underline}
 .card p{margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--muted)}
+.card.has-thumb{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:20px;align-items:start}
+.thumb{display:block}.thumb img{width:100%;aspect-ratio:40/21;object-fit:cover;object-position:left top;
+border-radius:8px;border:1px solid var(--rule)}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
 .empty{padding:28px 0;color:var(--muted)}
 .post{max-width:1100px;margin:0 auto;padding:30px 16px 8px;display:grid;
@@ -367,7 +370,7 @@ footer.site div{max-width:1100px;margin:0 auto;display:flex;gap:6px 18px;flex-wr
 footer.site a{color:rgba(255,255,255,.85)}
 @media(max-width:860px){.post{grid-template-columns:1fr;gap:18px}.post aside{position:static;order:2}
 .month{grid-template-columns:1fr}.month h2{position:static}.post article h1{font-size:28px}.dek{font-size:17px}}
-@media(max-width:640px){.prose p,.prose li{font-size:16px}.head h1{font-size:26px}}
+@media(max-width:640px){.card.has-thumb{grid-template-columns:1fr}.thumb{order:-1}.prose p,.prose li{font-size:16px}.head h1{font-size:26px}}
 """
 
 
@@ -447,6 +450,20 @@ def _absolute(url: str, frontend: str) -> str:
     return f"{frontend}{url}" if url.startswith("/") else url
 
 
+def _thumb(post: Post) -> str:
+    """The post's lead image beside its card on /blog. Decorative: the title
+    beside it is the link, so the image is hidden from screen readers and
+    taken out of the tab order."""
+    if not post.image:
+        return ""
+    size = _image_size(post.image)
+    dims = f' width="{size[0]}" height="{size[1]}"' if size else ""
+    return (
+        f'<a class="thumb" href="{post.path}" tabindex="-1" aria-hidden="true">'
+        f'<img src="{html.escape(post.image)}" alt=""{dims} loading="lazy" decoding="async"></a>'
+    )
+
+
 def render_index(posts: tuple[Post, ...], *, frontend: str) -> str:
     """The /blog page: posts grouped by month on a dated rail."""
     e = html.escape
@@ -458,11 +475,13 @@ def render_index(posts: tuple[Post, ...], *, frontend: str) -> str:
         heading = items[0].day.strftime("%B %Y")
         count = f"{len(items)} post" + ("" if len(items) == 1 else "s")
         cards = "".join(
-            f'<li class="card"><div class="stamp">publicationDate <span>=</span> '
+            f'<li class="card{" has-thumb" if p.image else ""}"><div class="text">'
+            f'<div class="stamp">publicationDate <span>=</span> '
             f'<time datetime="{p.published.isoformat()}">{p.day.isoformat()}</time></div>'
             f'<h3><a href="{p.path}">{e(p.title)}</a></h3>'
             f"<p>{e(p.description)}</p>"
-            f'<div class="row"><span>{p.reading_minutes} min read</span></div></li>'
+            f'<div class="row"><span>{p.reading_minutes} min read</span></div></div>'
+            f"{_thumb(p)}</li>"
             for p in items
         )
         sections.append(
