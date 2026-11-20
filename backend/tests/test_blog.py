@@ -10,6 +10,7 @@ import json
 import re
 import xml.etree.ElementTree as ET
 from datetime import date
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -212,3 +213,25 @@ def test_nestle_nigeria_links_to_its_own_lei(posts) -> None:
     post = next(p for p in posts if p.slug.startswith("showcasing-nigeria"))
     text = (blog.posts_dir() / f"{post.slug}.md").read_text()
     assert "[Nestle Nigeria PLC](https://opencheck.world/?lei=0292002173F4KD5E5347)" in text
+
+
+def test_blog_chrome_matches_the_apps(client: TestClient) -> None:
+    """The blog's header and footer copy SiteChrome.tsx (Stephen, 20 Nov
+    2026): the same nav, the same footer links in the same order, the same
+    mark and the GODIN ribbon. Moving a link in one file fails here."""
+    chrome = (
+        Path(__file__).resolve().parents[2] / "frontend/src/components/SiteChrome.tsx"
+    ).read_text()
+    footer = chrome[chrome.index("export function SiteFooter") :]
+    project = footer[footer.index("Project") : footer.index("Legal")]
+    labels = re.findall(r">\s*\n?\s*([A-Za-z]+)\s*\n?\s*</a>", project)
+    page = client.get("/blog").text
+    blog_footer = page[page.index('<footer class="site"') :]
+    blog_project = blog_footer[blog_footer.index("Project") : blog_footer.index("Legal")]
+    assert re.findall(r'<a href="[^"]*">([^<]+)</a>', blog_project) == labels
+    nav = page[page.index('<nav aria-label="Site navigation">') : page.index("</nav>")]
+    assert re.findall(r">([^<]+)</a>", nav) == ["Sources", "API", "Features", "Blog"]
+    assert 'class="godin"' in page and "/godin-logo.png" in page
+    assert 'clip-path="url(#oc-blog-lens)"' in page  # OpenCheckIcon, not the old triangle
+    assert "See who owns and controls a company, from open data." in page
+    assert 'href="/blog/feed.xml">RSS feed</a>' in page
