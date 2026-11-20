@@ -1,0 +1,5 @@
+---
+title: Connecticut's Principals and Name Change History datasets are Public Domain, and the licence row says so.
+readme: Connecticut's business registry is now Public Domain for all three datasets OpenCheck reads, after the Secretary of the State updated their terms on request.
+---
+The `CT-Open-Data` row read "Public Domain for Business Master" and said the Principals and Name Change History datasets carried no licence field. Stephen asked the Office of the Secretary of the State to confirm their reuse terms; on 20 Nov 2026 Business Services replied that they had set them to Public Domain, and data.ct.gov's metadata for `ka36-64k6` and `enwv-52we` now reads `PUBLIC_DOMAIN`. The row's name and summary, the adapter docstring, ATTRIBUTIONS.md, docs/sources.md, CLAUDE.md and the OKF concept are updated; the licence id and its terms (commercial yes, no attribution required, no share-alike) are unchanged, so no export or licence-matrix result moves. Filing History (`ah3s-bes7`) and Agents (`qh2m-n44y`) still carry no licence field and are still not read; both are follow-up tickets.
