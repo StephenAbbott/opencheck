@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 569** — The type-check ratchet now refuses to run without the optional ftm extra instead of reporting a stale baseline.
+**Latest: Phase 570** — A failed read of the Polish, Australian or Austrian register now reads as a source that did not answer, not as a company with no record.
 
 → [Full development history](docs/status.md)
 
