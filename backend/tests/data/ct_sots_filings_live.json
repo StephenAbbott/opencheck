@@ -1,0 +1,1336 @@
+{
+ "captured": "2026-11-20",
+ "select": "account,name,filing_date,effective_date,type,filing_type,report_year,date_forfeited",
+ "responses": {
+  "eurpac": [
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0000308500",
+    "filing_date": "1961-09-19T00:00:00.000",
+    "type": "Business Formation",
+    "filing_type": "Certificate of Incorporation"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0000308501",
+    "filing_date": "1961-09-19T00:00:00.000",
+    "type": "First Report",
+    "filing_type": "Organization and First Report"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0000308502",
+    "filing_date": "1963-09-12T00:00:00.000",
+    "type": "Amendment",
+    "filing_type": "Amend"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0000308503",
+    "filing_date": "1971-12-23T00:00:00.000",
+    "type": "Amendment",
+    "filing_type": "Amend"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0000308504",
+    "filing_date": "1976-01-09T00:00:00.000",
+    "type": "Merger",
+    "filing_type": "Certificate of Merger"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0000308505",
+    "filing_date": "1982-09-30T00:00:00.000",
+    "type": "Retirement Shares",
+    "filing_type": "Retirement Shares"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0000308506",
+    "filing_date": "1982-12-22T00:00:00.000",
+    "type": "Amendment",
+    "filing_type": "Amend Shares"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0000308507",
+    "filing_date": "1987-03-04T00:00:00.000",
+    "type": "Retirement Shares",
+    "filing_type": "Retirement Shares"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0001680405",
+    "filing_date": "1996-11-12T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "1996"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0001759173",
+    "filing_date": "1997-09-18T00:00:00.000",
+    "effective_date": "1997-09-18T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "1997"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0001773263",
+    "filing_date": "1997-11-06T00:00:00.000",
+    "effective_date": "1997-11-06T00:00:00.000",
+    "type": "Amendment",
+    "filing_type": "Amend"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0001880128",
+    "filing_date": "1998-08-19T00:00:00.000",
+    "effective_date": "1998-08-19T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "1998"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0002023103",
+    "filing_date": "1999-09-24T00:00:00.000",
+    "effective_date": "1999-09-24T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "1999"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0002055770",
+    "filing_date": "1999-12-21T00:00:00.000",
+    "effective_date": "1999-12-21T00:00:00.000",
+    "type": "Amendment",
+    "filing_type": "Amend Share"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0002153113",
+    "filing_date": "2000-08-29T00:00:00.000",
+    "effective_date": "2000-08-29T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2000"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0002329026",
+    "filing_date": "2001-09-14T00:00:00.000",
+    "effective_date": "2001-09-14T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2001"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0002507275",
+    "filing_date": "2002-09-23T00:00:00.000",
+    "effective_date": "2002-09-23T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2002"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0002632225",
+    "filing_date": "2003-09-10T00:00:00.000",
+    "effective_date": "2003-09-10T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2003"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0002918785",
+    "filing_date": "2004-10-01T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2004"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0003097076",
+    "filing_date": "2005-09-22T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2005"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0003297570",
+    "filing_date": "2006-09-18T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2006"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0003537596",
+    "filing_date": "2007-09-13T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2007"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0003779673",
+    "filing_date": "2008-09-09T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2008"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0004015314",
+    "filing_date": "2009-08-26T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2009"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0004263596",
+    "filing_date": "2010-08-30T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2010"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0004320624",
+    "filing_date": "2011-02-15T00:00:00.000",
+    "effective_date": "2011-02-15T00:00:00.000",
+    "type": "Change of Agent",
+    "filing_type": "Agent Change"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0004610974",
+    "filing_date": "2011-08-15T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2011"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0004775772",
+    "filing_date": "2013-01-07T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2012"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0004893215",
+    "filing_date": "2013-07-10T00:00:00.000",
+    "effective_date": "2013-07-10T00:00:00.000",
+    "type": "Change of Agent Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0004923734",
+    "filing_date": "2013-08-14T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2013"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0005016754",
+    "filing_date": "2013-12-23T00:00:00.000",
+    "effective_date": "2013-12-23T00:00:00.000",
+    "type": "Change of Agent",
+    "filing_type": "Agent Change"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0005164157",
+    "filing_date": "2014-08-13T00:00:00.000",
+    "effective_date": "2014-08-13T00:00:00.000",
+    "type": "Amendment",
+    "filing_type": "Restate"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0005276538",
+    "filing_date": "2015-02-10T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2014"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0005382484",
+    "filing_date": "2015-08-18T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2015"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0005653859",
+    "filing_date": "2016-09-19T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2016"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0005898952",
+    "filing_date": "2017-08-01T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2017"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0006225256",
+    "filing_date": "2018-08-01T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2018"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0006589812",
+    "filing_date": "2019-07-03T00:00:00.000",
+    "type": "Change of Business Address",
+    "filing_type": "Business Address Change"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0006640867",
+    "filing_date": "2019-09-09T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2019"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0006943532",
+    "filing_date": "2020-07-06T00:00:00.000",
+    "effective_date": "2020-07-06T00:00:00.000",
+    "type": "Change of Agent Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0006950703",
+    "filing_date": "2020-07-06T00:00:00.000",
+    "effective_date": "2020-07-06T00:00:00.000",
+    "type": "Change of Agent Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0006976103",
+    "filing_date": "2020-09-09T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2020"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "BF-0009812659",
+    "filing_date": "2021-08-27T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "BF-0010451987",
+    "filing_date": "2022-01-14T00:00:00.000",
+    "effective_date": "2022-01-14T00:00:00.000",
+    "type": "Mass Agent Change \ufffd Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "BF-0010392751",
+    "filing_date": "2022-09-07T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2022"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "BF-0011087733",
+    "filing_date": "2023-08-30T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "BF-0012340562",
+    "filing_date": "2024-09-06T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "BF-0012897805",
+    "filing_date": "2025-09-02T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "BF-0013732897",
+    "filing_date": "2026-09-16T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmSc6AAF",
+    "name": "0000308508",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "1994"
+   }
+  ],
+  "eder": [
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0003616763",
+    "filing_date": "2008-01-28T00:00:00.000",
+    "type": "Business Formation",
+    "filing_type": "Certificate of Organization"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0003877187",
+    "filing_date": "2009-01-30T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2009"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0004094992",
+    "filing_date": "2009-12-28T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2010"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0004401482",
+    "filing_date": "2011-02-03T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2011"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0004505444",
+    "filing_date": "2012-01-17T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2012"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0005072062",
+    "filing_date": "2014-03-26T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2013"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0005072066",
+    "filing_date": "2014-03-26T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2014"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0005245052",
+    "filing_date": "2014-12-29T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2015"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0005522593",
+    "filing_date": "2016-03-28T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2016"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0006037205",
+    "filing_date": "2018-01-26T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2017"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0006037213",
+    "filing_date": "2018-01-26T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2018"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0006413479",
+    "filing_date": "2019-02-27T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2019"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0006777111",
+    "filing_date": "2020-02-24T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2020"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "0007160881",
+    "filing_date": "2021-02-16T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2021"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "BF-0010190062",
+    "filing_date": "2022-03-01T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2022"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "BF-0011285152",
+    "filing_date": "2023-01-25T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "BF-0012199242",
+    "filing_date": "2024-01-23T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "BF-0012988468",
+    "filing_date": "2025-03-05T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "BF-0013817343",
+    "filing_date": "2026-01-19T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WnN83AAF",
+    "name": "BF-0014117105",
+    "filing_date": "2026-03-25T00:00:00.000",
+    "effective_date": "2026-04-01T00:00:00.000",
+    "type": "Amendment",
+    "filing_type": "Certificate of Amendment"
+   }
+  ],
+  "dissolved": [
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0002345819",
+    "filing_date": "2001-11-23T00:00:00.000",
+    "type": "Name Reservation",
+    "filing_type": "Reservation of Name"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0002354787",
+    "filing_date": "2001-12-17T00:00:00.000",
+    "type": "Business Formation",
+    "filing_type": "Certificate of Incorporation"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0004861852",
+    "filing_date": "2013-05-14T00:00:00.000",
+    "effective_date": "2013-05-14T00:00:00.000",
+    "type": "First Report",
+    "filing_type": "Organization and First Report"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0005467380",
+    "filing_date": "2016-01-20T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2014"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0005467382",
+    "filing_date": "2016-01-20T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2015"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0005946967",
+    "filing_date": "2017-10-17T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2016"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0006150604",
+    "filing_date": "2018-04-03T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2017"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0006448769",
+    "filing_date": "2019-03-11T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2018"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0006849655",
+    "filing_date": "2020-03-26T00:00:00.000",
+    "type": "Change of Business Address",
+    "filing_type": "Business Address Change"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0006849670",
+    "filing_date": "2020-03-26T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2019"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "0007094926",
+    "filing_date": "2021-02-01T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2020"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "BF-0009828077",
+    "filing_date": "2021-12-17T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "BF-0010316248",
+    "filing_date": "2023-02-07T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2022"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "BF-0011404332",
+    "filing_date": "2023-12-20T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "BF-0013307494",
+    "filing_date": "2025-02-19T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "BF-0012947209",
+    "filing_date": "2026-01-20T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmuhkAAB",
+    "name": "BF-0014384690",
+    "filing_date": "2026-11-05T00:00:00.000",
+    "effective_date": "2026-11-05T00:00:00.000",
+    "type": "Dissolution",
+    "filing_type": "Certificate of Dissolution"
+   }
+  ],
+  "forfeited": [
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0002656927",
+    "filing_date": "2003-12-23T00:00:00.000",
+    "type": "Business Formation",
+    "filing_type": "Certificate of Organization"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0002973584",
+    "filing_date": "2005-01-14T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2004"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0003100385",
+    "filing_date": "2006-01-09T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2005"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0003366733",
+    "filing_date": "2007-01-08T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2006"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0003595504",
+    "filing_date": "2007-12-20T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2007"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0003856255",
+    "filing_date": "2008-12-24T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2008"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0004090115",
+    "filing_date": "2009-12-11T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2009"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0004357208",
+    "filing_date": "2010-12-20T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2010"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0004537608",
+    "filing_date": "2012-03-05T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2011"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0005116185",
+    "filing_date": "2014-06-02T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2012"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0005116187",
+    "filing_date": "2014-06-02T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2013"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0005231092",
+    "filing_date": "2014-12-04T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2014"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0005514114",
+    "filing_date": "2016-03-15T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2015"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0005710669",
+    "filing_date": "2016-12-02T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2016"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0005987992",
+    "filing_date": "2017-12-19T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2017"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0006296183",
+    "filing_date": "2018-12-20T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2018"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "0006566139",
+    "filing_date": "2019-05-29T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2019"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "BF-0011892734",
+    "filing_date": "2023-07-21T00:00:00.000",
+    "type": "Administrative Dissolution",
+    "filing_type": "Notice of Intent to Dissolve/Revoke"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "BF-0012033474",
+    "filing_date": "2023-10-25T00:00:00.000",
+    "type": "Administrative Dissolution",
+    "filing_type": "Certificate of Dissolution/Revocation"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "BF-0012540427",
+    "filing_date": "2024-01-26T00:00:00.000",
+    "effective_date": "2024-01-26T00:00:00.000",
+    "type": "Reinstatement",
+    "filing_type": "Certificate of Reinstatement"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "BF-0014204262",
+    "filing_date": "2026-07-27T00:00:00.000",
+    "type": "Administrative Dissolution",
+    "filing_type": "Notice of Intent to Dissolve/Revoke"
+   },
+   {
+    "account": "001t000000Wn5FcAAJ",
+    "name": "BF-0014296390",
+    "filing_date": "2026-10-27T00:00:00.000",
+    "type": "Administrative Dissolution",
+    "filing_type": "Certificate of Dissolution/Revocation"
+   }
+  ],
+  "glenstone": [
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "0004787928",
+    "filing_date": "2013-01-09T00:00:00.000",
+    "type": "Business Formation",
+    "filing_type": "Certificate of Organization"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "0005296817",
+    "filing_date": "2015-03-13T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2014"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "0005978150",
+    "filing_date": "2017-12-04T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2015"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "0005978151",
+    "filing_date": "2017-12-04T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2016"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "0005978152",
+    "filing_date": "2017-12-04T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2017"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "0006434281",
+    "filing_date": "2019-03-04T00:00:00.000",
+    "effective_date": "2019-03-04T00:00:00.000",
+    "type": "Change of Agent",
+    "filing_type": "Agent Change"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "0006473279",
+    "filing_date": "2019-03-06T00:00:00.000",
+    "effective_date": "2019-03-06T00:00:00.000",
+    "type": "Amendment",
+    "filing_type": "Amend Name"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "0007075987",
+    "filing_date": "2021-01-22T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2018"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0009720703",
+    "filing_date": "2021-11-08T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2019"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0009720702",
+    "filing_date": "2023-04-13T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2020"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0009849678",
+    "filing_date": "2023-04-13T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0010816590",
+    "filing_date": "2023-04-13T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0011297612",
+    "filing_date": "2023-04-13T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0012164307",
+    "filing_date": "2024-03-12T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0012775490",
+    "filing_date": "2024-09-26T00:00:00.000",
+    "effective_date": "2024-09-26T00:00:00.000",
+    "type": "Interim Notice",
+    "filing_type": "Interim Notice"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0012775494",
+    "filing_date": "2024-09-26T00:00:00.000",
+    "effective_date": "2024-09-26T00:00:00.000",
+    "type": "Name Change Amendment",
+    "filing_type": "Certificate of Amendment"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0012775503",
+    "filing_date": "2024-09-26T00:00:00.000",
+    "effective_date": "2024-09-26T00:00:00.000",
+    "type": "Change of Agent",
+    "filing_type": "Agent Change"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0012775510",
+    "filing_date": "2024-09-26T00:00:00.000",
+    "effective_date": "2024-09-26T00:00:00.000",
+    "type": "Name Change Amendment",
+    "filing_type": "Certificate of Amendment"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0013024647",
+    "filing_date": "2025-03-11T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WnjbNAAR",
+    "name": "BF-0013487618",
+    "filing_date": "2025-06-24T00:00:00.000",
+    "effective_date": "2025-06-24T00:00:00.000",
+    "type": "Change of Agent",
+    "filing_type": "Agent Change"
+   }
+  ],
+  "ubs": [
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0001862443",
+    "filing_date": "1998-07-08T00:00:00.000",
+    "type": "Business Registration",
+    "filing_type": "Certificate of Authority"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0002014924",
+    "filing_date": "1999-08-27T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "1999"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0002178105",
+    "filing_date": "2000-10-20T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2000"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0002317854",
+    "filing_date": "2001-08-01T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2001"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0002393171",
+    "filing_date": "2002-03-18T00:00:00.000",
+    "effective_date": "2002-03-18T00:00:00.000",
+    "type": "Change of Agent",
+    "filing_type": "Agent Change"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0002489607",
+    "filing_date": "2002-07-24T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2002"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0002535045",
+    "filing_date": "2003-02-18T00:00:00.000",
+    "effective_date": "2003-02-18T00:00:00.000",
+    "type": "Change of Agent Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0002683256",
+    "filing_date": "2003-07-29T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2003"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0002878009",
+    "filing_date": "2004-07-26T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2004"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0003079379",
+    "filing_date": "2005-07-29T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2005"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0003256111",
+    "filing_date": "2006-07-25T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2006"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0003500859",
+    "filing_date": "2007-07-13T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2007"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0003740524",
+    "filing_date": "2008-07-10T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2008"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0004055275",
+    "filing_date": "2009-11-24T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2009"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0004242678",
+    "filing_date": "2010-07-23T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2010"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0004484809",
+    "filing_date": "2011-07-11T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2011"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0004682895",
+    "filing_date": "2012-07-09T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2012"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0004872088",
+    "filing_date": "2013-06-05T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2013"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0005126329",
+    "filing_date": "2014-06-16T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2014"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0005349105",
+    "filing_date": "2015-06-15T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2015"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0005589189",
+    "filing_date": "2016-06-21T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2016"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0005872714",
+    "filing_date": "2017-06-22T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2017"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0006199083",
+    "filing_date": "2018-06-13T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2018"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0006585151",
+    "filing_date": "2019-06-25T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2019"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0006943532",
+    "filing_date": "2020-07-06T00:00:00.000",
+    "effective_date": "2020-07-06T00:00:00.000",
+    "type": "Change of Agent Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0006950703",
+    "filing_date": "2020-07-06T00:00:00.000",
+    "effective_date": "2020-07-06T00:00:00.000",
+    "type": "Change of Agent Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "0006945206",
+    "filing_date": "2020-07-13T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2020"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "BF-0009761937",
+    "filing_date": "2021-07-09T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "BF-0010465361",
+    "filing_date": "2022-01-14T00:00:00.000",
+    "effective_date": "2022-01-14T00:00:00.000",
+    "type": "Mass Agent Change \ufffd Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "BF-0010192434",
+    "filing_date": "2022-07-12T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report",
+    "report_year": "2022"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "BF-0011147151",
+    "filing_date": "2023-07-18T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "BF-0012172898",
+    "filing_date": "2024-06-27T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "BF-0012934241",
+    "filing_date": "2025-06-20T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   },
+   {
+    "account": "001t000000WmkztAAB",
+    "name": "BF-0013765616",
+    "filing_date": "2026-06-16T00:00:00.000",
+    "type": "Annual Report",
+    "filing_type": "Annual Report"
+   }
+  ],
+  "merged": [
+   {
+    "account": "001t000000hjagJAAQ",
+    "name": "0004449495",
+    "filing_date": "2011-09-28T00:00:00.000",
+    "type": "Business Formation",
+    "filing_type": "Certificate of Incorporation"
+   },
+   {
+    "account": "001t000000hjagJAAQ",
+    "name": "0004465199",
+    "filing_date": "2011-10-31T00:00:00.000",
+    "effective_date": "2011-10-31T00:00:00.000",
+    "type": "Merger",
+    "filing_type": "Certificate of Merger"
+   },
+   {
+    "account": "001t000000hjagJAAQ",
+    "name": "0006946948",
+    "filing_date": "2020-07-06T00:00:00.000",
+    "effective_date": "2020-07-06T00:00:00.000",
+    "type": "Change of Agent Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000hjagJAAQ",
+    "name": "0006952529",
+    "filing_date": "2020-07-06T00:00:00.000",
+    "effective_date": "2020-07-06T00:00:00.000",
+    "type": "Change of Agent Address",
+    "filing_type": "Agent Address Change"
+   },
+   {
+    "account": "001t000000hjagJAAQ",
+    "name": "BF-0010477152",
+    "filing_date": "2022-01-14T00:00:00.000",
+    "effective_date": "2022-01-14T00:00:00.000",
+    "type": "Mass Agent Change \ufffd Address",
+    "filing_type": "Agent Address Change"
+   }
+  ]
+ },
+ "merged_master": {
+  "id": "001t000000hjagJAAQ",
+  "name": "WEB ACQUISITION CO.",
+  "accountnumber": "1049572",
+  "business_type": "Stock",
+  "status": "Merged",
+  "citizenship": "Domestic",
+  "formation_place": "CT",
+  "date_registration": "2011-09-28T00:00:00.000"
+ }
+}

@@ -19,11 +19,18 @@ reads three of them, one SODA query each:
 * ``enwv-52we`` **Name Change History** (96,966 rows) — old name, new name and
   the day, keyed on ``unique_key`` = Business Master ``id``.
 
+A fourth, **Filing History** (``ah3s-bes7``, 10.1M rows, replaced on the
+first of each month), is read for the History tab only
+(``fetch_timeline_data``), never by the lookup: keyed on ``account`` =
+Business Master ``id``, one row per filing — category, filing type, filing
+and effective dates, the report year. The organizer's and incorporator's
+names, titles and types (97,015 rows name an organizer, 82,125 of them a
+person) are never asked for.
+
 Not read: **Agents** (``qh2m-n44y``: e-mail, phone and residence on most
-rows), **Filing History** (``ah3s-bes7``, 10.1M rows — a History-tab
-follow-up), the principals' residence addresses and street lines, the
-business e-mail, and the self-reported owner flags (woman-, minority-,
-veteran-, LGBTQI-owned).
+rows), the principals' residence addresses and street lines, the business
+e-mail, and the self-reported owner flags (woman-, minority-, veteran-,
+LGBTQI-owned).
 
 The flow
 --------
@@ -65,8 +72,10 @@ data.ct.gov marks Business Master, Principals and Name Change History
 **Public Domain**. Business Master always was; the Secretary of the State set
 the other two to Public Domain on 20 Nov 2026, after Stephen asked them to
 confirm the reuse terms. The ``CT-Open-Data`` licence row says so. Filing
-History (``ah3s-bes7``) and Agents (``qh2m-n44y``) still carry no licence
-field and are not read.
+History (``ah3s-bes7``) carries no licence field; Stephen decided on
+20 Nov 2026 to treat it as Public Domain like its three siblings, without
+asking the Secretary of the State again. Agents (``qh2m-n44y``) carries none
+either and is not read.
 
 Rate limits
 -----------
@@ -86,6 +95,7 @@ import weakref
 from typing import Any
 from urllib.parse import urlencode
 
+import httpx
 import pycountry
 
 from .. import degradation, names
@@ -96,7 +106,7 @@ from ..http import build_client
 from ..outbound_rate import TokenBucket, current_budget
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
-from .schemas.ct_sots import CtSotsBundle
+from .schemas.ct_sots import CtSotsBundle, CtSotsTimelineBundle
 
 _LOG = logging.getLogger(__name__)
 
@@ -117,6 +127,7 @@ _SODA_BASE = "https://data.ct.gov/resource"
 DATASET_MASTER = "n7gp-d28j"
 DATASET_PRINCIPALS = "ka36-64k6"
 DATASET_NAME_CHANGES = "enwv-52we"
+DATASET_FILINGS = "ah3s-bes7"
 
 #: Columns asked for — an allowlist. Never the business e-mail, the mailing
 #: or records addresses, or the self-reported owner flags.
@@ -135,6 +146,13 @@ _PRINCIPALS_SELECT = (
     "business_state,business_country"
 )
 _NAME_CHANGES_SELECT = "unique_key,business_name_old,business_name_new,name_change_date"
+#: Filing History: what was filed and when. Never ``organizer_name``,
+#: ``organizer_title``, ``organizer_type`` or ``name_of_incorporator`` (a
+#: person on most rows that carry them), nor the microfilm volume and pages.
+_FILINGS_SELECT = (
+    "account,name,filing_date,effective_date,type,filing_type,report_year,"
+    "date_forfeited"
+)
 
 #: Rows per query. EURPAC has eleven principals; 1,000 is headroom, and a
 #: response that fills it is marked truncated.
@@ -150,6 +168,9 @@ _LOOKUP_TIMEOUT_S = 30.0
 
 #: The datasets are republished nightly.
 _CACHE_MAX_AGE_DAYS = 1.0
+#: Filing History is replaced once a month; a day is still the cache, so a
+#: filing made yesterday is not hidden for a month.
+_FILINGS_CACHE_NS = f"{_CACHE_NS}/filings-v1"
 
 _BUSINESS_ID_RE = re.compile(r"^\d{1,7}$")
 
@@ -493,9 +514,9 @@ class CtSotsAdapter(SourceAdapter):
             ),
             license="CT-Open-Data",
             attribution=(
-                "Connecticut Business Registry — Business Master, Principals "
-                "and Name Change History datasets — Connecticut Secretary of "
-                "the State, via data.ct.gov."
+                "Connecticut Business Registry — Business Master, Principals, "
+                "Name Change History and Filing History datasets — "
+                "Connecticut Secretary of the State, via data.ct.gov."
             ),
             supports=[SearchKind.ENTITY],
             requires_api_key=False,
@@ -512,17 +533,23 @@ class CtSotsAdapter(SourceAdapter):
         self, dataset: str, select: str, where: str, order: str
     ) -> list[dict[str, Any]] | None:
         """Rows for one SODA query, or None when it failed (a degradation)."""
+        rows, reason, detail = await self._query_with_reason(dataset, select, where, order)
+        if rows is None:
+            degradation.record(self.id, detail or "data.ct.gov did not answer", reason=reason)
+        return rows
+
+    async def _query_with_reason(
+        self, dataset: str, select: str, where: str, order: str
+    ) -> tuple[list[dict[str, Any]] | None, str, str]:
+        """``(rows, reason, detail)``; rows is None when the query failed."""
         budget = current_budget(self.id, _LOOKUP_CALL_BUDGET)
         if budget is not None and not budget.take():
-            degradation.record(
-                self.id,
-                (
-                    f"Connecticut per-lookup call budget of {_LOOKUP_CALL_BUDGET} "
-                    "Socrata requests reached; the record was not fetched"
-                ),
-                reason=degradation.REASON_RATE_LIMITED,
+            return (
+                None,
+                degradation.REASON_RATE_LIMITED,
+                f"Connecticut per-lookup call budget of {_LOOKUP_CALL_BUDGET} "
+                "Socrata requests reached; the record was not fetched",
             )
-            return None
         params = {
             "$select": select,
             "$where": where,
@@ -541,25 +568,25 @@ class CtSotsAdapter(SourceAdapter):
             )
 
         if response.status_code == 429:
-            degradation.record(
-                self.id,
-                "data.ct.gov returned HTTP 429",
-                reason=degradation.REASON_RATE_LIMITED,
-            )
-            return None
+            return None, degradation.REASON_RATE_LIMITED, "data.ct.gov returned HTTP 429"
         if not response.is_success:
             _LOG.warning("data.ct.gov returned %s for %s", response.status_code, dataset)
-            degradation.record(self.id, f"data.ct.gov returned HTTP {response.status_code}")
-            return None
+            return (
+                None,
+                degradation.REASON_UPSTREAM_ERROR,
+                f"data.ct.gov returned HTTP {response.status_code}",
+            )
         try:
             payload = response.json()
         except ValueError:
-            degradation.record(self.id, "data.ct.gov returned a non-JSON body")
-            return None
+            return None, degradation.REASON_UPSTREAM_ERROR, "data.ct.gov returned a non-JSON body"
         if not isinstance(payload, list):
-            degradation.record(self.id, "data.ct.gov returned an unexpected shape")
-            return None
-        return [r for r in payload if isinstance(r, dict)]
+            return (
+                None,
+                degradation.REASON_UPSTREAM_ERROR,
+                "data.ct.gov returned an unexpected shape",
+            )
+        return [r for r in payload if isinstance(r, dict)], "", ""
 
     # ------------------------------------------------------------------
     # Search — none: the register is reached from the business ID GLEIF files
@@ -654,6 +681,57 @@ class CtSotsAdapter(SourceAdapter):
         return rows
 
     # ------------------------------------------------------------------
+    # History tab — the lookup's rows plus the Filing History
+    # ------------------------------------------------------------------
+
+    async def fetch_timeline_data(
+        self, hit_id: str, *, legal_name: str = ""
+    ) -> dict[str, Any] | None:
+        """The lookup's bundle plus the business's filings, for the History tab.
+
+        None when there is no record (a stub, a number the register lacks, a
+        name the gate refuses). The Master, Principals and Name Change reads
+        are the lookup's own, cached; the Filing History is read here only and
+        cached a day under its own key, and only when it answered. A filing
+        read that failed leaves ``filings`` empty and says why in
+        ``filings_unavailable`` (a degradation reason), so the tab can say the
+        register was not read rather than that nothing was filed.
+        """
+        bundle = await self.fetch(hit_id, legal_name=legal_name)
+        if bundle.get("is_stub") or not bundle.get("master"):
+            return None
+        out = dict(bundle)
+        record_id = clean_field((bundle.get("master") or {}).get("id"))
+        cache_key = f"{_FILINGS_CACHE_NS}/{record_id}"
+        cached = self._cache.get_payload(cache_key, max_age_days=_CACHE_MAX_AGE_DAYS)
+        if cached is not None and isinstance(cached[0], list):
+            filings: list[dict[str, Any]] = cached[0]
+        elif not self.info.live_available or not re.match(r"^[A-Za-z0-9]{15,18}$", record_id):
+            out["filings"] = []
+            out["filings_unavailable"] = degradation.REASON_NOT_CONFIGURED
+            return out
+        else:
+            try:
+                rows, reason, _detail = await self._query_with_reason(
+                    DATASET_FILINGS, _FILINGS_SELECT,
+                    f"account='{record_id}'", "filing_date,name",
+                )
+            except httpx.TimeoutException:
+                rows, reason = None, degradation.REASON_TIMEOUT
+            except httpx.HTTPError:
+                rows, reason = None, degradation.REASON_UPSTREAM_ERROR
+            if rows is None:
+                out["filings"] = []
+                out["filings_unavailable"] = reason or degradation.REASON_UPSTREAM_ERROR
+                return out
+            filings = [r for r in rows if clean_field(r.get("account")) == record_id]
+            self._cache.put(cache_key, filings)
+        out["filings"] = filings
+        out["filings_truncated"] = len(filings) >= _ROW_LIMIT
+        validate_raw(self.id, CtSotsTimelineBundle, out)
+        return out
+
+    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
@@ -704,6 +782,7 @@ __all__ = [
     "CT_SCHEME_NAME",
     "CT_SOTS_RA_CODE",
     "CtSotsAdapter",
+    "DATASET_FILINGS",
     "DATASET_MASTER",
     "DATASET_NAME_CHANGES",
     "DATASET_PRINCIPALS",

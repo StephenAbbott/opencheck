@@ -27,8 +27,8 @@ Connecticut business records from the Secretary of the State's registry on data.
 
 - **Licence:** `CT-Open-Data` — Connecticut open data (data.ct.gov; Public Domain)
 - **Commercial use:** yes · **Attribution:** not required · **Share-alike:** no
-- **Attribution line:** Connecticut Business Registry — Business Master, Principals and Name Change History datasets — Connecticut Secretary of the State, via data.ct.gov.
-- data.ct.gov marks the three datasets OpenCheck reads Public Domain: Business Master, Principals and Name Change History. The Secretary of the State's Business Services team set the last two to Public Domain on 20 Nov 2026, in answer to OpenCheck's request to confirm their reuse terms. data.ct.gov's terms are disclaimers only. OpenCheck attributes the Secretary of the State anyway.
+- **Attribution line:** Connecticut Business Registry — Business Master, Principals, Name Change History and Filing History datasets — Connecticut Secretary of the State, via data.ct.gov.
+- data.ct.gov marks the three datasets OpenCheck reads Public Domain: Business Master, Principals and Name Change History. The Secretary of the State's Business Services team set the last two to Public Domain on 20 Nov 2026, in answer to OpenCheck's request to confirm their reuse terms. A fourth, Filing History, read for the History tab, carries no licence field; OpenCheck treats it as Public Domain like the other three (decided 20 Nov 2026). data.ct.gov's terms are disclaimers only. OpenCheck attributes the Secretary of the State anyway.
 
 See the [licensing compatibility matrix](/licensing/matrix.md) for how this licence combines with others at export time.
 

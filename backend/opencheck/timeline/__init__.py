@@ -9,6 +9,7 @@ from __future__ import annotations
 from .ariregister import ariregister_change_events
 from .assemble import Timeline, TimelineEntry, assemble_timeline
 from .companies_house import classify_companies_house_filing
+from .ct_sots import ct_sots_change_events
 from .cvr_denmark import cvr_change_events
 from .gleif import classify_gleif_modification, relationship_interest_dates
 from .ny_dos import ny_dos_change_events
@@ -41,6 +42,7 @@ __all__ = [
     "assemble_timeline",
     "classify_companies_house_filing",
     "classify_gleif_modification",
+    "ct_sots_change_events",
     "cvr_change_events",
     "ny_dos_change_events",
     "nz_change_events",

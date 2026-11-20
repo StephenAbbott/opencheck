@@ -181,6 +181,16 @@ describe("recordUrl", () => {
     expect(recordUrl("ny_dos", _LEI, {})).toBeNull();
   });
 
+  it("links a Connecticut row to the open-data row for its business ID", () => {
+    // service.ct.gov has no per-business address; the backend's
+    // ct_sots.record_url is the same query. EURPAC SERVICE INCORPORATED.
+    expect(recordUrl("ct_sots", _LEI, { ct_sots: "0016116" })).toBe(
+      "https://data.ct.gov/resource/n7gp-d28j.json?accountnumber=0016116",
+    );
+    expect(recordUrl("ct_sots", _LEI, {})).toBeNull();
+    expect(recordUrl("ct_sots", _LEI, { ct_sots: "16116" })).toBeNull();
+  });
+
   it("returns null rather than a broken link when the number is absent", () => {
     for (const id of ["companies_house", "nz_companies", "ariregister", "cvr_denmark"]) {
       expect(recordUrl(id, _LEI, {})).toBeNull();
@@ -199,6 +209,7 @@ describe("historySourceLabel", () => {
     expect(historySourceLabel("nz_companies")).toBe("Companies Office (NZ)");
     expect(historySourceLabel("ariregister")).toBe("e-Äriregister (EE)");
     expect(historySourceLabel("ny_dos")).toBe("Dept. of State (NY)");
+    expect(historySourceLabel("ct_sots")).toBe("Secretary of the State (CT)");
     expect(historySourceLabel("ur_latvia")).toBe("Register of Enterprises (LV)");
   });
 

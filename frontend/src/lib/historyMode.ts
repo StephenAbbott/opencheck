@@ -42,6 +42,7 @@ export const HISTORY_SOURCES = [
   "ariregister",
   "cvr_denmark",
   "ny_dos",
+  "ct_sots",
   "ur_latvia",
   "ica_israel",
   "sirene",
@@ -65,6 +66,7 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   ariregister: "e-Äriregister (EE)",
   cvr_denmark: "CVR (DK)",
   ny_dos: "Dept. of State (NY)",
+  ct_sots: "Secretary of the State (CT)",
   ur_latvia: "Register of Enterprises (LV)",
   ica_israel: "Corporations Authority (IL)",
   sirene: "Sirene (FR)",
@@ -128,6 +130,14 @@ export function recordUrl(
     return siren ? bodaccSearchUrl(siren) : null;
   }
   if (sourceId === "joafe") return joafeUrl(registryNumbers[sourceId]);
+  // Connecticut's business search has no per-business address; the chip
+  // opens the open-data row for the business ID (`ct_sots.record_url` in the
+  // backend, the source card's link). Not in the register-link table, which
+  // would put the same query on every lookup as a "Register record".
+  if (sourceId === "ct_sots") {
+    const id = registryNumbers.ct_sots;
+    return id && /^\d{7}$/.test(id) ? connecticutRecordUrl(id) : null;
+  }
   // Phase 296: every register's address comes from the one register-link table
   // (lib/registerLinks.ts). The History tab reads its `history` entry where
   // there is one — Companies House's filing history; New York's open-data
@@ -139,6 +149,10 @@ export function recordUrl(
 }
 
 /** DILA's search of every BODACC notice naming a SIREN. */
+export function connecticutRecordUrl(businessId: string): string {
+  return `https://data.ct.gov/resource/n7gp-d28j.json?accountnumber=${encodeURIComponent(businessId)}`;
+}
+
 export function bodaccSearchUrl(siren: string): string {
   return `https://bodacc-datadila.opendatasoft.com/explore/dataset/annonces-commerciales/table/?q=${encodeURIComponent(siren)}`;
 }
@@ -246,6 +260,8 @@ export const REGISTER_READ_NOTES: Record<string, string> = {
     "From BODACC, the official bulletin in which French registers and courts publish notices about a company: collective proceedings, removals from the register, changes, sales of a business and accounts filed. Each row links to its notice. No person is named — not a sole trader, a director or a liquidator — and a sale is shown from the seller's side with the buyer named only where it is a company. Judgments of personal bankruptcy and management bans are left out: they are about a person, not the company. Notices start in 2008.",
   joafe:
     "From the Journal officiel des associations et fondations d'entreprise: what the association declared to its prefecture — its creation, a change of name, seat, purpose or statutes, its dissolution — and every deposit of annual accounts. Associations' notices are reached through the RNA, so notices before 2009 are not; a fondation d'entreprise or fonds de dotation is reached through its accounts only. A seat transfer is shown by commune and postcode, never the street, and a change of purpose as filed, never its text. A corrected notice replaces the one it corrects.",
+  ct_sots:
+    "From the Connecticut Secretary of the State's open data: every filing the business made — formations, amendments, agent and address changes, dissolutions, withdrawals, reinstatements, mergers — and its recorded name changes. Annual reports are counted on one row. A merger certificate does not name the other business, and a filing's organizer is never shown. For a business formed elsewhere, a dissolution or withdrawal ends only its registration in Connecticut.",
   ica_israel:
     "From the Israel Corporations Authority's change log, which publishes one year of requests and names only the kind of request and the day its status was last updated — never who or what changed, and not the day it was filed. A share transfer is shown as recorded, with its parties not published; a winding-up or a change of name as a request recorded, not as the status or name it led to. OpenCheck keeps the rows from build to build, so this history grows past the register's year; before the earliest day it holds, an empty timeline is a log that was not kept, not a quiet company.",
   ur_latvia:
