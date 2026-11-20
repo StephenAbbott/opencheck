@@ -1,0 +1,6 @@
+---
+title: The MCP ownership map says, inside the image, what it leaves out.
+readme: The ownership map image now says under the picture how many relationships it drew and that the rest are in its table.
+tests: backend +6
+---
+`opencheck_ownership_map` draws at most sixteen current edges, nearest the company first, and leaves ended relationships to the table. Until now only the JSON said so (`omitted_from_image`); the SVG did not, so an image passed on alone read as the whole structure. From T-Rank's "Shareholder Maps" piece (20 Nov 2026), which alerts the reader whenever entities are left out of a map; Stephen took that suggestion and set the rest aside (Notion: "Learn from T-Rank ownership analytics approaches and MCP server"). `owners.map_cut_note` writes one line — "16 of 41 current relationships drawn, nearest the company first. 1 ended relationship is not drawn. Every relationship is listed in the table that comes with this map." — and nothing when the picture is complete. `reporting/diagram._render` gained a `note` argument: wrapped to the canvas between the last node and the legend, kept clear of edge labels, and appended to the SVG's `<desc>`. The PDF/HTML report's figures already say their cut in the caption and are unchanged. After deploy: call the map tool on a company with more than sixteen owners (Rosneft) and check the line under the picture.

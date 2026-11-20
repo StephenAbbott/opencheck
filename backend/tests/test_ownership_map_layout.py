@@ -153,3 +153,59 @@ def test_a_wrapped_label_steps_one_whole_line_height():
     for _x0, _y0, _x1, _y1, body in _label_boxes(svg):
         ys = [int(y) for y in re.findall(r'<tspan x="\d+" y="(\d+)"', body)]
         assert all(b - a == 13 for a, b in zip(ys, ys[1:])), ys
+
+
+# ── The image says what it leaves out (the shareholder-maps ticket) ─────────
+
+
+def test_map_cut_note_says_nothing_when_everything_is_drawn():
+    assert O.map_cut_note(5, 5) is None
+
+
+def test_map_cut_note_counts_the_cut_and_the_ended():
+    note = O.map_cut_note(16, 41, ended_rows=1)
+    assert note.startswith("16 of 41 current relationships drawn, nearest the company first.")
+    assert "1 ended relationship is not drawn." in note
+    assert note.endswith("Every relationship is listed in the table that comes with this map.")
+
+
+def _many_owners(n):
+    bods = [ent("T", "Target")]
+    for k in range(n):
+        bods += [ent(f"O{k}", f"Owner {k}"), rel(f"r{k}", "T", f"O{k}", 1.0)]
+    return bods
+
+
+def _note_text(svg):
+    return " ".join(re.findall(r'class="map-note">([^<]*)</text>', svg))
+
+
+def test_a_capped_map_says_so_in_the_image():
+    ans, svg = the_map(_many_owners(O.MAP_MAX_EDGES + 4))
+    assert ans["omitted_from_image"] == 4
+    said = _note_text(svg)
+    assert f"{O.MAP_MAX_EDGES} of {O.MAP_MAX_EDGES + 4} current relationships drawn" in said
+    # In the description too, for a reader who cannot see the image.
+    desc = re.search(r'<desc id="ds">([^<]*)</desc>', svg).group(1)
+    assert "current relationships drawn" in desc
+
+
+def test_the_note_sits_between_the_last_node_and_the_legend():
+    _ans, svg = the_map(_many_owners(O.MAP_MAX_EDGES + 4))
+    note_ys = [float(y) for y in re.findall(r'<text x="40" y="([\d.]+)"[^>]*class="map-note"', svg)]
+    legend_y = max(float(y) for y in re.findall(r'<line x1="40" y1="([\d.]+)"', svg))
+    lowest_node = max(y for _x, y in _circles(svg))
+    assert note_ys and all(lowest_node < y < legend_y for y in note_ys)
+
+
+def test_a_map_that_draws_everything_carries_no_note():
+    _ans, svg = the_map(_many_owners(3))
+    assert "map-note" not in svg
+
+
+def test_an_ended_relationship_left_off_the_image_is_said():
+    bods = _many_owners(2)
+    ended = rel("rx", "T", "O0", 3.0)
+    ended["recordDetails"]["interests"][0]["endDate"] = "2020-01-01"
+    _ans, svg = the_map(bods + [ended])
+    assert "1 ended relationship is not drawn." in _note_text(svg)

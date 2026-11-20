@@ -1165,6 +1165,7 @@ def ownership_map(
         svg, _summ = _render(
             nodes, edges, title, layer=layer, view_w=max(760, 270 + 250 * depth_max),
             max_h=None,
+            note=map_cut_note(len(shown), len(drawable), ended_rows=sum(1 for r in rows if r["status"] == "ended")),
         )
     returns = sum(
         1 for e in edges if level.get(e["from"], 0) <= level.get(e["to"], 0) and e["from"] != e["to"]
@@ -1217,8 +1218,9 @@ def ownership_map(
         "note": (
             "Each edge is one source's relationship, labelled with that source; a "
             "party two sources name appears once with both edges. The image draws "
-            "current edges only (at most 16, nearest the company first); every "
-            "edge, ended ones included, is in 'edges'. Officers and board roles "
+            "current edges only (at most 16, nearest the company first) and says "
+            "under the picture what it left out; every edge, ended ones included, "
+            "is in 'edges'. Officers and board roles "
             "— company secretaries included — are left out. A GLEIF reporting "
             "exception names no party, so it is listed under "
             "'reporting_exceptions' rather than drawn; an undisclosed parent "
@@ -1229,6 +1231,28 @@ def ownership_map(
         "image": "attached as SVG" if svg else "no ownership or control edges to draw",
     }
     return answer, svg
+
+
+def map_cut_note(drawn: int, current: int, *, ended_rows: int = 0) -> str | None:
+    """The line the map image prints about what it leaves out, or None when it
+    draws everything. The answer's JSON has always said it
+    (``omitted_from_image``); the picture did not, so an image passed on alone
+    read as the whole structure (T-Rank's shareholder-maps note, 20 Nov 2026:
+    say when entities are left out)."""
+    parts: list[str] = []
+    if current > drawn:
+        parts.append(
+            f"{drawn} of {current} current relationships drawn, nearest the company first."
+        )
+    if ended_rows:
+        parts.append(
+            f"{ended_rows} ended {'relationship is' if ended_rows == 1 else 'relationships are'}"
+            " not drawn."
+        )
+    if not parts:
+        return None
+    parts.append("Every relationship is listed in the table that comes with this map.")
+    return " ".join(parts)
 
 
 def _map_summary(
