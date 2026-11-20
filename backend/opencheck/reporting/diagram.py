@@ -799,7 +799,7 @@ def _render(
             for i, n in enumerate(ns):
                 pos[n] = (col_x[lyr], top + offset + row_h * i)
 
-    note_y = None
+    note_y: float | None = None
     note_lines: list[str] = []
     if note:
         # ~6 units a character at 11px; wrap to the canvas, one line per 15.
@@ -885,6 +885,7 @@ def _render(
         parts.append(_node_svg(cx, cy, nd["kind"], nd["label"], nd.get("sublabel", "")))
     parts.extend(labels)
     for i, line in enumerate(note_lines):
+        assert note_y is not None  # set whenever there are note lines
         parts.append(
             f'<text x="40" y="{note_y + 15 * i:.0f}" font-size="11" fill="{_MUTE}" '
             f'class="map-note">{escape(line)}</text>'
