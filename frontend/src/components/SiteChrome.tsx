@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { View } from "../lib/views";
-import { NAV_ITEMS } from "../lib/views";
+import { BLOG_PATH, NAV_ITEMS } from "../lib/views";
 import { OpenCheckIcon } from "./icons";
 
 /*
@@ -117,6 +117,14 @@ export function SiteHeader({
                   </button>
                 );
               })}
+              {/* The blog is served by the backend as its own pages
+                  (opencheck/blog.py), so it is a real link, not a view. */}
+              <a
+                href={BLOG_PATH}
+                className="inline-flex min-h-[44px] items-center text-oo-small text-white/80 hover:text-white transition-colors"
+              >
+                Blog
+              </a>
             </nav>
             </div>
             {/* The constant search field. On a report page the tabbed panel is
@@ -297,6 +305,12 @@ export function SiteFooter({ onNavigate }: { onNavigate: (v: View) => void }) {
                   className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
                 >
                   Features
+                </a>
+                <a
+                  href={BLOG_PATH}
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
+                >
+                  Blog
                 </a>
                 <a
                   href="/about"

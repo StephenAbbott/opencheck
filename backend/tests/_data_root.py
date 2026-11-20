@@ -62,6 +62,7 @@ DIRECT_ENV_ASSET_PATHS: frozenset[str] = frozenset(
 #: answer (an exported tarball). ``test_dataless_suite`` checks that every
 #: tracked file sits under one of them.
 TRACKED_FALLBACK: tuple[str, ...] = (
+    "blog",
     "cache/bods_data",
     "demo",
     "laundromat/seed.json",

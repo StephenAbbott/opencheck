@@ -55,6 +55,12 @@ export const NAV_ITEMS: { view: View; label: string }[] = [
   { view: "features", label: "Features" },
 ];
 
+/** The blog's address. Its pages are rendered by the backend
+ *  (`backend/opencheck/blog.py`), not by the SPA, so the header and footer
+ *  link to it with a plain href; in single-service mode `/blog` is answered
+ *  before the SPA fallback, and the dev server proxies it. */
+export const BLOG_PATH = "/blog";
+
 export function pathToView(path: string): View {
   if (path === "/sources") return "sources";
   if (path === "/features") return "features";

@@ -43,7 +43,7 @@ from .lookup_budget import ClientScopeMiddleware
 from .static_cache import DownloadNoStoreMiddleware, spa_cache_control
 from .ratelimit import limiter, rate_limit_exceeded_handler
 from .secret_scrub import safe_message
-from .routers import health, search, lookup, expand, national_id, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports, knowability, leads, daily_changes as daily_changes_router
+from .routers import health, search, lookup, expand, national_id, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports, knowability, leads, blog as blog_router, daily_changes as daily_changes_router
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
 log = logging.getLogger(__name__)
@@ -769,6 +769,7 @@ app.include_router(saved_reports.router)
 app.include_router(knowability.router)
 app.include_router(leads.router)
 app.include_router(daily_changes_router.router)
+app.include_router(blog_router.router)
 
 
 # ---------------------------------------------------------------------------
