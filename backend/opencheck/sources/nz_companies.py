@@ -150,6 +150,14 @@ def _paf(a: Any) -> str | None:
 # client of the accountant or agent who provides it, so it is far weaker
 # evidence that two role records are the same person.
 _ADDR_TYPE_RANK = {"PHYSICAL": 0, "ALTERNATIVE": 2}
+
+# How long a cached NZBN answer is trusted. Under the Companies (Address
+# Information) Amendment Act 2025 (in force 18 Nov 2026) a director or linked
+# shareholder can replace the residential address on the public register with
+# an alternative one. A cache with no expiry kept the old residential address
+# until the next deploy; seven days bounds how long OpenCheck can show an
+# address the register has stopped publishing. Read by nz_associations too.
+NZ_CACHE_MAX_AGE_DAYS = 7
 _ADDR_TYPE_RANK_UNTYPED = 1
 
 
@@ -377,7 +385,9 @@ class NzCompaniesAdapter(SourceAdapter):
         if not self.info.live_available and not self._cache.has(cache_key):
             return _bundle(None, [], [], None, "", True)
 
-        cached = self._cache.get_payload(cache_key)
+        cached = self._cache.get_payload(
+            cache_key, max_age_days=NZ_CACHE_MAX_AGE_DAYS
+        )
         if cached is not None:
             return cached[0]
 

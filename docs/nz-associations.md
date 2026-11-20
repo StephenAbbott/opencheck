@@ -24,7 +24,10 @@ API that powers the main NZ lookup.
     address each match is graded against, and keeps this from becoming a free
     name search); anything else answers `available: false`. One Role Search
     call, cached per company and name; a cached company-wide result answers it
-    with no call.
+    with no call. Every cached answer here, and the company's own NZBN record,
+    is trusted for seven days (`NZ_CACHE_MAX_AGE_DAYS`), so an address a
+    director has since replaced with an alternative one stops showing within a
+    week, not at the next deploy.
   - `GET /nz-associations?company_number=<n>` — every role holder of the
     company (up to 60 searches), the original panel's view.
 - Auth: a **separate** subscription key, `NZBN_ROLE_SEARCH_API_KEY`
