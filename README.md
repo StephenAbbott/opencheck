@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 577** — Latvian joint-stock companies say their shareholders are not public instead of "None on record", and SIA companies no longer carry the joint-stock withholding note on History.
+**Latest: Phase 578** — Connecticut's business registry is now Public Domain for all three datasets OpenCheck reads, after the Secretary of the State updated their terms on request.
 
 → [Full development history](docs/status.md)
 
