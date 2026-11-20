@@ -61,13 +61,12 @@ person holds.
 Licence
 -------
 
-data.ct.gov marks Business Master **Public Domain**. The Principals and Name
-Change History datasets, from the same publisher on the same portal, carry
-no licence field at all; the bulk-data page lists all five datasets as
-"Free". Connecticut's Freedom of Information Act makes the records public
-(Conn. Gen. Stat. § 1-210). The ``CT-Open-Data`` licence row says all of
-this. Whether to ask the Secretary of the State to confirm reuse terms for
-the principals is Stephen's decision on the Notion ticket.
+data.ct.gov marks Business Master, Principals and Name Change History
+**Public Domain**. Business Master always was; the Secretary of the State set
+the other two to Public Domain on 20 Nov 2026, after Stephen asked them to
+confirm the reuse terms. The ``CT-Open-Data`` licence row says so. Filing
+History (``ah3s-bes7``) and Agents (``qh2m-n44y``) still carry no licence
+field and are not read.
 
 Rate limits
 -----------

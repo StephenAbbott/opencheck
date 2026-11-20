@@ -1683,8 +1683,10 @@ Things that will be re-derived otherwise:
   its CT registration date is not a `foundingDate`. A two-letter
   `formation_place` is read as a US state only (`country_code("DE")` is
   Germany).
-- **Licence `CT-Open-Data`**: Business Master is Public Domain; Principals and
-  Name Change History carry no licence field. Stated, not assumed.
+- **Licence `CT-Open-Data`**: all three datasets are Public Domain on
+  data.ct.gov — Principals and Name Change History since 20 Nov 2026, when the
+  Secretary of the State set them in answer to Stephen's request. Filing
+  History (`ah3s-bes7`) and Agents (`qh2m-n44y`) still carry no licence.
 - Scheme `US-CT`; in `register_hops._NO_COUNTRY_ALIAS`; not in
   `RA_BY_COUNTRY`. No record link (service.ct.gov has no per-business
   address); `source.url` is the SODA query. Optional `SOCRATA_APP_TOKEN`

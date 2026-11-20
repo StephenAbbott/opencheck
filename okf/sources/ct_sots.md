@@ -4,7 +4,7 @@ title: "Connecticut Secretary of the State \u2014 Business Registry"
 description: "Connecticut business records from the Secretary of the State's registry on data.ct.gov, looked up by business ID: name, type, status, formation, recorded name changes, and the principals \u2014 officers and directors of a corporation, members or managers of an LLC, partners of an LLP \u2014 by name and role."
 resource: "https://portal.ct.gov/sots/business-services/bulk-data-and-images"
 tags: ["cdd", "national-register", "CT-Open-Data", "commercial-yes"]
-timestamp: "2026-11-12"
+timestamp: "2026-11-20"
 source_id: "ct_sots"
 license: "CT-Open-Data"
 commercial_use: "yes"
@@ -25,10 +25,10 @@ Connecticut business records from the Secretary of the State's registry on data.
 
 # Licensing
 
-- **Licence:** `CT-Open-Data` — Connecticut open data (data.ct.gov; Public Domain for Business Master)
+- **Licence:** `CT-Open-Data` — Connecticut open data (data.ct.gov; Public Domain)
 - **Commercial use:** yes · **Attribution:** not required · **Share-alike:** no
 - **Attribution line:** Connecticut Business Registry — Business Master, Principals and Name Change History datasets — Connecticut Secretary of the State, via data.ct.gov.
-- data.ct.gov marks the Business Master dataset Public Domain. The Principals and Name Change History datasets, from the same publisher on the same portal, carry no licence field; the Secretary of the State lists all five registry datasets as free bulk data, and Connecticut's Freedom of Information Act makes the records public (Conn. Gen. Stat. § 1-210). data.ct.gov's terms are disclaimers only. OpenCheck attributes the Secretary of the State anyway (recorded 12 Nov 2026).
+- data.ct.gov marks the three datasets OpenCheck reads Public Domain: Business Master, Principals and Name Change History. The Secretary of the State's Business Services team set the last two to Public Domain on 20 Nov 2026, in answer to OpenCheck's request to confirm their reuse terms. data.ct.gov's terms are disclaimers only. OpenCheck attributes the Secretary of the State anyway.
 
 See the [licensing compatibility matrix](/licensing/matrix.md) for how this licence combines with others at export time.
 
