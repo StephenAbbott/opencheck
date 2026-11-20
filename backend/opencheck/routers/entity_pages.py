@@ -397,8 +397,10 @@ async def robots_txt() -> PlainTextResponse:
         "Allow: /entity/",
         "Allow: /browse",
         "Allow: /sitemaps/",
+        "Allow: /blog",
         "",
         f"Sitemap: {frontend}/sitemaps/sitemap-index.xml",
+        f"Sitemap: {frontend}/blog/sitemap.xml",
         "",
     ]
     return PlainTextResponse(

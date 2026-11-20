@@ -193,6 +193,14 @@ _EXEMPT_PATHS = {
     # most hourly and otherwise served from memory — a cached dict dump that
     # never contacts a source, on the same footing as /sources.
     "/source-health",
+    # The blog: crawler- and feed-reader-facing like the entity pages, and a
+    # read of local Markdown files cached in memory (opencheck/blog.py).
+    "/blog",
+    "/blog/",
+    "/blog/feed.xml",
+    "/blog/sitemap.xml",
+    "/blog/media/{slug}/{name}",
+    "/blog/{slug}",
 }
 
 

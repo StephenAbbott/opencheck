@@ -675,6 +675,31 @@ bundle, under `ares/bundle-v3/`, only when VR returned data).
 
 ---
 
+## The blog is Markdown files served by the backend (the blog ticket, 20 Nov 2026)
+
+`data/blog/posts/*.md` + `data/blog/media/`, `opencheck/blog.py`,
+`routers/blog.py`, `scripts/import_medium.py`; reader's page `docs/blog.md`.
+Stephen's decisions (20 Nov 2026) and the things that will be re-derived
+otherwise:
+
+- **opencheck.world is the original copy**: each post's `rel=canonical` is its
+  own `/blog/<slug>`; the Medium story is credited ("First on Medium"), and its
+  canonical link is changed by hand in Medium's story settings.
+- **Server-rendered, like the entity pages** — registered before the SPA
+  fallback; the header and footer link with a plain `href={BLOG_PATH}`, never
+  a view; the Vite dev server proxies `/blog`. Look B "Ledger" (mockups on
+  the Notion ticket): the date is said in words *and* as `publicationDate`.
+- **The importer reads Medium's export zip**, never RSS (latest ten only) or
+  story pages (403 to scripts). It imports posts tagged `opencheck`, stores
+  images as WebP and rewrites links between imported posts to `/blog/<slug>`.
+  A post edited here is re-imported only with `--keep-existing` off on purpose.
+  The zip holds personal data: `/blog/` at the repo root is gitignored.
+- **Raw HTML in a post is escaped** (markdown-it `html: False`); `media_path`
+  accepts only the importer's `NN.ext` names, so no path outside the folder is
+  reachable. `data/blog` is in `tests/_data_root.py`'s `TRACKED_FALLBACK`.
+
+---
+
 ## Frontend: BODSGraph (Cytoscape.js)
 
 **Do not use `@openownership/bods-dagre`** — it was removed in Phase 44. The graph is now pure Cytoscape.js + `cytoscape-dagre`.

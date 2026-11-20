@@ -69,6 +69,12 @@ dependencies = [
     # (opencheck/backups.py, Phase 260). Already installed as a dependency of
     # the MCP SDK; named here because OpenCheck now imports it directly.
     "cryptography>=50",
+    # markdown-it-py (CommonMark) renders the blog's Markdown posts
+    # (opencheck/blog.py) to HTML on the server; PyYAML reads their
+    # frontmatter. PyYAML already arrives with uvicorn[standard] and
+    # markdown-it-py with rich; both are named because the blog imports them.
+    "markdown-it-py>=3",
+    "pyyaml>=6",
 ]
 
 [project.optional-dependencies]

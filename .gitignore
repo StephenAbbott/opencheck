@@ -155,3 +155,8 @@ data/jar_lithuania.sqlite.gz
 data/jar_lithuania.sqlite.building
 data/onrc_romania.sqlite-journal
 data/onrc/
+
+# Medium "Download your information" zips dropped into blog/ for
+# backend/scripts/import_medium.py. They hold personal data (sessions, IP
+# addresses); never commit them. The imported posts live in data/blog/.
+/blog/
