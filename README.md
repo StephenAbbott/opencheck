@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 579** — OpenCheck has a blog at opencheck.world/blog, republishing the OpenCheck posts from Medium with their publication dates and an RSS feed.
+**Latest: Phase 580** — Connecticut businesses now have a History tab built from the Secretary of the State's filings and recorded name changes, with annual reports counted on one row.
 
 → [Full development history](docs/status.md)
 
