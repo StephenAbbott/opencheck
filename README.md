@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 570** — A failed read of the Polish, Australian or Austrian register now reads as a source that did not answer, not as a company with no record.
+**Latest: Phase 571** — Nine register adapters now check a register's company name against GLEIF's with one shared function instead of nine copies.
 
 → [Full development history](docs/status.md)
 
