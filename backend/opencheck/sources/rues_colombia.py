@@ -317,14 +317,7 @@ def names_agree(gleif_name: str | None, row: dict[str, Any]) -> bool:
     for candidate in candidates:
         if not candidate:
             continue
-        a, b = names.org_comparable_name(_fold(wanted)), names.org_comparable_name(_fold(candidate))
-        if a and a == b:
-            return True
-        if a and names.despace(a) == names.despace(b):
-            return True
-        if names.distinctive_token_agreement(_fold(wanted), _fold(candidate)):
-            return True
-        if names.name_similarity(_fold(wanted), _fold(candidate)) >= names.NAME_MATCH_THRESHOLD:
+        if names.register_names_agree(_fold(wanted), _fold(candidate)):
             return True
     return False
 

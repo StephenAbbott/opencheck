@@ -154,7 +154,6 @@ _CACHE_MAX_AGE_DAYS = 1.0
 
 _BUSINESS_ID_RE = re.compile(r"^\d{1,7}$")
 
-_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
 
 STATUS_ACTIVE = "Active"
 
@@ -417,17 +416,6 @@ def summarise(bundle: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _latin_agree(a: str, b: str) -> bool:
-    ca, cb = names.org_comparable_name(a), names.org_comparable_name(b)
-    if ca and ca == cb:
-        return True
-    if ca and names.despace(ca) == names.despace(cb):
-        return True
-    if names.distinctive_token_agreement(a, b):
-        return True
-    return names.name_similarity(a, b) >= _NAME_SIMILARITY_THRESHOLD
-
-
 def names_agree(legal_name: str | None, bundle: dict[str, Any]) -> bool:
     """Does the current name, or any recorded former name, agree with GLEIF's?
 
@@ -439,7 +427,7 @@ def names_agree(legal_name: str | None, bundle: dict[str, Any]) -> bool:
     candidates = [clean_field((bundle.get("master") or {}).get("name"))]
     for change in name_changes_of(bundle):
         candidates.extend([change["old"], change["new"]])
-    return any(c and _latin_agree(wanted, c) for c in candidates)
+    return any(c and names.register_names_agree(wanted, c) for c in candidates)
 
 
 def record_url(business_id: str) -> str:

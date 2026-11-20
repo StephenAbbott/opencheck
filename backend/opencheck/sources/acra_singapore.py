@@ -168,7 +168,6 @@ _ACRA_AGENCY_LABELS = frozenset(
 _UEN_RE = re.compile(r"^(?:\d{8}[A-Z]|\d{9}[A-Z]|[RST]\d{2}[A-Z]{2}\d{4}[A-Z])$")
 _VCC_SUB_FUND_RE = re.compile(r"^[RST]\d{2}VC\d{4}[A-Z]-SF\d+$")
 
-_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
 _LATIN_LETTER_RE = re.compile(r"[A-Za-z]")
 
 #: The register's literal "no value".
@@ -219,17 +218,6 @@ def former_names(detail: dict[str, Any] | None) -> list[str]:
     return out
 
 
-def _latin_agree(a: str, b: str) -> bool:
-    ca, cb = names.org_comparable_name(a), names.org_comparable_name(b)
-    if ca and ca == cb:
-        return True
-    if ca and names.despace(ca) == names.despace(cb):
-        return True
-    if names.distinctive_token_agreement(a, b):
-        return True
-    return names.name_similarity(a, b) >= _NAME_SIMILARITY_THRESHOLD
-
-
 def names_agree(
     legal_name: str | None,
     entity: dict[str, Any],
@@ -260,7 +248,7 @@ def names_agree(
     if detail:
         candidates.append(clean_field(detail.get("entity_name")))
         candidates.extend(former_names(detail))
-    return any(c and _latin_agree(wanted, c) for c in candidates)
+    return any(c and names.register_names_agree(wanted, c) for c in candidates)
 
 
 def record_url(resource_id: str, uen: str) -> str:

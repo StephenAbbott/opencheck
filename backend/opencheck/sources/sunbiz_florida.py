@@ -442,20 +442,6 @@ def renamed(events: list[dict[str, Any]]) -> bool:
     return any((e.get("code") or "") in NAME_EVENTS for e in events)
 
 
-_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
-
-
-def _latin_agree(a: str, b: str) -> bool:
-    ca, cb = names.org_comparable_name(a), names.org_comparable_name(b)
-    if ca and ca == cb:
-        return True
-    if ca and names.despace(ca) == names.despace(cb):
-        return True
-    if names.distinctive_token_agreement(a, b):
-        return True
-    return names.name_similarity(a, b) >= _NAME_SIMILARITY_THRESHOLD
-
-
 def name_check(legal_name: str | None, current: str | None, events: list[dict[str, Any]]) -> str:
     """How GLEIF's name relates to the register's record.
 
@@ -470,7 +456,7 @@ def name_check(legal_name: str | None, current: str | None, events: list[dict[st
     if not wanted:
         return "agrees"
     candidates = [current or ""] + [n for n, _ in former_names(current, events)]
-    if any(c and _latin_agree(wanted, c) for c in candidates):
+    if any(c and names.register_names_agree(wanted, c) for c in candidates):
         return "agrees"
     if renamed(events):
         return "renamed"

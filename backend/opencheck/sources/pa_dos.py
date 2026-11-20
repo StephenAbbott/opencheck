@@ -249,14 +249,7 @@ def names_agree(gleif_name: str | None, registered: str | None) -> bool:
     candidate = clean_field(registered)
     if not wanted or not candidate:
         return True
-    a, b = names.org_comparable_name(wanted), names.org_comparable_name(candidate)
-    if a and a == b:
-        return True
-    if a and names.despace(a) == names.despace(b):
-        return True
-    if names.distinctive_token_agreement(wanted, candidate):
-        return True
-    return names.name_similarity(wanted, candidate) >= names.NAME_MATCH_THRESHOLD
+    return names.register_names_agree(wanted, candidate)
 
 
 def summarise(bundle: dict[str, Any]) -> dict[str, Any]:
