@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 587** — The About page now shows a lookup as a diagram, the four checks with their mode badges and BODS statements with the graph's own icons.
+**Latest: Phase 588** — The Netherlands knowability statement now records the bill implementing the EU AML package, sent to the House of Representatives on 20 November 2026, and what it changes in the UBO register.
 
 → [Full development history](docs/status.md)
 
