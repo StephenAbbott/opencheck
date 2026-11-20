@@ -423,6 +423,7 @@ One hit, scored against the queried person.
 | `name_score` | `float` | `required` | — |
 | `birth_year_compatible` | `bool` | `required` | — |
 | `strong` | `bool` | `required` | — |
+| `matched_name` | `str \| None` | `None` | The name on the record that `name_score` was measured against: the caption, or another name the record files (an alias, a name in the original script). Can differ from `hit.name`, which is the caption. |
 
 #### `PersonAppointmentsResponse`
 

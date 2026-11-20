@@ -917,6 +917,7 @@ def shape_person_check(payload: Any) -> dict[str, Any]:
             "name": m.hit.name,
             "summary": m.hit.summary,
             "identifiers": m.hit.identifiers,
+            "matched_name": m.matched_name,
             "name_score": m.name_score,
             "birth_year_compatible": m.birth_year_compatible,
             "is_stub": m.hit.is_stub,

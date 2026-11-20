@@ -31,10 +31,11 @@ corroborated the match — and the response carries explicit caveats.
 The same wording rules apply as for entity risk signals: signals are
 rule-derived from source records, never inferred.
 
-Scoring reuses the cross-check module's helpers (`_name_score`,
-`_birth_year_compatible`) and its 0.88 similarity threshold so a
-"strong match" means the same thing here as it does for the
-RELATED_PEP / RELATED_SANCTIONED signals on the entity report.
+Scoring reuses the cross-check module's reading — every name the record
+files (`names.best_ftm_name`), the 0.88 similarity threshold and the
+birth-year, patronymic and given-name filters — so a "strong match" means
+the same thing here as it does for the RELATED_PEP / RELATED_SANCTIONED
+signals on the entity report.
 """
 
 from __future__ import annotations
@@ -49,7 +50,8 @@ from .. import names, provenance
 from ..bods import map_companies_house
 from ..cross_check import (
     _birth_year_compatible,
-    _name_score,
+    _given_names_compatible,
+    _patronymic_compatible,
     corroborating_attributes,
     match_confidence,
 )
@@ -94,6 +96,10 @@ class PersonMatch(BaseModel):
     name_score: float
     birth_year_compatible: bool
     strong: bool
+    #: The name on the record that ``name_score`` was measured against: the
+    #: caption, or another name the record files (an alias, a name in the
+    #: original script). Can differ from ``hit.name``, which is the caption.
+    matched_name: str | None = None
 
 
 class CheckedSource(BaseModel):
@@ -125,16 +131,54 @@ class PersonCheckResponse(BaseModel):
     cross_source_links: list[dict[str, Any]] = []
 
 
+def _record_names(hit: SourceHit) -> dict:
+    """The names a hit's record files, in the shape ``names.best_ftm_name``
+    reads: the caption plus, for an FtM record (OpenSanctions,
+    EveryPolitician, OpenAleph), its ``name`` / ``alias`` / ``previousName``
+    values. A Wikidata search hit adds the label or alias the search matched
+    (``match.text``), a name the item itself carries.
+    """
+    raw = hit.raw if isinstance(hit.raw, dict) else {}
+    props = dict(raw.get("properties") or {}) if isinstance(raw.get("properties"), dict) else {}
+    match = raw.get("match")
+    if hit.source_id == "wikidata" and isinstance(match, dict) and match.get("text"):
+        props = {"alias": [str(match["text"])]}
+    return {"caption": hit.name or "", "properties": props}
+
+
 def _score_hit(
     hit: SourceHit, query: str, birth_year: int | None
 ) -> PersonMatch:
-    score = _name_score(query, hit.name or "")
+    """Score a hit against the queried person.
+
+    The name is scored against every name the record files, not its caption
+    alone (the person-check caption ticket, 20 Nov 2026): OpenSanctions'
+    record of Борислав Любенов Великов is captioned "Borislav Velikov",
+    0.78 against the full name, while it files "БОРИСЛАВ ЛЮБЕНОВ ВЕЛИКОВ" as
+    a name. The related-party screen in ``cross_check`` has read the record's
+    names since the Rosneftegaz ticket; this is the same reading
+    (``names.best_ftm_name``), so a person matches here when they match there.
+
+    A strong match then passes the same hard filters as that screen: the
+    birth year, the patronymic and the different-given-name refusal of the
+    Bulgarian PEP ticket. The more names are scored, the more those filters
+    carry, so none is optional here.
+    """
+    matched_name, score = names.best_ftm_name(query, _record_names(hit))
     by_ok = _birth_year_compatible(birth_year, hit)
+    target = {"kind": "person", "name": query, "birth_year": birth_year}
+    strong = (
+        score >= STRONG_MATCH_THRESHOLD
+        and by_ok
+        and _patronymic_compatible(target, hit)
+        and _given_names_compatible(target, hit)
+    )
     return PersonMatch(
         hit=hit,
         name_score=round(score, 3),
         birth_year_compatible=by_ok,
-        strong=score >= STRONG_MATCH_THRESHOLD and by_ok,
+        strong=strong,
+        matched_name=matched_name or hit.name,
     )
 
 
@@ -179,6 +223,7 @@ async def _person_check_impl(
             payload["evidence"] = dict(payload.get("evidence") or {})
             payload["evidence"]["match"] = {
                 "query_name": name,
+                "matched_name": match.matched_name,
                 "name_score": match.name_score,
                 "birth_year_checked": birth_year is not None,
                 "birth_year_compatible": match.birth_year_compatible,
