@@ -636,6 +636,8 @@ from .mappers.ukraine import (  # noqa: F401  (re-exported, Phase 246)
 )
 from .mappers.bulgaria import (  # noqa: F401  (re-exported: the Bulgaria Commercial Register ticket)
     BG_COVERAGE_NOTE,
+    _BG_JOINED_NOTE,
+    _BG_JOINED_NOTES,
     _BG_PARTNER_SHARE_NOTE,
     _BG_RIGHT_TYPES,
     _BG_ROLE_INTERESTS,
@@ -644,11 +646,14 @@ from .mappers.bulgaria import (  # noqa: F401  (re-exported: the Bulgaria Commer
     _BG_SENIOR_MANAGER,
     _BG_SOURCE,
     _bg_amount,
+    _bg_name_fold,
     _bg_owner_interests,
+    _bg_shorter_form_of,
     _bg_party_key,
     _bg_party_statement,
     _bg_role_interest,
     _bg_share_from_percent,
+    bg_join_keyless,
     bg_partner_shares,
     map_bg_tr,
 )
