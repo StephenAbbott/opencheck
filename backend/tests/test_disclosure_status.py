@@ -238,6 +238,37 @@ def test_a_hint_fills_the_gap_instead_of_none_filed() -> None:
     assert vals == [("exempt", "beneficial_owners"), ("none_filed", "shareholders")]
 
 
+def test_a_latvian_joint_stock_company_is_never_none_on_record_for_shareholders() -> None:
+    # AS "Remars-Rīga" (20 Nov 2026): the lookup reads only the SIA members
+    # table, so an AS read "Shareholders: None on record" beside a History
+    # tab saying the register no longer shows them.
+    raw = {"is_stub": False, "entity": {"type": "AS"}, "members": []}
+    hints = {"ur_latvia": disclosure.bundle_hints("ur_latvia", raw)}
+    out = _lookup([], [_hit("ur_latvia")], hints=hints)
+    entries = out["sources"]["ur_latvia"]["entries"]
+    vals = [(e["value"], e["covers"]) for e in entries]
+    assert ("none_filed", "shareholders") not in vals
+    assert ("restricted", "shareholders") in vals
+    detail = next(e for e in entries if e["covers"] == "shareholders")["details"][0]
+    assert detail == disclosure.LV_AS_SHAREHOLDERS
+
+
+@pytest.mark.parametrize("raw", [
+    {"is_stub": False, "entity": {"type": "SIA"}, "members": []},
+    {"is_stub": True, "entity": {"type": "AS"}},
+    {"is_stub": False, "read_failed": "upstream_error", "entity": {"type": "AS"}},
+])
+def test_a_latvian_sia_or_unread_record_needs_no_hint(raw: dict) -> None:
+    assert disclosure.bundle_hints("ur_latvia", raw) == []
+
+
+def test_the_latvian_detail_passes_the_banned_vocabulary() -> None:
+    from opencheck.knowability import BANNED_VOCABULARY
+
+    words = disclosure.LV_AS_SHAREHOLDERS.lower()
+    assert not [w for w in BANNED_VOCABULARY if re.search(rf"\b{re.escape(w)}\b", words)]
+
+
 # --- BODS -----------------------------------------------------------------------
 
 

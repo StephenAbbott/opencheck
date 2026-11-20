@@ -26,7 +26,7 @@ changes the verdict or reaches the AI summary. `OPAQUE_OWNERSHIP` and
 | `exempt` | Exempt | A lawful exemption from filing: a Companies House PSC exemption (shares on a regulated market), a Ukrainian statutory or legal-form exemption, Estonia's "need not file", a GLEIF reporting exception that says there is no consolidating parent. |
 | `not_provided` | Not provided | Required but not supplied: Companies House "PSC exists but not identified", "contacted but no response", restriction notices; GLEIF's `NON_PUBLIC` family. |
 | `none_filed` | None on record | The source holds the company's record but no owner and no reason. Never worded as an exemption or as non-compliance. |
-| `restricted` | Not public | The source is the national register of a country whose beneficial-ownership tier is closed to the public under the [knowability](knowability.md) access status. |
+| `restricted` | Not public | The source is the national register of a country whose beneficial-ownership tier is closed to the public under the [knowability](knowability.md) access status; or, for Latvia, the shareholders of a joint-stock company (AS), which the register stopped publishing on 19 November 2026. |
 | `unreachable` | Not read | OpenCheck could not read the source, or read it only in part (a `source_fetch` / `source_read` degradation; Estonia's REST tier, which has no beneficial owners). |
 | `no_record` | No record of the company | An ownership source answered and holds nothing on this company. |
 | `not_covered` | Not an ownership source | The source's job does not include owners. Not chipped; named once under the source cards. |
@@ -140,6 +140,13 @@ read `none_filed` until the adapter followed the link.
 | Obliged, none in the open data ("due, none published") | `none_filed` — an entry can be withheld for a person at risk or a minor, and the open data does not say so |
 | Only `J` / `C` rows (board or council members named because no owner was identified) | `none_exist` |
 | Read from the REST tier, which has no beneficial owners | `unreachable` |
+
+### Latvia (read from the bundle, not the statements)
+
+| Register of Enterprises | Value |
+|---|---|
+| A joint-stock company (AS) | Shareholders: `restricted`, with the register's reason. The lookup reads only the SIA members table, and the AS stockholders table has answered "access denied" to the public since 19 November 2026, after the Constitutional Court's judgment of 9 November 2026. Never `none_filed`. |
+| An SIA with no member rows | Shareholders: `none_filed`, as before |
 
 ### OpenCheck's own channels
 

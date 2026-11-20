@@ -183,6 +183,31 @@ def _bg_tr_hints(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
     return entries
 
 
+#: Latvia: a joint-stock company's (AS) shareholders. The lookup reads only
+#: the SIA members table, and since 19 Nov 2026 the register's AS
+#: stockholders table answers "Pieeja liegta" to the public, after the
+#: Constitutional Court's judgment of 9 Nov 2026 (case 2024-01-01).
+LV_AS_SHAREHOLDERS = (
+    "the register stopped publishing a joint-stock company's shareholders "
+    "on 19 November 2026, after a Constitutional Court judgment"
+)
+
+
+def _ur_latvia_hints(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """An AS has no rows in the SIA members table, which is all the lookup
+    reads, so without this its shareholders fell to "None on record" while
+    the History tab of the same report said the register no longer shows
+    them (AS "Remars-Rīga", 20 Nov 2026). Said as ``restricted`` with the
+    register's reason, never ``none_filed``."""
+    from .sources.ur_latvia import is_joint_stock  # local: the adapter is heavy
+
+    if raw.get("is_stub") or raw.get("read_failed"):
+        return []
+    if not is_joint_stock(raw.get("entity")):
+        return []
+    return [_entry("restricted", "shareholders", detail=LV_AS_SHAREHOLDERS)]
+
+
 def bundle_hints(source_id: str, raw: Mapping[str, Any] | None) -> list[dict[str, Any]]:
     """Entries a source's raw bundle says and its statements cannot.
 
@@ -200,6 +225,8 @@ def bundle_hints(source_id: str, raw: Mapping[str, Any] | None) -> list[dict[str
         return _companies_house_hints(raw)
     if source_id == "bg_tr":
         return _bg_tr_hints(raw)
+    if source_id == "ur_latvia":
+        return _ur_latvia_hints(raw)
     if source_id != "ariregister":
         return []
     if raw.get("bo_not_read"):
