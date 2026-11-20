@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 588** — The Netherlands knowability statement now records the bill implementing the EU AML package, sent to the House of Representatives on 20 November 2026, and what it changes in the UBO register.
+**Latest: Phase 589** — A Connecticut business recorded as merged or consolidated now shows that ending on its History tab even when the merger certificate sits on the surviving business's record.
 
 → [Full development history](docs/status.md)
 
