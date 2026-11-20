@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 568** — Latvia's knowability statement now records that joint-stock company shareholders who are natural persons moved to the non-public part of the register on 19 November 2026.
+**Latest: Phase 569** — The type-check ratchet now refuses to run without the optional ftm extra instead of reporting a stale baseline.
 
 → [Full development history](docs/status.md)
 
