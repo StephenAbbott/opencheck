@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 586** — The sources page now opens with the same large page title as the API and features pages.
+**Latest: Phase 587** — The About page now shows a lookup as a diagram, the four checks with their mode badges and BODS statements with the graph's own icons.
 
 → [Full development history](docs/status.md)
 
