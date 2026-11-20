@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 580** — Connecticut businesses now have a History tab built from the Secretary of the State's filings and recorded name changes, with annual reports counted on one row.
+**Latest: Phase 581** — The blog no longer shows topic chips or a topic filter; posts are listed by date alone.
 
 → [Full development history](docs/status.md)
 
