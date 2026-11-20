@@ -235,3 +235,13 @@ def test_blog_chrome_matches_the_apps(client: TestClient) -> None:
     assert 'clip-path="url(#oc-blog-lens)"' in page  # OpenCheckIcon, not the old triangle
     assert "See who owns and controls a company, from open data." in page
     assert 'href="/blog/feed.xml">RSS feed</a>' in page
+
+
+def test_blog_text_is_smoothed_like_the_apps(client: TestClient) -> None:
+    """The app's body is Tailwind `antialiased`; the blog must match or macOS
+    draws its wordmark and text bolder (Stephen, 20 Nov 2026)."""
+    index_html = (Path(__file__).resolve().parents[2] / "frontend/index.html").read_text()
+    assert re.search(r'<body class="[^"]*\bantialiased\b', index_html)
+    page = client.get("/blog").text
+    assert "-webkit-font-smoothing:antialiased" in page
+    assert "-moz-osx-font-smoothing:grayscale" in page

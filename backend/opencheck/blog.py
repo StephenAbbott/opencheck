@@ -38,7 +38,7 @@ from .cache import data_root
 from .entity_pages import FONTS_STYLESHEET, _goatcounter_snippet
 
 #: Bump when the rendered HTML changes materially (part of every ETag).
-TEMPLATE_VERSION = "4"
+TEMPLATE_VERSION = "5"
 
 AUTHOR = "Stephen Abbott Pugh"
 AUTHOR_URL = "https://www.beneficialownership.co.uk/"
@@ -321,7 +321,10 @@ _CSS = """
 --ink:#191d23;--body:#2a2f37;--muted:#5b6170;--rule:#e3e4ea;--bg:#f3f3f5;
 --line:#93c5fd}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+/* -webkit-font-smoothing matches the app's body (Tailwind `antialiased` in
+   frontend/index.html); without it macOS draws every word heavier. */
 body{margin:0;background:var(--bg);color:var(--ink);
+-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
 font:16px/1.55 "DM Sans",system-ui,"Segoe UI",sans-serif}
 a{color:var(--blue)}img{max-width:100%;height:auto;display:block}
 .skip{position:absolute;left:-999px;top:0;background:#fff;padding:8px 12px;z-index:9}
