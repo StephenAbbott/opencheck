@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 573** — A failed read of seven more sources (Estonia without its index, Brazil's CNPJ, Ireland's CRO, Malta, India's MCA, Finland's PRH and Wikidata) now reads as a source that did not answer, not as a company with no record.
+**Latest: Phase 574** — A Bulgarian officer or board seat filed without the register's person key now joins the beneficial owner or officer it names in the same company, so one person is one node.
 
 → [Full development history](docs/status.md)
 
