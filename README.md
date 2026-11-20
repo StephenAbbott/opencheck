@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 581** — The blog no longer shows topic chips or a topic filter; posts are listed by date alone.
+**Latest: Phase 582** — The ownership map image now says under the picture how many relationships it drew and that the rest are in its table.
 
 → [Full development history](docs/status.md)
 
