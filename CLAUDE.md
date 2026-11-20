@@ -836,6 +836,8 @@ is the token file for the six accents (allowlisted for hex like
   record-keeping fact, not a fact about the company. **Phase 263 made it six**:
   the New York Department of State (`timeline/ny_dos.py`), reconstructed from
   the rows `ny_dos`'s ordinary fetch returns — see "New York DOS" below.
+  Connecticut joined it from the Filing History (`timeline/ct_sots.py`) — see
+  "Connecticut is a live read of data.ct.gov" below.
 - Entity-scoped sections (risk signals, structural context, cross-source
   identifiers, possibly-same) are guarded `mode === "quick"`. They were
   `mode !== "background"`, which silently included the new ESG tab.
@@ -1686,7 +1688,26 @@ Things that will be re-derived otherwise:
 - **Licence `CT-Open-Data`**: all three datasets are Public Domain on
   data.ct.gov — Principals and Name Change History since 20 Nov 2026, when the
   Secretary of the State set them in answer to Stephen's request. Filing
-  History (`ah3s-bes7`) and Agents (`qh2m-n44y`) still carry no licence.
+  History (`ah3s-bes7`) carries no licence field and is treated as Public
+  Domain (Stephen, 20 Nov 2026, without asking again); Agents (`qh2m-n44y`)
+  carries none and is not read.
+- **History tab** (the Connecticut History ticket, 20 Nov 2026):
+  `fetch_timeline_data` is the lookup's cached bundle plus the Filing History
+  on `account` = Master `id`, read for the tab only (never the lookup), cached
+  a day under `ct_sots/filings-v1/<id>` when it answered; a failure is
+  `filings_unavailable` → `registers_unavailable["ct_sots"]`, and the renames
+  still show. Organizer and incorporator columns are never selected (the
+  schema refuses them). `timeline/ct_sots.py`: renames from Name Change
+  History, with an amendment filed or effective that day folded in; ending,
+  restoring and moving filings Tier 2 (foreign businesses worded as ending
+  only their Connecticut registration); a merger certificate is
+  `SUCCESSION` only on a domestic business the Master records as Merged or
+  Consolidation (it never names the other business); a Notice of Intent to
+  Dissolve is Tier 3; **annual reports are one grouped row** (Stephen); the
+  rest Tier 3. Filing types are mapped on the pair (category, type) with the
+  category as fallback; the "\ufffd" categories and literal "None" are
+  cleaned. `_registration_numbers` carries the business ID tenth;
+  `_unpack` pads a shorter tuple.
 - Scheme `US-CT`; in `register_hops._NO_COUNTRY_ALIAS`; not in
   `RA_BY_COUNTRY`. No record link (service.ct.gov has no per-business
   address); `source.url` is the SODA query. Optional `SOCRATA_APP_TOKEN`
@@ -1854,8 +1875,9 @@ Notion ticket; the things that will be re-derived otherwise:
   dated by the judgment, the rest by publication. **BODACC events never
   cluster with each other** (`assemble._DISCRETE_SOURCES`). Each row carries
   `record_url` (the notice); `registers_unavailable` / `registers_truncated`
-  are said on the tab. `_Numbers` is a 9-tuple (`fr` last); `_unpack` pads
-  the 8-tuples older test mocks return.
+  are said on the tab. `_Numbers` is a 10-tuple (`fr` ninth, Connecticut's
+  business ID tenth); `_unpack` pads the shorter tuples older test mocks
+  return.
 - **Watchlist** (D): `bodacc_tick` reads every watched SIREN since
   `meta.bodacc_day` − 3 days on a thread, every
   `OPENCHECK_WATCHLIST_BODACC_INTERVAL_S` (6 h); the first run only sets the

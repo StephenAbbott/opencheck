@@ -77,6 +77,7 @@ from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
 from .ica_israel import ica_israel_change_events
 from .joafe import joafe_change_events
+from .ct_sots import ct_sots_change_events
 from .ny_dos import ny_dos_change_events
 from .sirene import sirene_change_events
 from .nz_companies import nz_change_events
@@ -96,6 +97,7 @@ _DK_RA_CODE = "RA000170"   # Danish CVR / Erhvervsstyrelsen
 _NY_RA_CODE = "RA000628"   # New York Department of State (keyed on RA, not jurisdiction)
 _LV_RA_CODE = "RA000423"   # Latvian Register of Enterprises (Uzņēmumu reģistrs)
 _IL_RA_CODE = "RA000406"   # Israel Corporations Authority (Registrar of Companies)
+_CT_RA_CODE = "RA000600"   # Connecticut Secretary of the State (keyed on RA, not jurisdiction)
 #: The French authorities whose records file a SIREN — the INPI / Sirene
 #: deriver's set (RA000189 Sirene, RA000192 Infogreffe, RA001129 the RNE).
 _FR_RA_CODES = frozenset({"RA000189", "RA000192", "RA001129"})
@@ -133,14 +135,25 @@ _Numbers = tuple[
     str | None,
     str | None,
     str | None,
+    str | None,
 ]
+
+#: Positions in :data:`_Numbers`. A registration read older than a register
+#: (a test double, a cached tuple) is shorter; :func:`_unpack` pads it.
+_NUMBERS_LEN = 10
+
+
+def _unpack(numbers: tuple) -> _Numbers:
+    """A registration tuple padded with ``None`` to the current length."""
+    padded = tuple(numbers) + (None,) * (_NUMBERS_LEN - len(numbers))
+    return padded[:_NUMBERS_LEN]  # type: ignore[return-value]
 
 
 async def _gleif_registration(client: httpx.AsyncClient, lei: str) -> _Numbers:
-    """Return ``(ch, nz, ee, dk, ny, lv, il, legal_name, fr_siren)`` from GLEIF."""
+    """Return ``(ch, nz, ee, dk, ny, lv, il, legal_name, fr_siren, ct)`` from GLEIF."""
     resp = await client.get(_GLEIF_RECORD_URL.format(lei=quote(lei)))
     if resp.status_code == 404:
-        return None, None, None, None, None, None, None, None, None
+        return _unpack(())
     resp.raise_for_status()
     return _registration_numbers(resp.json())
 
@@ -156,13 +169,14 @@ def _cached_registration(lei: str) -> _Numbers | None:
     if hit is None:
         return None
     numbers = _registration_numbers(hit[0])
-    return numbers if any(numbers[:7]) or numbers[8] else None
+    return numbers if any(numbers[:7]) or numbers[8] or numbers[9] else None
 
 
 def _registration_numbers(payload: dict | None) -> _Numbers:
-    """``(ch, nz, ee, dk, ny, lv, il, legal_name, fr_siren)`` from a GLEIF Level-1 record payload.
+    """``(ch, nz, ee, dk, ny, lv, il, legal_name, fr_siren, ct)`` from a GLEIF Level-1 record payload.
 
-    The French SIREN comes last so the positions before it keep their meaning.
+    The French SIREN and the Connecticut business ID come last so the
+    positions before them keep their meaning.
 
     The legal name rides along for New York: the DOS emitter is name-gated,
     because six ISSUED LEIs file a DOS ID that belongs to another entity, and
@@ -193,7 +207,15 @@ def _registration_numbers(payload: dict | None) -> _Numbers:
             fr = normalise_siren(registered_as)
         except ValueError:
             fr = None
-    return ch, nz, ee, dk, ny, lv, il, legal_name, fr
+    ct: str | None = None
+    if registered_as and registered_at == _CT_RA_CODE:
+        from ..sources.ct_sots import normalise_business_id
+
+        try:
+            ct = normalise_business_id(registered_as)
+        except ValueError:
+            ct = None
+    return ch, nz, ee, dk, ny, lv, il, legal_name, fr, ct
 
 
 async def _gleif_modifications(
@@ -326,6 +348,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     lv_regcode: str | None = None
     il_number: str | None = None
     fr_siren: str | None = None
+    ct_business_id: str | None = None
     legal_name: str | None = None
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
@@ -346,7 +369,7 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         reg_res, mods_res = results
         if not isinstance(reg_res, BaseException):
-            company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name, fr_siren = reg_res
+            company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name, fr_siren, ct_business_id = _unpack(reg_res)
             company_number_basis = "live"
         else:
             # A 429 handed back by the Phase 143 transport, the throttle
@@ -356,7 +379,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             gleif_record_available = False
             cached = _cached_registration(lei)
             if cached is not None:
-                company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name, fr_siren = cached
+                company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name, fr_siren, ct_business_id = _unpack(cached)
                 company_number_basis = "cached"
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
@@ -473,6 +496,26 @@ async def fetch_timeline(lei: str) -> Timeline:
             bundle = None
         if bundle:
             ny_events = ny_dos_change_events(bundle)
+
+    # Connecticut — the lookup's rows (name-gated, cached) plus the Filing
+    # History, read here only. A filing read that failed is said on the tab
+    # (``registers_unavailable``); the recorded renames still show.
+    ct_events = []
+    ct_unavailable: str | None = None
+    if ct_business_id:
+        try:
+            from ..sources import REGISTRY
+
+            ct_adapter: Any = REGISTRY["ct_sots"]
+            ct_bundle = await ct_adapter.fetch_timeline_data(
+                ct_business_id, legal_name=legal_name or ""
+            )
+        except Exception:  # noqa: BLE001
+            log.warning("timeline: Connecticut read failed for %s", ct_business_id, exc_info=True)
+            ct_bundle, ct_unavailable = None, "upstream_error"
+        if ct_bundle:
+            ct_unavailable = ct_bundle.get("filings_unavailable") or None
+            ct_events = ct_sots_change_events(ct_bundle)
 
     # Latvia — reconstruct events from UR's dated open data (no key; the
     # lookup's cached read plus six event tables read here only). Additions
@@ -605,6 +648,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             + ee_events
             + dk_events
             + ny_events
+            + ct_events
             + lv_events
             + il_events
             + fr_events
@@ -628,6 +672,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             ("ariregister", ee_code),
             ("cvr_denmark", dk_cvr),
             ("ny_dos", ny_dos_id),
+            ("ct_sots", ct_business_id),
             ("ur_latvia", lv_regcode),
             ("ica_israel", il_number),
             ("sirene", fr_siren),
@@ -644,6 +689,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             ("bodacc", bodacc_unavailable),
             ("joafe", joafe_unavailable),
             ("ur_latvia", lv_unavailable),
+            ("ct_sots", ct_unavailable),
         )
         if reason
     }
