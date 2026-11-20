@@ -41,3 +41,23 @@ def test_the_committed_baseline_is_well_formed() -> None:
     baseline = ratchet.load_baseline()
     assert baseline, "backend/mypy-baseline.json is missing or empty"
     assert all(k.startswith("opencheck/") and v > 0 for k, v in baseline.items())
+
+
+def test_a_run_without_the_ftm_extra_is_refused_not_miscounted(monkeypatch, capsys) -> None:
+    """Without rigour installed mypy counted one error fewer in matching.py
+    and the ratchet called main's baseline stale (codebase review, 20 Nov
+    2026). It now refuses to run and says which extra to install."""
+    real = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util,
+        "find_spec",
+        lambda name, *a, **k: None if name == "rigour" else real(name, *a, **k),
+    )
+    assert ratchet.missing_extras() == ["ftm"]
+    assert ratchet.main([]) == 2
+    assert "uv sync --extra ftm" in capsys.readouterr().err
+
+
+def test_the_ratchet_runs_when_the_extras_are_installed(monkeypatch) -> None:
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a, **k: object())
+    assert ratchet.missing_extras() == []

@@ -28,7 +28,8 @@ Usage (from ``backend/``)::
                                                      # refuses to raise a count
     uv run python scripts/mypy_ratchet.py --update --allow-increase
 
-Exit status: 0 clean, 1 ratchet failure, 2 mypy itself failed to run.
+Exit status: 0 clean, 1 ratchet failure, 2 mypy itself failed to run or
+the optional extras the baseline is measured with are not installed.
 """
 
 from __future__ import annotations
@@ -48,6 +49,21 @@ TARGET = "opencheck"
 # ``opencheck/app.py:58: error: … [assignment]``. Notes and the summary line
 # are not errors; a syntax error is reported as ``error:`` too and counts.
 _ERROR = re.compile(r"^(?P<path>[^:\s][^:]*\.pyi?):\d+(?::\d+)?: error: ")
+
+
+#: Optional dependencies whose presence changes what mypy sees. CI installs
+#: them (``uv sync --extra ftm``); a run without them counts a different
+#: number of errors and reports the baseline as stale when it is not.
+REQUIRED_EXTRAS = {"rigour": "ftm", "followthemoney": "ftm"}
+
+
+def missing_extras() -> list[str]:
+    """The extras whose packages are not installed in this environment."""
+    import importlib.util
+
+    return sorted(
+        {extra for module, extra in REQUIRED_EXTRAS.items() if importlib.util.find_spec(module) is None}
+    )
 
 
 def run_mypy() -> tuple[Counter[str], str]:
@@ -107,6 +123,16 @@ def main(argv: list[str] | None = None) -> int:
         "--allow-increase", action="store_true", help="with --update: accept higher counts"
     )
     args = parser.parse_args(argv)
+    missing = missing_extras()
+    if missing:
+        flags = " ".join(f"--extra {e}" for e in missing)
+        sys.stderr.write(
+            "mypy ratchet: the baseline is measured with the optional extras "
+            f"installed, and these are missing: {', '.join(missing)}.\n"
+            f"Run `uv sync {flags}` first (CI does), or the counts will not "
+            "match the baseline.\n"
+        )
+        return 2
 
     counts, output = run_mypy()
     baseline = load_baseline()
