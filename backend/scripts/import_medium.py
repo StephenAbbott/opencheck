@@ -22,16 +22,28 @@ already has a file.
 
 The export zip holds personal data (sessions, IP addresses, e-mail
 settings); never commit it.
+
+``--feed`` reads Medium's author RSS feed instead of an export (Stephen,
+20 Nov 2026). The feed carries the latest ten posts in full, so it is how a
+new post reaches the blog without an export: the daily workflow
+``import-medium-feed.yml`` runs it. It imports only OpenCheck-tagged posts
+the blog does not already hold (matched on the Medium id), and never
+rewrites one, so an edit made here is never overwritten::
+
+    uv run --with markdownify --with beautifulsoup4 \\
+        python scripts/import_medium.py --feed
 """
 
 from __future__ import annotations
 
 import argparse
+import email.utils
 import hashlib
 import io
 import re
 import sys
 import urllib.request
+import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -54,6 +66,14 @@ _TOPIC_LABELS = {"Mcp Server": "MCP", "Ai": "AI"}
 #: Image width asked of Medium's CDN: twice the 690px prose column.
 _IMAGE_WIDTH = 1600
 _USER_AGENT = "OpenCheck blog importer (+https://opencheck.world/blog)"
+#: The author feed: the latest ten posts, in full, with their tags.
+FEED_URL = "https://medium.com/feed/@stephenabbottpugh"
+#: The address every imported post's ``medium_url`` uses, whichever host the
+#: feed or export linked from.
+_CANONICAL_BASE = "https://medium.com/@stephenabbottpugh/"
+_CONTENT_NS = "{http://purl.org/rss/1.0/modules/content/}encoded"
+#: Medium's CDN image id: the last path segment of a ``cdn-images-1`` URL.
+_CDN_RE = re.compile(r"^https://cdn-images-1\.medium\.com/(?:max/\d+/)?(?P<id>[^/?#]+)$")
 
 
 def medium_id(url: str) -> str | None:
@@ -238,6 +258,137 @@ def convert(post: dict, slugs_by_id: dict[str, str], *, fetch: bool = True) -> s
     return "\n".join(lines) + "\n\n" + markdown
 
 
+def _tag_name(slug: str) -> str:
+    """A feed category (``mcp-server``) in the export's spelling (``Mcp Server``)."""
+    return " ".join(word.capitalize() for word in slug.split("-"))
+
+
+def _all_emphasis(p: Tag) -> bool:
+    """Whether every word of a paragraph is inside ``<em>`` (links included)."""
+    words = [t for t in p.find_all(string=True) if t.strip()]
+    return bool(words) and all(t.find_parent("em") is not None for t in words)
+
+
+def _take_subtitle(body: BeautifulSoup) -> str:
+    """Remove the feed body's opening title and subtitle; return the subtitle.
+
+    A feed body opens in one of three ways: the subtitle as an all-emphasis
+    paragraph (its links kept inside the emphasis); a figure, then that
+    paragraph; or an ``<h3>`` restating the title (the zip export's
+    ``graf--title``, dropped as that is), where Medium shows the first
+    paragraph as the subtitle, as the zip export's subtitle field holds it.
+    """
+    after_title = False
+    for el in [c for c in body.children if isinstance(c, Tag)]:
+        if el.name == "figure":
+            continue
+        if el.name == "h3" and not after_title:
+            el.decompose()
+            after_title = True
+            continue
+        if el.name == "p" and (after_title or _all_emphasis(el)):
+            text = re.sub(r"\s+", " ", el.get_text("")).strip()
+            el.decompose()
+            return text.rstrip(".") if after_title else text
+        return ""
+    return ""
+
+
+def parse_feed(xml_text: str) -> list[dict]:
+    """Every post in Medium's RSS feed, in the shape ``parse_post`` returns.
+
+    The feed's ``content:encoded`` is the body alone: the subtitle is its
+    first paragraph when that paragraph is all emphasis, images are plain
+    ``<figure><img>`` with a ``cdn-images-1`` source, and a tracking pixel
+    (``medium.com/_/stat``) closes it.
+    """
+    root = ET.fromstring(xml_text)
+    posts = []
+    for item in root.iter("item"):
+        link = (item.findtext("link") or "").split("?", 1)[0]
+        content = item.findtext(_CONTENT_NS) or ""
+        date = item.findtext("pubDate")
+        if not link or not content or not date or medium_id(link) is None:
+            continue
+        body = BeautifulSoup(content, "html.parser")
+        for img in body.select("img"):
+            src = str(img.get("src") or "")
+            if "medium.com/_/stat" in src:
+                img.decompose()
+                continue
+            match = _CDN_RE.match(src)
+            if match:
+                img["data-image-id"] = match.group("id")
+        subtitle = _take_subtitle(body)
+        soup = BeautifulSoup('<section data-field="body"></section>', "html.parser")
+        section = soup.section
+        for el in list(body.contents):
+            section.append(el)
+        published = email.utils.parsedate_to_datetime(date)
+        slugs = [c.text.strip() for c in item.findall("category") if c.text]
+        last = urlparse(link).path.rstrip("/").rsplit("/", 1)[-1]
+        posts.append(
+            {
+                "soup": soup,
+                "title": (item.findtext("title") or "").strip(),
+                "subtitle": subtitle,
+                "published": published.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "canonical": _CANONICAL_BASE + last,
+                "id": medium_id(link),
+                "slug": slug_of(link),
+                "tags": [_tag_name(t) for t in slugs],
+                "tag_slugs": slugs,
+            }
+        )
+    return posts
+
+
+def _held_ids() -> set[str]:
+    """The Medium ids of the posts the blog already holds."""
+    held = set()
+    for path in (OUT / "posts").glob("*.md"):
+        match = re.search(r'^medium_id: "([0-9a-f]+)"$', path.read_text(encoding="utf-8"), re.M)
+        if match:
+            held.add(match.group(1))
+    return held
+
+
+def _held_slugs_by_id() -> dict[str, str]:
+    out = {}
+    for path in (OUT / "posts").glob("*.md"):
+        match = re.search(r'^medium_id: "([0-9a-f]+)"$', path.read_text(encoding="utf-8"), re.M)
+        if match:
+            out[match.group(1)] = path.stem
+    return out
+
+
+def import_feed(xml_text: str, *, fetch: bool = True) -> list[Path]:
+    """Write every OpenCheck post in the feed the blog does not hold yet.
+
+    Never rewrites a held post (matched on the Medium id, or on a file of the
+    same slug), so a post corrected here keeps its correction. Returns the
+    files written.
+    """
+    posts = [p for p in parse_feed(xml_text) if OPENCHECK_TAG in p["tag_slugs"]]
+    held = _held_ids()
+    slugs_by_id = {**_held_slugs_by_id(), **{p["id"]: p["slug"] for p in posts}}
+    written = []
+    (OUT / "posts").mkdir(parents=True, exist_ok=True)
+    for post in sorted(posts, key=lambda p: p["published"]):
+        dest = OUT / "posts" / f"{post['slug']}.md"
+        if post["id"] in held or dest.exists():
+            continue
+        dest.write_text(convert(post, slugs_by_id, fetch=fetch), encoding="utf-8")
+        written.append(dest)
+    return written
+
+
+def _fetch_feed(url: str = FEED_URL) -> str:
+    request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        return response.read().decode("utf-8")
+
+
 def _read_export(path: Path) -> dict[str, str]:
     """``{filename: html}`` for every published post in an export zip or dir."""
     files: dict[str, str] = {}
@@ -254,11 +405,26 @@ def _read_export(path: Path) -> dict[str, str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("export", type=Path, help="Medium export zip, or the unzipped folder")
+    ap.add_argument(
+        "export", type=Path, nargs="?", help="Medium export zip, or the unzipped folder"
+    )
+    ap.add_argument(
+        "--feed", action="store_true", help="import new OpenCheck posts from the RSS feed"
+    )
     ap.add_argument("--id", action="append", default=[], help="also import this Medium id")
     ap.add_argument("--keep-existing", action="store_true")
     ap.add_argument("--no-images", action="store_true", help="do not download images")
     args = ap.parse_args(argv)
+
+    if args.feed:
+        written = import_feed(_fetch_feed(), fetch=not args.no_images)
+        for path in written:
+            print(f"imported {path.name}")
+        if not written:
+            print("No new OpenCheck posts in the feed.")
+        return 0
+    if args.export is None:
+        ap.error("give an export zip or folder, or --feed")
 
     posts = []
     for raw in _read_export(args.export).values():

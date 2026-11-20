@@ -1,0 +1,73 @@
+name: Import Medium feed
+
+# Brings a new OpenCheck post from Medium onto opencheck.world/blog without an
+# export (Stephen, 20 Nov 2026). Once a day it reads the author RSS feed
+# (the latest ten posts, in full) and writes every post tagged `opencheck`
+# that data/blog/posts/ does not already hold, with its images as WebP
+# (backend/scripts/import_medium.py --feed). A held post is never rewritten,
+# so an edit made here survives.
+#
+# When something was written, the blog tests run on it and the post is
+# committed straight to main, which Render deploys. It changes no code, so
+# the commit carries [skip ci]. The second workflow that pushes, after
+# stamp-phase.yml: `contents: write` on its job and the default GITHUB_TOKEN.
+# If main gains a protection rule that blocks GITHUB_TOKEN pushes, this job
+# needs a token with bypass permission, like the stamp.
+#
+# After a post lands: set its Medium canonical link to opencheck.world/blog/<slug>
+# in Medium's story settings ("First on Medium" stays on the page).
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: import-medium-feed
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install backend
+        run: uv sync
+        working-directory: backend
+      - name: Import new posts from the feed
+        run: uv run --with markdownify --with beautifulsoup4 python scripts/import_medium.py --feed
+        working-directory: backend
+      - name: Anything new?
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain -- data/blog)" ]; then
+            echo "new=true" >> "$GITHUB_OUTPUT"
+            git status --short -- data/blog
+          fi
+      - name: Blog tests on the new posts
+        if: steps.changes.outputs.new == 'true'
+        run: uv run --with markdownify --with beautifulsoup4 pytest -q tests/test_blog.py tests/test_import_medium_feed.py
+        working-directory: backend
+      - name: Commit and push to main
+        if: steps.changes.outputs.new == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/blog
+          titles=$(git diff --cached --name-only -- data/blog/posts | xargs -r -n1 basename | sed 's/\.md$//' | paste -sd ', ' -)
+          git commit -m "Blog: import ${titles} from Medium [skip ci]"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            # Only data/blog changed here, so a rebase onto a moved main is safe.
+            git pull --rebase origin main
+          done
+          exit 1

@@ -645,6 +645,9 @@ bundle, under `ares/bundle-v3/`, only when VR returned data).
   `stamp-phase.yml`'s `stamp` job commits the phase row to `main` (Phase 347)
   with the default token; if `main` ever gains a protection rule that blocks
   `GITHUB_TOKEN`, that job needs a token with bypass permission.
+  **A second pushes since the Medium-feed ticket (20 Nov 2026):**
+  `import-medium-feed.yml` commits new blog posts to `main` (data/blog only,
+  `[skip ci]`), after the blog tests pass on them.
   `dependency-audit.yml` runs pip-audit over the locked runtime dependencies
   when `pyproject.toml` / `uv.lock` change and weekly. `openaleph-client` was
   removed — nothing imported it, and it held urllib3 at 1.x; the OpenAleph
@@ -689,8 +692,11 @@ otherwise:
   fallback; the header and footer link with a plain `href={BLOG_PATH}`, never
   a view; the Vite dev server proxies `/blog`. Look B "Ledger" (mockups on
   the Notion ticket): the date is said in words *and* as `publicationDate`.
-- **The importer reads Medium's export zip**, never RSS (latest ten only) or
-  story pages (403 to scripts). It imports posts tagged `opencheck`, stores
+- **The importer reads Medium's export zip** for the archive, and the author
+  RSS feed (latest ten only) daily for new posts — `--feed`, run by
+  `import-medium-feed.yml`, which writes only OpenCheck-tagged posts it does
+  not hold (matched on `medium_id`) and never rewrites one. Story pages answer
+  403 to scripts. It imports posts tagged `opencheck`, stores
   images as WebP and rewrites links between imported posts to `/blog/<slug>`.
   A post edited here is re-imported only with `--keep-existing` off on purpose.
   The zip holds personal data: `/blog/` at the repo root is gitignored.
