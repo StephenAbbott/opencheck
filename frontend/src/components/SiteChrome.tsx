@@ -118,10 +118,13 @@ export function SiteHeader({
                 );
               })}
               {/* The blog is served by the backend as its own pages
-                  (opencheck/blog.py), so it is a real link, not a view. */}
+                  (opencheck/blog.py), so it is a real link, not a view.
+                  Hidden below sm: a fourth word does not fit beside the mark
+                  and search icon at 360px (the Phase 251 one-row header);
+                  phones reach the blog from the footer. */}
               <a
                 href={BLOG_PATH}
-                className="inline-flex min-h-[44px] items-center text-oo-small text-white/80 hover:text-white transition-colors"
+                className="hidden sm:inline-flex min-h-[44px] items-center text-oo-small text-white/80 hover:text-white transition-colors"
               >
                 Blog
               </a>
