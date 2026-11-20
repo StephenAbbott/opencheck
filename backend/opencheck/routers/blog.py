@@ -45,12 +45,11 @@ def _posts_tag(posts: tuple[blog.Post, ...]) -> str:
 
 
 @router.api_route("/blog", methods=["GET", "HEAD"], response_class=HTMLResponse)
-async def blog_index(request: Request, topic: str | None = None) -> Response:
+async def blog_index(request: Request) -> Response:
     posts = blog.all_posts()
     frontend = _frontend()
-    topic = blog.topic_slug(topic) if topic else None
-    page = blog.render_index(posts, frontend=frontend, topic=topic or None)
-    return _answer(request, page, _etag("index", topic or "", frontend, _posts_tag(posts)))
+    page = blog.render_index(posts, frontend=frontend)
+    return _answer(request, page, _etag("index", frontend, _posts_tag(posts)))
 
 
 @router.api_route("/blog/", methods=["GET", "HEAD"], include_in_schema=False)
