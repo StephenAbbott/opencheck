@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 571** — Nine register adapters now check a register's company name against GLEIF's with one shared function instead of nine copies.
+**Latest: Phase 572** — A new test tries every source with its upstream failing and checks the failure is reported, never read as an empty answer or cached.
 
 → [Full development history](docs/status.md)
 
