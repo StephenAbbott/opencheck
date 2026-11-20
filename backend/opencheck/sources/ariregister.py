@@ -1492,6 +1492,17 @@ class AriregisterAdapter(SourceAdapter):
             validate_raw(self.id, AriregisterBundle, page)
             return page
         if not index_present:
+            # No index, so the page was the only read. A redirect away from
+            # the company is the register's answer; anything else (a 5xx, a
+            # 429, a timeout, a page that would not parse) is a failed read,
+            # never "no record" (the PR 653 class).
+            if outcome != "not_found":
+                degradation.record(
+                    self.id,
+                    "The e-Business Register page did not answer, so the "
+                    "company's record was not read.",
+                    reason=degradation.reason_for_failure(outcome or "no answer"),
+                )
             return self._stub(registry_code, legal_name)
         cut = meta.get("cut") or "the last build"
         if outcome == "not_found":

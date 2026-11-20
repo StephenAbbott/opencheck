@@ -215,7 +215,6 @@ TERMINAL_STATUSES: tuple[str, ...] = (
     "Domesticated",
 )
 
-_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
 
 #: Legal-form markers that make an owner row a legal entity rather than a
 #: natural person. Deliberately high-precision: a marker here is a form of
@@ -361,17 +360,6 @@ def trade_name_list(rows: list[dict[str, Any]] | None) -> list[str]:
     return out
 
 
-def _latin_agree(a: str, b: str) -> bool:
-    ca, cb = names.org_comparable_name(a), names.org_comparable_name(b)
-    if ca and ca == cb:
-        return True
-    if ca and names.despace(ca) == names.despace(cb):
-        return True
-    if names.distinctive_token_agreement(a, b):
-        return True
-    return names.name_similarity(a, b) >= _NAME_SIMILARITY_THRESHOLD
-
-
 def names_agree(
     legal_name: str | None,
     company: dict[str, Any] | None,
@@ -392,7 +380,7 @@ def names_agree(
         return True
     candidates = [clean_field((company or {}).get("BUSINESS_NAME"))]
     candidates.extend(trade_names or [])
-    return any(c and _latin_agree(wanted, c) for c in candidates)
+    return any(c and names.register_names_agree(wanted, c) for c in candidates)
 
 
 def record_url(layer: int, where: str) -> str:

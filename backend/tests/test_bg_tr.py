@@ -552,3 +552,108 @@ def test_the_snapshot_detail_writes_the_cut_in_words() -> None:
     with provenance.recording() as recorder:
         bg_tr.declare_snapshot({})
     assert recorder.resolve().detail == "Commercial Register open data"
+
+
+# --------------------------------------------------------------------------
+# A keyless entry joins the company's one keyed person of that name
+# (the duplicate-owner ticket, 20 Nov 2026: UBB's supervisory board files
+# its seats with no person key, the beneficial owners list with one)
+# --------------------------------------------------------------------------
+
+
+def _ubb_shape(**extra) -> dict:
+    return {
+        "eik": "000694959", "name": "ОББ", "legal_form_code": "AD", "status_class": "live",
+        "parties": [
+            {"name": "Петър Гроздев Андронов", "kind": "person", "field": "SupervisingBoard"},
+            {"name": "Кристин Ван Рейсенгем", "kind": "person", "field": "SupervisingBoard"},
+            *extra.get("parties", []),
+        ],
+        "beneficial_owners": [
+            {"name": "ПЕТЪР ГРОЗДЕВ АНДРОНОВ", "kind": "person", "key": "k-andronov",
+             "rights": [{"code": "OTHER_MEANS"}]},
+            {"name": "Кристин Надин Мария ван Рейсенгем", "kind": "person", "key": "k-vr",
+             "rights": [{"code": "OTHER_MEANS"}]},
+            *extra.get("owners", []),
+        ],
+    }
+
+
+def _people(statements: list[dict]) -> list[dict]:
+    return [s for s in statements if s["recordType"] == "person"]
+
+
+def test_a_keyless_entry_whose_name_differs_only_in_case_is_the_keyed_person() -> None:
+    statements = list(map_bg_tr(_ubb_shape()))
+    andronov = [p for p in _people(statements)
+                if "андронов" in p["recordDetails"]["names"][0]["fullName"].casefold()]
+    assert len(andronov) == 1
+    person = andronov[0]
+    # Spelled as the entry carrying the register's key spells it.
+    assert person["recordDetails"]["names"][0]["fullName"] == "ПЕТЪР ГРОЗДЕВ АНДРОНОВ"
+    notes = [a["description"] for a in person.get("annotations", [])]
+    assert any("supervisory board entry without the register's person key" in n for n in notes)
+    rels = [s for s in statements if s["recordType"] == "relationship"
+            and s["recordDetails"]["interestedParty"] == person["recordId"]]
+    assert {r["recordDetails"]["interests"][0]["type"] for r in rels} == {
+        "boardMember", "otherInfluenceOrControl"}
+
+
+def test_a_short_name_joins_the_one_fuller_name_with_a_note() -> None:
+    statements = list(map_bg_tr(_ubb_shape()))
+    vr = [p for p in _people(statements) if "рейсенгем" in p["recordDetails"]["names"][0]["fullName"].casefold()]
+    assert len(vr) == 1
+    assert vr[0]["recordDetails"]["names"][0]["fullName"] == "Кристин Надин Мария ван Рейсенгем"
+    notes = [a["description"] for a in vr[0].get("annotations", [])]
+    assert any("“Кристин Ван Рейсенгем”" in n and "middle names left out" in n for n in notes)
+    assert len(_people(statements)) == 2
+
+
+def test_a_short_name_fitting_two_people_joins_neither() -> None:
+    bundle = _ubb_shape(owners=[{"name": "Кристин Анна ван Рейсенгем", "kind": "person",
+                                 "key": "k-vr2", "rights": [{"code": "OTHER_MEANS"}]}])
+    vr = [p for p in _people(list(map_bg_tr(bundle)))
+          if "рейсенгем" in p["recordDetails"]["names"][0]["fullName"].casefold()]
+    assert len(vr) == 3
+
+
+@pytest.mark.parametrize(("short", "full", "fits"), [
+    ("Кристин Ван Рейсенгем", "Кристин Надин Мария ван Рейсенгем", True),
+    ("андрю блейър", "андрю джеймс геддис блейър", True),
+    ("иван петров", "петър иванов петров", False),       # first word differs
+    ("иван петров", "иван петров", False),               # not shorter: the case rule's
+    ("петров", "иван петров", False),                    # one word is too little
+    ("иван георгиев петров и борис петров", "иван георгиев петров", False),  # longer
+])
+def test_a_shorter_form(short: str, full: str, fits: bool) -> None:
+    from opencheck.bods.mappers.bulgaria import _bg_name_fold, _bg_shorter_form_of
+
+    assert _bg_shorter_form_of(_bg_name_fold(short), _bg_name_fold(full)) is fits
+
+
+def test_two_keyed_people_of_one_name_leave_a_keyless_entry_apart() -> None:
+    bundle = _ubb_shape(owners=[{"name": "Петър Гроздев Андронов", "kind": "person",
+                                 "key": "k-other", "rights": [{"code": "OTHER_MEANS"}]}])
+    andronov = [p for p in _people(list(map_bg_tr(bundle)))
+                if "андронов" in p["recordDetails"]["names"][0]["fullName"].casefold()]
+    assert len(andronov) == 3
+    assert not any(p.get("annotations") for p in andronov
+                   if "person key" in str(p.get("annotations")))
+
+
+def test_the_join_never_gives_a_key_to_an_entity_or_crosses_a_kind() -> None:
+    from opencheck.bods.mappers.bulgaria import bg_join_keyless
+
+    rows = bg_join_keyless([
+        {"name": "Иван Иванов", "kind": "person", "key": "k1"},
+        {"name": "ИВАН ИВАНОВ", "kind": "entity"},
+    ])
+    assert "key" not in rows[1]
+
+
+def test_the_finding_counts_a_keyless_entry_of_a_keyed_person_once() -> None:
+    bundle = {"eik": OOD, "status_class": "live", "legal_form_code": "AD", "parties": [
+        {"name": "Петър Андронов", "kind": "person", "key": "k1", "field": "Representatives"},
+        {"name": "ПЕТЪР АНДРОНОВ", "kind": "person", "field": "SupervisingBoard"},
+    ]}
+    assert "1 officer or board member" in finding_bg_tr(bundle)

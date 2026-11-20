@@ -236,6 +236,33 @@ async def test_fetch_both_providers_fail_returns_partial(monkeypatch, tmp_path) 
 
 
 @pytest.mark.asyncio
+async def test_fetch_one_provider_down_is_a_failed_read(monkeypatch, tmp_path) -> None:
+    """A 404 beside a 503 is not "no record": the other provider may hold the
+    company. A stub, a source_fetch degradation, and nothing cached."""
+    from opencheck import degradation
+
+    _live(monkeypatch, tmp_path)
+    mock_cache = MagicMock(); mock_cache.has.return_value = False
+    mock_cache.get_payload.return_value = None; mock_cache.put.return_value = None
+
+    async def route(url, **kw):
+        return _resp(404) if "opencnpj" in url else _resp(503)
+
+    with (
+        degradation.recording() as records,
+        patch("opencheck.sources.cnpj_brazil.Cache", return_value=mock_cache),
+        patch("opencheck.sources.cnpj_brazil.build_client", return_value=_make_client(route)),
+    ):
+        bundle = await CnpjBrazilAdapter().fetch("33000167000101", legal_name="Petrobras")
+
+    assert bundle["is_stub"] is True
+    assert [(d.source_id, d.check) for d in records] == [
+        ("cnpj_brazil", degradation.CHECK_SOURCE_FETCH)
+    ]
+    mock_cache.put.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_fetch_stub_when_live_disabled(monkeypatch, tmp_path) -> None:
     from opencheck.config import get_settings
 

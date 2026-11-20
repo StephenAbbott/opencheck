@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 568** — Latvia's knowability statement now records that joint-stock company shareholders who are natural persons moved to the non-public part of the register on 19 November 2026.
+**Latest: Phase 574** — A Bulgarian officer or board seat filed without the register's person key now joins the beneficial owner or officer it names in the same company, so one person is one node.
 
 → [Full development history](docs/status.md)
 

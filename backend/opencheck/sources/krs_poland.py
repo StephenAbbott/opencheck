@@ -65,12 +65,21 @@ from typing import Any
 
 import httpx
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
+from ..secret_scrub import describe_exception
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.krs_poland import KRSBundle
+
+#: The register did not answer (a 5xx, a timeout, an unreadable body). Names
+#: the register, never the company (``degradation.record``).
+_FETCH_FAILED_DETAIL = (
+    "The Polish National Court Register (KRS) did not answer, so the "
+    "company's record was not read."
+)
 
 _log = logging.getLogger(__name__)
 
@@ -345,6 +354,9 @@ class KrsPolandAdapter(SourceAdapter):
         # --- 2. Live fetch (try P → S → C) ---
         raw: dict[str, Any] | None = None
         used_rejestr: str = "P"
+        # A failed read is never "no record": a 404 on every register type
+        # is an answer, anything else is a degradation (the Phase 262 rule).
+        failure: str | None = None
 
         async with build_client() as client:
             for rejestr in _REJESTRY:
@@ -362,16 +374,33 @@ class KrsPolandAdapter(SourceAdapter):
                         continue
                     _log.warning(
                         "krs_poland: HTTP %s for KRS %s (rejestr=%s): %s",
-                        exc.response.status_code, krs, rejestr, exc,
+                        exc.response.status_code, krs, rejestr,
+                        describe_exception(exc),
                     )
+                    failure = f"HTTP {exc.response.status_code}"
                     break
                 except httpx.HTTPError as exc:
                     _log.warning(
                         "krs_poland: network error for KRS %s (rejestr=%s): %s",
-                        krs, rejestr, exc,
+                        krs, rejestr, describe_exception(exc),
                     )
+                    failure = type(exc).__name__
+                    break
+                except ValueError:
+                    _log.warning(
+                        "krs_poland: unreadable body for KRS %s (rejestr=%s)",
+                        krs, rejestr,
+                    )
+                    failure = "unreadable body"
                     break
 
+        if failure is not None:
+            degradation.record(
+                self.id,
+                _FETCH_FAILED_DETAIL,
+                reason=degradation.reason_for_failure(failure),
+            )
+            return self._stub(krs, legal_name)
         if raw is None:
             return self._stub(krs, legal_name)
 

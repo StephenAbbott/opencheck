@@ -16,7 +16,6 @@ from pathlib import Path
 import opencheck
 from opencheck import cross_check, names, openaleph_check, watchlist
 from opencheck.routers import person_check
-from opencheck.sources import acra_singapore, cr_hongkong, dlcp_dc, ny_dos
 
 _PACKAGE = Path(opencheck.__file__).parent
 
@@ -62,8 +61,10 @@ def test_every_former_copy_reads_the_shared_value():
     t = names.NAME_MATCH_THRESHOLD
     assert t == watchlist.NAME_MATCH_THRESHOLD
     assert t == person_check.STRONG_MATCH_THRESHOLD
-    for adapter in (cr_hongkong, ny_dos, acra_singapore, dlcp_dc):
-        assert t == adapter._NAME_SIMILARITY_THRESHOLD, adapter.__name__
+    import inspect as _inspect
+
+    gate = _inspect.signature(names.register_names_agree).parameters["threshold"]
+    assert gate.default == t
     import inspect
 
     for fn in (cross_check.assess_cross_source_names, openaleph_check.assess_openaleph_names):

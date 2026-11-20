@@ -43,6 +43,9 @@ import time
 from typing import Any
 from urllib.parse import quote
 
+import httpx
+
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -61,6 +64,13 @@ _EXTRACT_META_TTL_S = 86_400.0
 _OPEN_SERVICES_BASE = "https://services.cro.ie/cws"
 
 _CACHE_NS = "cro"
+
+#: The Open Data Portal did not answer (a 5xx, a timeout, an unreadable
+#: body). Names the register, never the company (``degradation.record``).
+_FETCH_FAILED_DETAIL = (
+    "The Irish Companies Registration Office Open Data Portal did not "
+    "answer, so the company's record was not read."
+)
 
 # GLEIF Registration Authority code for the Irish CRO.
 IE_RA_CODE: str = "RA000402"
@@ -195,23 +205,39 @@ class CroAdapter(SourceAdapter):
                 f"?resource_id={_COMPANIES_RESOURCE_ID}"
                 f"&filters={quote(filters)}&limit=1"
             )
-            async with build_client() as client:
-                response = await client.get(url)
-                if not response.is_success:
-                    import logging
-                    logging.getLogger(__name__).warning(
-                        "CRO Open Data returned %s — skipping (url=%s)",
-                        response.status_code,
-                        response.url,
-                    )
-                    return {
-                        "source_id": self.id,
-                        "crn": crn,
-                        "company": None,
-                        "legal_name": legal_name,
-                        "is_stub": False,
-                    }
-                data = response.json()
+            failure: str | None = None
+            data: dict[str, Any] = {}
+            try:
+                async with build_client() as client:
+                    response = await client.get(url)
+                if response.is_success:
+                    data = response.json()
+                else:
+                    failure = f"HTTP {response.status_code}"
+            except httpx.HTTPError as exc:
+                failure = type(exc).__name__
+            except ValueError:
+                failure = "unreadable body"
+            if failure is not None:
+                # A failed read is never "no record" and is never cached
+                # (the Phase 262 rule): a stub plus a source_fetch
+                # degradation, so the card says CRO did not answer.
+                import logging
+                logging.getLogger(__name__).warning(
+                    "CRO Open Data did not answer (%s) for CRN %s", failure, crn
+                )
+                degradation.record(
+                    self.id,
+                    _FETCH_FAILED_DETAIL,
+                    reason=degradation.reason_for_failure(failure),
+                )
+                return {
+                    "source_id": self.id,
+                    "crn": crn,
+                    "company": None,
+                    "legal_name": legal_name,
+                    "is_stub": True,
+                }
 
             records = (data.get("result") or {}).get("records") or []
             company = records[0] if records else {}

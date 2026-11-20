@@ -43,10 +43,11 @@ import logging
 import re
 from typing import Any
 
-from .. import identifiers
+from .. import degradation, identifiers
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
+from ..secret_scrub import describe_exception
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _LOG = logging.getLogger(__name__)
@@ -61,6 +62,13 @@ _CACHE_NS = "cnpj_brazil"
 BR_RA_CODE: str = "RA000681"
 
 _CNPJ_RE = re.compile(r"^\d{14}$")
+
+#: Neither provider answered (a 5xx, a timeout, an unreadable body). Names the
+#: register, never the company (``degradation.record``).
+_FETCH_FAILED_DETAIL = (
+    "Neither OpenCNPJ nor BrasilAPI answered, so the company's record in the "
+    "Receita Federal CNPJ register was not read."
+)
 
 
 def normalise_cnpj(cnpj: str | int) -> str:
@@ -235,11 +243,22 @@ class CnpjBrazilAdapter(SourceAdapter):
         if cached is not None:
             return cached[0]
 
-        raw = await self._fetch_raw(cnpj)
+        raw, failure = await self._fetch_raw(cnpj)
+        if raw is None and failure is not None:
+            # A provider failed and neither returned the company. One 404
+            # beside one outage is not an answer either: the other provider
+            # may hold it. A failure is never cached (the Phase 262 rule).
+            degradation.record(
+                self.id,
+                _FETCH_FAILED_DETAIL,
+                reason=degradation.reason_for_failure(failure),
+            )
+            return _bundle(None, [], True)
         if raw is None:
-            # Both providers failed/empty. The entity IS registered (GLEIF
-            # confirmed RA000681), so surface a non-stub card using the GLEIF
-            # name rather than hiding it — mirrors the CRO / JAR adapters.
+            # Both providers answered without the company. The entity IS
+            # registered (GLEIF confirmed RA000681), so surface a non-stub
+            # card using the GLEIF name rather than hiding it — mirrors the
+            # CRO / JAR adapters.
             bundle = _bundle({"name": legal_name} if legal_name else None, [], False)
             self._cache.put(cache_key, bundle)
             return bundle
@@ -248,27 +267,37 @@ class CnpjBrazilAdapter(SourceAdapter):
         self._cache.put(cache_key, bundle)
         return bundle
 
-    async def _fetch_raw(self, cnpj: str) -> dict[str, Any] | None:
-        """Try OpenCNPJ, then BrasilAPI. Return the first JSON object found."""
+    async def _fetch_raw(self, cnpj: str) -> tuple[dict[str, Any] | None, str | None]:
+        """Try OpenCNPJ, then BrasilAPI.
+
+        Returns ``(record, None)`` for the first JSON object found, ``(None,
+        None)`` when both answered without one, and ``(None, failure)`` when
+        neither returned it and at least one did not answer — ``failure`` the
+        first short label ("HTTP 503", "ReadTimeout").
+        """
+        failure: str | None = None
         for url in (_OPENCNPJ_URL.format(cnpj=cnpj), _BRASILAPI_URL.format(cnpj=cnpj)):
             try:
                 async with build_client() as client:
                     resp = await client.get(url, headers={"Accept": "application/json"})
             except Exception as exc:  # noqa: BLE001
-                _LOG.warning("cnpj_brazil: HTTP error %s: %s", url, exc)
+                _LOG.warning("cnpj_brazil: HTTP error %s: %s", url, describe_exception(exc))
+                failure = failure or type(exc).__name__
                 continue
             if resp.status_code == 404:
                 continue  # not in this provider's snapshot — try the next
             if not resp.is_success:
                 _LOG.warning("cnpj_brazil: HTTP %s from %s", resp.status_code, url)
+                failure = failure or f"HTTP {resp.status_code}"
                 continue
             try:
                 data = resp.json()
             except ValueError:
+                failure = failure or "unreadable body"
                 continue
             if isinstance(data, dict) and (data.get("razao_social") or data.get("nome")):
-                return data
-        return None
+                return data, None
+        return None, failure
 
     def _normalise(self, cnpj: str, raw: dict[str, Any], legal_name: str) -> dict[str, Any]:
         """Collapse an OpenCNPJ or BrasilAPI payload into the common bundle."""

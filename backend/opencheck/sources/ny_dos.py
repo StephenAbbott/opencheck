@@ -171,7 +171,6 @@ _CACHE_MAX_AGE_DAYS = 1.0
 
 _DOS_ID_RE = re.compile(r"^\d{1,9}$")
 
-_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
 
 #: Status labels, verbatim.
 STATUS_ACTIVE = "Active"
@@ -509,17 +508,6 @@ def summarise(bundle: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _latin_agree(a: str, b: str) -> bool:
-    ca, cb = names.org_comparable_name(a), names.org_comparable_name(b)
-    if ca and ca == cb:
-        return True
-    if ca and names.despace(ca) == names.despace(cb):
-        return True
-    if names.distinctive_token_agreement(a, b):
-        return True
-    return names.name_similarity(a, b) >= _NAME_SIMILARITY_THRESHOLD
-
-
 def names_agree(legal_name: str | None, bundle: dict[str, Any]) -> bool:
     """Does any name DOS holds for the entity agree with GLEIF's?
 
@@ -536,7 +524,7 @@ def names_agree(legal_name: str | None, bundle: dict[str, Any]) -> bool:
     for row in entity_filings_of(bundle):
         candidates.append(clean_field(row.get("corp_name")))
         candidates.append(clean_field(row.get("fict_name")))
-    return any(c and _latin_agree(wanted, c) for c in candidates)
+    return any(c and names.register_names_agree(wanted, c) for c in candidates)
 
 
 def record_url(dos_id: str, dataset: str = DATASET_FILINGS) -> str:
