@@ -38,7 +38,7 @@ from .cache import data_root
 from .entity_pages import FONTS_STYLESHEET, _goatcounter_snippet
 
 #: Bump when the rendered HTML changes materially (part of every ETag).
-TEMPLATE_VERSION = "3"
+TEMPLATE_VERSION = "4"
 
 AUTHOR = "Stephen Abbott Pugh"
 AUTHOR_URL = "https://www.beneficialownership.co.uk/"
@@ -280,12 +280,38 @@ def get_post(slug: str) -> Post | None:
 # Pages
 # ---------------------------------------------------------------------------
 
+#: The site's mark: OpenCheckIcon in frontend/src/components/icons/index.tsx,
+#: copied coordinate for coordinate (the clip path renamed so it cannot meet
+#: another on the page).
 _LOGO = (
-    '<svg viewBox="-11 -11 98 94" width="26" height="26" aria-hidden="true">'
-    '<path d="M38 0 L0 72 M38 0 L76 72 M0 72 L76 72" stroke="#93c5fd" stroke-width="5"/>'
-    '<circle cx="38" cy="0" r="11" fill="#22c55e"/>'
-    '<circle cx="0" cy="72" r="11" fill="#3b82f6"/>'
-    '<circle cx="76" cy="72" r="11" fill="#7c3aed"/></svg>'
+    '<svg viewBox="0 0 200 200" class="mark" aria-hidden="true" focusable="false">'
+    '<defs><clipPath id="oc-blog-lens"><circle cx="80" cy="80" r="63"/></clipPath></defs>'
+    '<line x1="127" y1="127" x2="186" y2="186" stroke="white" stroke-width="14" stroke-linecap="round"/>'
+    '<circle cx="80" cy="80" r="70" fill="none" stroke="white" stroke-width="13"/>'
+    '<g clip-path="url(#oc-blog-lens)">'
+    '<rect x="90" y="16" width="22" height="108" fill="white"/>'
+    '<rect x="108" y="42" width="18" height="82" fill="white"/>'
+    + "".join(
+        f'<rect x="{x}" y="{y}" width="{w}" height="{w}" fill="#1e3a8a"/>'
+        for x, y, w in (
+            (93, 24, 6),
+            (103, 24, 6),
+            (93, 35, 6),
+            (103, 35, 6),
+            (93, 46, 6),
+            (103, 46, 6),
+            (112, 50, 5),
+            (112, 61, 5),
+        )
+    )
+    + '<rect x="96" y="94" width="10" height="30" fill="#1e3a8a"/></g>'
+    '<line x1="48" y1="28" x2="18" y2="76" stroke="#93c5fd" stroke-width="4.5" stroke-linecap="round"/>'
+    '<line x1="18" y1="76" x2="48" y2="124" stroke="#93c5fd" stroke-width="4.5" stroke-linecap="round"/>'
+    '<line x1="48" y1="28" x2="48" y2="124" stroke="#93c5fd" stroke-width="4.5" stroke-linecap="round"/>'
+    '<polygon points="34,55 34,99 76,77" fill="white"/>'
+    '<circle cx="48" cy="28" r="11" fill="#22c55e"/>'
+    '<circle cx="18" cy="76" r="11" fill="#3b82f6"/>'
+    '<circle cx="48" cy="124" r="11" fill="#7c3aed"/></svg>'
 )
 
 #: Colours are the design system's tokens (frontend/tailwind.config.js):
@@ -300,16 +326,24 @@ font:16px/1.55 "DM Sans",system-ui,"Segoe UI",sans-serif}
 a{color:var(--blue)}img{max-width:100%;height:auto;display:block}
 .skip{position:absolute;left:-999px;top:0;background:#fff;padding:8px 12px;z-index:9}
 .skip:focus{left:8px;top:8px}
-header.site{background:var(--navy);color:#fff;padding:12px 16px}
-header.site .in{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;
-align-items:center;gap:4px 16px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:9px;color:#fff;text-decoration:none;
-font:700 20px Bitter,Georgia,serif}.brand b{color:var(--line);font-weight:700}
-header.site nav{display:flex;gap:18px;font-size:14px;flex-wrap:wrap}
+/* The header and footer copy SiteHeader / SiteFooter in
+   frontend/src/components/SiteChrome.tsx, class for class. */
+header.site{background-color:var(--navy);color:#fff;padding:12px 16px;
+background-image:radial-gradient(circle 500px at calc(100% + 80px) -80px,rgba(61,48,212,.28),transparent)}
+header.site .in{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;
+gap:4px 10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;
+font:700 18px/1.25 Bitter,Georgia,serif}.brand:hover{opacity:.8}.brand b{color:var(--line);font-weight:700}
+.brand .mark{height:24px;width:auto;flex-shrink:0}
+header.site nav{display:flex;flex-wrap:wrap;align-items:center;gap:0 10px;font-size:13px;line-height:1.6}
 header.site nav a{color:rgba(255,255,255,.8);text-decoration:none;display:inline-flex;
-align-items:center;min-height:44px}
+align-items:center;min-height:44px;transition:color .15s}
 header.site nav a:hover{color:#fff}
-header.site nav a[aria-current]{color:#fff;font-weight:500;box-shadow:inset 0 -2px var(--line)}
+header.site nav a[aria-current]{color:#fff;font-weight:500;border-bottom:2px solid var(--line)}
+@media(min-width:640px){header.site{padding:16px 40px}header.site .in{gap:4px 16px}
+.brand{gap:10px;font-size:20px}.brand .mark{height:28px}header.site nav{gap:0 20px}}
+@media(min-width:768px){header.site .in{justify-content:flex-start}}
+@media(min-width:1024px){header.site{padding-left:64px;padding-right:64px}}
 .wrap{max-width:1100px;margin:0 auto;padding:36px 16px 8px}
 .head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;
 padding-bottom:18px;border-bottom:1px solid #dcdde3;margin-bottom:8px}
@@ -332,6 +366,7 @@ border-radius:50%;background:#fff;border:3px solid var(--blue)}
 .thumb{display:block}.thumb img{width:100%;aspect-ratio:40/21;object-fit:cover;object-position:left top;
 border-radius:8px;border:1px solid var(--rule)}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.rss{font-size:13px;font-weight:500;text-decoration:none}.rss:hover{text-decoration:underline}
 .empty{padding:28px 0;color:var(--muted)}
 .post{max-width:1100px;margin:0 auto;padding:30px 16px 8px;display:grid;
 grid-template-columns:260px minmax(0,1fr);gap:44px}
@@ -365,9 +400,33 @@ border:1px solid var(--soft-border);border-radius:10px;padding:8px 12px;font-siz
 .prose figcaption{font-size:13px;color:var(--muted);margin-top:8px}
 .endnote{max-width:690px;margin:36px 0 0;padding:20px 22px;background:#fff;border:1px solid var(--rule);
 border-radius:10px;font-size:14px;line-height:1.6;color:var(--muted)}.endnote b{color:var(--ink)}
-footer.site{background:var(--navy);color:rgba(255,255,255,.85);font-size:13px;padding:18px 16px;margin-top:48px}
-footer.site div{max-width:1100px;margin:0 auto;display:flex;gap:6px 18px;flex-wrap:wrap}
-footer.site a{color:rgba(255,255,255,.85)}
+.godin{padding:16px 24px;color:rgba(255,255,255,.9);font-size:13px;line-height:1.6;margin-top:48px;
+background:linear-gradient(90deg,rgb(7,116,95) 0%,rgb(11,110,92) 100%)}
+.godin .in{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.godin img{height:32px;width:auto;filter:brightness(0) invert(1)}
+.godin p{flex:1;min-width:0;margin:0}
+.godin p a{color:inherit;text-decoration:underline;text-underline-offset:2px;font-weight:500}
+.godin p a:hover{color:#fff}
+footer.site{border-top:1px solid #e5e5e5;background:var(--bg);padding:32px 24px 24px}
+footer.site .in{max-width:1100px;margin:0 auto}
+footer.site .cols{display:grid;grid-template-columns:1fr;gap:32px}
+footer.site .name{font:700 15px/1.5 Bitter,Georgia,serif;color:var(--ink)}
+footer.site .name b{color:var(--blue);font-weight:700}
+footer.site .tag{margin:8px 0 0;font-size:12px;line-height:1.625;color:#696969;max-width:220px}
+footer.site .groups{display:flex;gap:40px}
+footer.site h3{font:500 10px "DM Sans",sans-serif;letter-spacing:.1em;text-transform:uppercase;
+color:#696969;margin:0 0 12px}
+footer.site .groups a{display:block;font:12px/1.5 "DM Mono",ui-monospace,monospace;color:var(--blue);
+text-decoration:none;margin-bottom:8px}
+footer.site .groups a:last-child{margin-bottom:0}
+footer.site a:hover{color:#363f4e}
+footer.site .strip{margin-top:32px;padding-top:16px;border-top:1px solid #e5e5e5;
+font:11px "DM Mono",ui-monospace,monospace;color:#696969}
+footer.site .strip a{color:var(--blue);text-underline-offset:2px}
+@media(min-width:640px){.godin{padding:16px 40px}footer.site{padding-left:40px;padding-right:40px}
+footer.site .cols{grid-template-columns:1fr 1fr;gap:16px}footer.site .groups{justify-content:flex-end}}
+@media(min-width:1024px){.godin{padding-left:64px;padding-right:64px}
+footer.site{padding-left:64px;padding-right:64px}}
 @media(max-width:860px){.post{grid-template-columns:1fr;gap:18px}.post aside{position:static;order:2}
 .month{grid-template-columns:1fr}.month h2{position:static}.post article h1{font-size:28px}.dek{font-size:17px}}
 @media(max-width:640px){.card.has-thumb{grid-template-columns:1fr}.thumb{order:-1}.prose p,.prose li{font-size:16px}.head h1{font-size:26px}}
@@ -420,10 +479,15 @@ def _head(
 
 
 def _header(frontend: str) -> str:
+    """SiteHeader (frontend/src/components/SiteChrome.tsx) as plain HTML: the
+    same mark, wordmark and nav, with Blog marked as the current page. The
+    SPA's search field is left out: it starts a lookup, which only the app
+    can run."""
     f = html.escape(frontend)
     return (
         '<a class="skip" href="#main">Skip to content</a>'
-        f'<header class="site"><div class="in"><a class="brand" href="{f}/">{_LOGO}'
+        f'<header class="site" role="banner"><div class="in">'
+        f'<a class="brand" href="{f}/" aria-label="OpenCheck — back to homepage">{_LOGO}'
         "<span>Open<b>Check</b></span></a>"
         '<nav aria-label="Site navigation">'
         f'<a href="{f}/sources">Sources</a><a href="{f}/api">API</a>'
@@ -432,17 +496,50 @@ def _header(frontend: str) -> str:
     )
 
 
+_GITHUB = "https://github.com/StephenAbbott/opencheck"
+_ATTRIBUTIONS = f"{_GITHUB}/blob/main/ATTRIBUTIONS.md"
+
+
 def _footer(frontend: str) -> str:
+    """SiteFooter (frontend/src/components/SiteChrome.tsx) as plain HTML: the
+    GODIN ribbon, then the brand, the Project and Legal link groups and the
+    licence strip, with the same links in the same order."""
     f = html.escape(frontend)
+    project = "".join(
+        f'<a href="{href}">{label}</a>'
+        for href, label in (
+            (f"{f}/api", "API"),
+            (f"{f}/changelog", "Changelog"),
+            (_GITHUB, "GitHub"),
+            (f"{f}/sources", "Sources"),
+            (f"{f}/watchlist", "Watchlist"),
+            (f"{f}/features", "Features"),
+            ("/blog", "Blog"),
+            (f"{f}/about", "About"),
+        )
+    )
     return (
-        '<footer class="site"><div>'
-        f'<a href="{f}/">OpenCheck</a>'
-        '<a href="/blog/feed.xml">RSS feed</a>'
-        f'<a href="{f}/about">About OpenCheck</a>'
-        '<a href="https://github.com/StephenAbbott/opencheck">Source code (MIT)</a>'
-        "<span>Posts by "
-        f'<a href="{AUTHOR_URL}">{AUTHOR}</a></span>'
-        "</div></footer>"
+        '<aside class="godin" aria-label="GODIN — Global Open Data Integration Network">'
+        '<div class="in"><a href="https://godin.gleif.org/" target="_blank" rel="noreferrer" '
+        'aria-label="GODIN — Global Open Data Integration Network (opens in new tab)">'
+        f'<img src="{f}/godin-logo.png" alt="GODIN logo" width="127" height="32" '
+        'loading="lazy" decoding="async"></a>'
+        "<p>OpenCheck is built on open data and open standards from "
+        '<a href="https://godin.gleif.org/" target="_blank" rel="noreferrer">GODIN members</a> '
+        "and others, and demonstrates the kind of interoperability GODIN exists to enable. "
+        f'<a href="{f}/about">How it works →</a></p></div></aside>'
+        '<footer class="site"><div class="in"><div class="cols">'
+        '<div><div class="name">Open<b>Check</b></div>'
+        '<p class="tag">See who owns and controls a company, from open data.</p></div>'
+        '<div class="groups">'
+        f"<div><h3>Project</h3>{project}</div>"
+        "<div><h3>Legal</h3>"
+        f'<a href="{_GITHUB}?tab=License-1-ov-file" target="_blank" rel="noreferrer">MIT licence</a>'
+        f'<a href="{_ATTRIBUTIONS}" target="_blank" rel="noreferrer">ATTRIBUTIONS.md</a>'
+        "</div></div></div>"
+        '<div class="strip">Third-party data is licensed per source — see '
+        f'<a href="{_ATTRIBUTIONS}" target="_blank" rel="noreferrer">ATTRIBUTIONS.md</a> '
+        "for details.</div></div></footer>"
     )
 
 
@@ -504,7 +601,8 @@ def render_index(posts: tuple[Post, ...], *, frontend: str) -> str:
 <body>
 {_header(frontend)}
 <main id="main" class="wrap">
-<div class="head"><div><h1>{BLOG_TITLE}</h1><p>{intro}</p></div></div>
+<div class="head"><div><h1>{BLOG_TITLE}</h1><p>{intro}</p></div>
+<a class="rss" href="/blog/feed.xml">RSS feed</a></div>
 {body}
 </main>
 {_footer(frontend)}
