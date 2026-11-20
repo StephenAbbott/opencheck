@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 582** — The ownership map image now says under the picture how many relationships it drew and that the rest are in its table.
+**Latest: Phase 583** — The blog's list of posts now shows each post's lead image beside its title, and the Nigeria post links Nestle Nigeria to its own LEI.
 
 → [Full development history](docs/status.md)
 
