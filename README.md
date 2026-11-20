@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 587** — The About page now shows a lookup as a diagram, the four checks with their mode badges and BODS statements with the graph's own icons.
+**Latest: Phase 589** — A Connecticut business recorded as merged or consolidated now shows that ending on its History tab even when the merger certificate sits on the surviving business's record.
 
 → [Full development history](docs/status.md)
 

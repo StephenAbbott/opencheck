@@ -1727,7 +1727,10 @@ Things that will be re-derived otherwise:
   restoring and moving filings Tier 2 (foreign businesses worded as ending
   only their Connecticut registration); a merger certificate is
   `SUCCESSION` only on a domestic business the Master records as Merged or
-  Consolidation (it never names the other business); a Notice of Intent to
+  Consolidation (it never names the other business), and such a business
+  with no certificate on its own record (it was filed on the survivor's)
+  still gets one `SUCCESSION` row from the Master, dated by
+  `dissolution_date` or left undated; a Notice of Intent to
   Dissolve is Tier 3; **annual reports are one grouped row** (Stephen); the
   rest Tier 3. Filing types are mapped on the pair (category, type) with the
   category as fallback; the "\ufffd" categories and literal "None" are
