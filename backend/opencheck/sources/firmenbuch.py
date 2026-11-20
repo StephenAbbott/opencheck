@@ -71,12 +71,21 @@ from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
+from ..secret_scrub import describe_exception
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.firmenbuch import FBBundle
+
+#: The register did not answer. Names the register, never the company
+#: (``degradation.record``).
+_FETCH_FAILED_DETAIL = (
+    "The Austrian Commercial Register (Firmenbuch) did not answer, so the "
+    "company's record was not read."
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -759,12 +768,21 @@ class FirmenbuchAdapter(SourceAdapter):
             cache_key=cache_key,
         )
         if not xml_response:
+            # A failed read is never a card (the Phase 262 rule): the
+            # register did not answer, so nothing it holds was read. The
+            # stub carries only a short failure label, never the exception
+            # text (httpx puts the request URL in it).
+            degradation.record(
+                self.id,
+                _FETCH_FAILED_DETAIL,
+                reason=degradation.reason_for_failure(soap_error or ""),
+            )
             return {
                 "source_id": self.id,
                 "fn": fn,
                 "extract": None,
                 "legal_name": self._names.get(fn, legal_name),
-                "is_stub": False,
+                "is_stub": True,
                 "soap_error": soap_error,
             }
 
@@ -797,8 +815,8 @@ class FirmenbuchAdapter(SourceAdapter):
 
         On success: ``(xml_text, None)``.
         On failure: ``(None, error_description)`` — the error string is
-        surfaced in the fetch bundle under ``"soap_error"`` so callers can
-        diagnose failures without needing debug-level logging.
+        surfaced in the fetch bundle under ``"soap_error"`` as a short label
+        ("HTTP 503", "ReadTimeout"), never the exception text.
 
         Results are cached by *cache_key*; cached calls always return no error.
 
@@ -838,12 +856,14 @@ class FirmenbuchAdapter(SourceAdapter):
                 response.raise_for_status()
                 xml_text = response.text
         except Exception as exc:
-            error_str = f"{type(exc).__name__}: {exc}"
+            # A short label ("HTTP 503", "ReadTimeout"), never ``str(exc)``:
+            # it reaches the bundle, and the bundle reaches the Data drawer.
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            error_str = f"HTTP {status}" if isinstance(status, int) else type(exc).__name__
             logger.warning(
                 "Firmenbuch SOAP call failed (cache_key=%s): %s",
                 cache_key,
-                error_str,
-                exc_info=True,
+                describe_exception(exc),
             )
             return None, error_str
 
