@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 572** — A new test tries every source with its upstream failing and checks the failure is reported, never read as an empty answer or cached.
+**Latest: Phase 573** — A failed read of seven more sources (Estonia without its index, Brazil's CNPJ, Ireland's CRO, Malta, India's MCA, Finland's PRH and Wikidata) now reads as a source that did not answer, not as a company with no record.
 
 → [Full development history](docs/status.md)
 
