@@ -80,10 +80,13 @@ export function SourcesPage({
   const summary = healthSummary(health);
 
   return (
-    <section>
-      <SectionLabel as="h2" className="border-b border-oo-rule pb-2 mb-4">
+    <section aria-labelledby="sources-heading">
+      <h2
+        id="sources-heading"
+        className="font-head font-bold text-[clamp(1.35rem,3vw,1.8rem)] text-oo-ink mb-2 leading-tight"
+      >
         Sources
-      </SectionLabel>
+      </h2>
       <p className="text-oo-body leading-relaxed text-oo-muted mb-6 max-w-2xl">
         OpenCheck reads {sources ? `${sources.length} ` : ""}open registers and
         datasets. The Legal Entity Identifier (LEI) connects them: GLEIF, which
