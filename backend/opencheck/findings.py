@@ -2268,12 +2268,14 @@ def finding_bg_tr(bundle: dict[str, Any]) -> str | None:
         f"{owners} beneficial owner{'s' if owners != 1 else ''} filed"
         if owners else "no beneficial owners in the open data since 2021"
     )
-    parties = bundle.get("parties") or []
+    from .bods.mappers.bulgaria import bg_join_keyless
+
+    parties = bg_join_keyless(bundle.get("parties") or [])
     # People, not entries: one person is often a representative and a board
     # member (UBB: 22 entries, 14 people).
     def _people(fields_in: bool, fields: tuple[str, ...]) -> int:
         return len({
-            p.get("key") or p.get("eik") or p.get("name")
+            p.get("key") or p.get("eik") or " ".join(str(p.get("name") or "").casefold().split())
             for p in parties if (p.get("field") in fields) is fields_in
         })
 

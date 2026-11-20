@@ -33,7 +33,12 @@ What each list becomes
 
 A person appearing on two lists of one company is one party: the builder
 gives each a company-scoped key derived from the register's hash, and a
-person without one is matched by name within the company only.
+person without one is matched by name within the company only — to another
+keyless entry with the same name, or to the one keyed person of the company
+whose name is the same letter case and spacing aside, or of which it is a
+shorter form (``bg_join_keyless``; UBB's supervisory board files ПЕТЪР
+ГРОЗДЕВ АНДРОНОВ and Кристин Ван Рейсенгем with no hash, 19 Nov 2026). Two
+keyed people fitting the name leave the entry apart, with no note.
 """
 
 from __future__ import annotations
@@ -147,6 +152,76 @@ def _bg_share_from_percent(percent: dict[str, Any] | None) -> dict[str, float] |
     if "more_than" in percent:
         return {"exclusiveMinimum": float(percent["more_than"])}
     return None
+
+
+def _bg_name_fold(name: Any) -> str:
+    return " ".join(str(name or "").casefold().split())
+
+
+def _bg_shorter_form_of(short: str, full: str) -> bool:
+    """``short`` is ``full`` with middle names left out: at least two words,
+    the same first and last word, every word of it in ``full``, and fewer
+    words (Кристин Ван Рейсенгем → Кристин Надин Мария ван Рейсенгем)."""
+    s, f = short.split(), full.split()
+    return (
+        len(s) >= 2 and len(f) > len(s)
+        and s[0] == f[0] and s[-1] == f[-1]
+        and set(s) <= set(f)
+    )
+
+
+def bg_join_keyless(parties: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The company's party entries, a keyless person given the key of the one
+    keyed person of the company it names. Two rules, tried in order:
+
+    * ``case`` — the name folds to the same (letter case and spacing);
+    * ``short`` — the keyless name is a shorter form of the keyed one
+      (``_bg_shorter_form_of``; Stephen, 20 Nov 2026). Only that direction:
+      a keyless entry *longer* than a keyed name was, across the whole index
+      on 20 Nov 2026, always one row naming several people.
+
+    A rule that fits two keyed people joins nothing. The joined copy carries
+    ``joined_by_name`` (the rule); every other entry is returned as it was.
+    Never across companies: the key is company-scoped and so is this rule.
+    Bulgaria publishes no birth date, so nothing else could confirm a join.
+    """
+    keyed: dict[str, set[str]] = {}
+    for p in parties:
+        if p.get("kind") == "person" and p.get("key"):
+            keyed.setdefault(p["key"], set()).add(_bg_name_fold(p.get("name")))
+    out: list[dict[str, Any]] = []
+    for p in parties:
+        if p.get("kind") == "person" and not p.get("key") and not p.get("eik"):
+            name = _bg_name_fold(p.get("name"))
+            for rule, fits in (
+                ("case", lambda n: n == name),
+                ("short", lambda n: _bg_shorter_form_of(name, n)),
+            ):
+                keys = {k for k, names in keyed.items() if any(fits(n) for n in names)}
+                if keys:
+                    if len(keys) == 1:
+                        p = {**p, "key": next(iter(keys)), "joined_by_name": rule}
+                    break
+        out.append(p)
+    return out
+
+
+_BG_JOINED_NOTES = {
+    "case": (
+        "The Commercial Register files this person's {lists} entry without the "
+        "register's person key. OpenCheck joined it to this person because the "
+        "name is the same, letter case and spacing aside, and no other person of "
+        "this company bears it."
+    ),
+    "short": (
+        "The Commercial Register files this person's {lists} entry as {spelling}, "
+        "without the register's person key. OpenCheck joined it to this person "
+        "because that name is this name with middle names left out, and no other "
+        "person of this company fits it. Bulgaria publishes no birth date to "
+        "confirm the join."
+    ),
+}
+_BG_JOINED_NOTE = _BG_JOINED_NOTES["case"]
 
 
 def _bg_party_key(party: dict[str, Any]) -> str:
@@ -340,22 +415,45 @@ def map_bg_tr(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     # One person on several lists is one statement, built from everything
     # the lists say: the residence is filed on the beneficial-owner entry
     # only, the nationality on some lists and not others.
+    n_parties = len(bundle.get("parties") or [])
+    everyone = bg_join_keyless([*(bundle.get("parties") or []), *(bundle.get("beneficial_owners") or [])])
+    parties, owners = everyone[:n_parties], everyone[n_parties:]
     merged: dict[str, dict[str, Any]] = {}
-    for listed in [*(bundle.get("parties") or []), *(bundle.get("beneficial_owners") or [])]:
-        whole = merged.setdefault(_bg_party_key(listed), {})
+    joined: dict[tuple[str, str, str], list[str]] = {}
+    # The keyed entries first, so a person's name is spelled as the entry
+    # carrying the register's key spells it.
+    for listed in sorted(everyone, key=lambda p: bool(p.get("joined_by_name"))):
+        key = _bg_party_key(listed)
+        whole = merged.setdefault(key, {})
         for k, v in listed.items():
-            if v not in (None, "", [], {}) and k not in whole:
+            if v not in (None, "", [], {}) and k not in whole and k != "joined_by_name":
                 whole[k] = v
+        if listed.get("joined_by_name"):
+            field = listed.get("field") or "ActualOwners"
+            label = "beneficial owner" if field == "ActualOwners" else (
+                _BG_ROLE_INTERESTS.get(field, ("", field, False))[1].split(" (")[0]
+                .removeprefix("Member of the ").removeprefix("Member of ").lower())
+            rule = listed["joined_by_name"]
+            spelling = f"“{listed.get('name')}”" if rule == "short" else ""
+            labels = joined.setdefault((key, rule, spelling), [])
+            if label not in labels:
+                labels.append(label)
 
     def party_ref(party: dict[str, Any]) -> Iterable[dict[str, Any]]:
         key = _bg_party_key(party)
         if key not in seen:
             stmt = _bg_party_statement(eik, merged.get(key, party), source_url)
+            for (k, rule, spelling), labels in joined.items():
+                if k == key:
+                    annotate(stmt, commenting(
+                        pointer("recordDetails"),
+                        _BG_JOINED_NOTES[rule].format(lists=" and ".join(labels), spelling=spelling),
+                    ))
             seen[key] = (stmt["recordId"], "entity" if party.get("kind") == "entity" else "person")
             yield stmt
 
     shares = bg_partner_shares(bundle)
-    for idx, party in enumerate(bundle.get("parties") or []):
+    for idx, party in enumerate(parties):
         if party.get("eik") == eik:
             continue
         yield from party_ref(party)
@@ -383,7 +481,7 @@ def map_bg_tr(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         annotate(rel, *notes)
         yield rel
 
-    for owner in bundle.get("beneficial_owners") or []:
+    for owner in owners:
         interests = _bg_owner_interests(owner)
         if not interests:
             continue
