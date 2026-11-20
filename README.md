@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 574** — A Bulgarian officer or board seat filed without the register's person key now joins the beneficial owner or officer it names in the same company, so one person is one node.
+**Latest: Phase 575** — Cached New Zealand company records and director associations now expire after seven days, so a replaced residential address stops showing within a week.
 
 → [Full development history](docs/status.md)
 
