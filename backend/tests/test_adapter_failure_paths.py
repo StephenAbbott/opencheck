@@ -55,21 +55,7 @@ MODES = ("http_503", "timeout")
 
 #: Adapters that fail this check today, with what they do. Delete an entry in
 #: the commit that fixes it.
-KNOWN_GAPS: dict[str, str] = {
-    "ariregister": (
-        "with no index, a failed print page is a stub with no degradation "
-        "(the pre-Phase-330 behaviour CLAUDE.md records)"
-    ),
-    "cnpj_brazil": (
-        "a 503 returns an empty card (company None) and caches it, so one "
-        "outage reads as 'no record' until the cache expires"
-    ),
-    "cro": "a 503 returns an empty card (company None) with no degradation",
-    "malta_mbr": "a 503 returns an empty card (company None) with no degradation",
-    "mca_india": "a 503 or a timeout returns a stub with no degradation",
-    "prh": "a 503 returns an empty card (company {}) with no degradation",
-    "wikidata": "a 503 from SPARQL reads as empty bindings and returns a stub",
-}
+KNOWN_GAPS: dict[str, str] = {}
 
 #: How many adapters must actually be graded, so the check cannot hollow out
 #: quietly as sources gain stores or credentials. 45 are graded today.

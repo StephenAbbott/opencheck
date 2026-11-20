@@ -41,6 +41,9 @@ import re
 from typing import Any
 from urllib.parse import quote
 
+import httpx
+
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -52,6 +55,13 @@ _LOG = logging.getLogger(__name__)
 _API_BASE = "https://openapi.baros.mbr.mt/api/v1"
 
 _CACHE_NS = "malta_mbr"
+
+#: The Open Data API did not answer (a 5xx, a timeout, an unreadable body).
+#: Names the register, never the company (``degradation.record``).
+_FETCH_FAILED_DETAIL = (
+    "The Malta Business Registry Open Data API did not answer, so the "
+    "company's record was not read."
+)
 
 # The MBR placed a WAF in front of the Open Data API (observed failing from the
 # 22 June 2026 weekly live-smoke run) that returns 403 to non-browser
@@ -174,18 +184,35 @@ class MaltaMbrAdapter(SourceAdapter):
             return _bundle(cached[0] or {}, False)
 
         url = _company_url(reg)
-        async with build_client() as client:
-            # Browser UA required by the MBR WAF (see _BROWSER_UA); overrides the
-            # shared client's OpenCheck UA for this request only.
-            response = await client.get(url, headers={"User-Agent": _BROWSER_UA})
-            if not response.is_success:
-                _LOG.warning(
-                    "Malta MBR returned %s for %s — skipping",
-                    response.status_code,
-                    reg,
-                )
+        failure: str | None = None
+        data: Any = None
+        try:
+            async with build_client() as client:
+                # Browser UA required by the MBR WAF (see _BROWSER_UA); overrides
+                # the shared client's OpenCheck UA for this request only.
+                response = await client.get(url, headers={"User-Agent": _BROWSER_UA})
+            if response.status_code == 404:
+                # The register's answer: no company under this number.
+                _LOG.info("Malta MBR has no record for %s", reg)
                 return _bundle(None, False)
-            data = response.json()
+            if response.is_success:
+                data = response.json()
+            else:
+                failure = f"HTTP {response.status_code}"
+        except httpx.HTTPError as exc:
+            failure = type(exc).__name__
+        except ValueError:
+            failure = "unreadable body"
+        if failure is not None:
+            # A failed read is never "no record" and is never cached (the
+            # Phase 262 rule): a stub plus a source_fetch degradation.
+            _LOG.warning("Malta MBR did not answer (%s) for %s", failure, reg)
+            degradation.record(
+                self.id,
+                _FETCH_FAILED_DETAIL,
+                reason=degradation.reason_for_failure(failure),
+            )
+            return _bundle(None, True)
 
         # Detail endpoint wraps the record in a top-level ``data`` object.
         company = (data.get("data") if isinstance(data, dict) else None) or {}

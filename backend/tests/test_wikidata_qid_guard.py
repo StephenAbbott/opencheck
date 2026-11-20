@@ -260,3 +260,22 @@ async def test_fetch_survives_a_class_roots_timeout(monkeypatch) -> None:
     assert result["summary"]["is_entity"]
     # The owner is still read, classified on its direct class alone.
     assert [o.get("name") or o.get("label") for o in result["summary"]["controlling_owners"]]
+
+
+@pytest.mark.asyncio
+async def test_a_wdqs_error_status_is_not_no_mapping(monkeypatch) -> None:
+    """A 503 from WDQS reaches ``find_qid_by_lei`` as ``{}``; it is raised, so
+    ``_resolve_ctx`` reports Wikidata as not answering rather than as holding
+    no record for the LEI."""
+    from opencheck.sources.wikidata import WikidataUnavailable
+
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+    wikidata = REGISTRY["wikidata"]
+
+    async def failed(query, *, cache_key):
+        return {}
+
+    monkeypatch.setattr(wikidata, "_sparql", failed)
+    with pytest.raises(WikidataUnavailable):
+        await wikidata.find_qid_by_lei(LEI)

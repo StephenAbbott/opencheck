@@ -415,11 +415,16 @@ async def audit(
 #: Adding a source here is a gain and needs no ceremony. **Removing one is a
 #: statement** that its provenance can no longer be checked without the
 #: network, and belongs in the commit that made that true.
+#:
+#: ``cnpj_brazil`` left on 20 Nov 2026: it was only "graded" because a blocked
+#: request built a live-looking card from the GLEIF name — the outage-as-"no
+#: record" bug ``test_adapter_failure_paths.py`` names. A failed read is now a
+#: stub with a degradation, so with the network blocked there is nothing live
+#: to compare; the weekly sweep grades it for real.
 OFFLINE_COMPARED = frozenset(
     {
         "anaf_romania",
         "cac_nigeria",
-        "cnpj_brazil",
         "eiti",
         "eiti_assessment",
         "eiti_bo",
