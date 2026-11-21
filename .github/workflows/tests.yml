@@ -41,6 +41,12 @@ jobs:
         # is fully offline/deterministic.
         run: uv run pytest -q
         working-directory: backend
+      - name: Medium feed importer
+        # The importer's converters are not app dependencies, so the suite
+        # above skips tests/test_import_medium_feed.py; run it with them.
+        if: ${{ !cancelled() }}
+        run: uv run --with markdownify --with beautifulsoup4 pytest -q tests/test_import_medium_feed.py
+        working-directory: backend
       - name: Type check (mypy ratchet)
         # Non-strict mypy; a module may not carry more errors than
         # backend/mypy-baseline.json records (Phase 266).

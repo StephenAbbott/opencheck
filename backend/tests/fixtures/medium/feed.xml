@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0" xmlns:cc="http://cyber.law.harvard.edu/rss/creativeCommonsRssModule.html">
+<channel><title>Stories by Stephen Abbott Pugh on Medium</title>
+<item><title>A new post with a linked subtitle</title><link>https://stephenabbottpugh.medium.com/a-new-post-with-a-linked-subtitle-aaaaaaaaaaaa?source=rss-1</link>
+<category>opencheck</category><category>beneficial-ownership</category><category>mcp-server</category>
+<pubDate>Thu, 19 Nov 2026 09:30:00 GMT</pubDate>
+<content:encoded><![CDATA[<p><em>How </em><a href="https://opencheck.world/"><em>OpenCheck</em></a><em> reads a feed</em></p><figure><img alt="A chart" src="https://cdn-images-1.medium.com/max/1024/1*hero.png" /><figcaption>The hero</figcaption></figure><p>First paragraph, linking to <a href="https://stephenabbottpugh.medium.com/an-older-post-bbbbbbbbbbbb">an older post</a>.</p><h3>A heading</h3><p>Second paragraph.</p><img src="https://medium.com/_/stat?event=post.clientViewed&amp;referrerSource=full_rss&amp;postId=aaaaaaaaaaaa" width="1" height="1" alt="">]]></content:encoded></item>
+<item><title>A post that opens with a figure</title><link>https://stephenabbottpugh.medium.com/a-post-that-opens-with-a-figure-cccccccccccc?source=rss-1</link>
+<category>opencheck</category>
+<pubDate>Wed, 18 Nov 2026 12:00:00 GMT</pubDate>
+<content:encoded><![CDATA[<figure><img alt="" src="https://cdn-images-1.medium.com/max/1024/1*first.png" /></figure><p><em>The subtitle, after the figure.</em></p><p>The body.</p>]]></content:encoded></item>
+<item><title>A post that opens with its title</title><link>https://stephenabbottpugh.medium.com/a-post-that-opens-with-its-title-dddddddddddd?source=rss-1</link>
+<category>opencheck</category>
+<pubDate>Tue, 17 Nov 2026 12:00:00 GMT</pubDate>
+<content:encoded><![CDATA[<h3>A post that opens with its title - and more</h3><figure><img alt="" src="https://cdn-images-1.medium.com/max/1024/1*title.png" /></figure><p>Medium shows this first paragraph as the subtitle.</p><p>The body.</p>]]></content:encoded></item>
+<item><title>A post not tagged OpenCheck</title><link>https://stephenabbottpugh.medium.com/a-post-not-tagged-opencheck-eeeeeeeeeeee?source=rss-1</link>
+<category>fatf</category>
+<pubDate>Mon, 16 Nov 2026 12:00:00 GMT</pubDate>
+<content:encoded><![CDATA[<p>Not for the blog.</p>]]></content:encoded></item>
+<item><title>An older post</title><link>https://stephenabbottpugh.medium.com/an-older-post-bbbbbbbbbbbb?source=rss-1</link>
+<category>opencheck</category>
+<pubDate>Sun, 15 Nov 2026 12:00:00 GMT</pubDate>
+<content:encoded><![CDATA[<p><em>Already on the blog, and edited there.</em></p><p>Medium's copy.</p>]]></content:encoded></item>
+</channel></rss>
