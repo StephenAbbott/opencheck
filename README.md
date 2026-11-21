@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 590** — The Italy beneficial ownership access row now records the Ministry of Economy and Finance's consultation on the decree that would re-enact legitimate-interest access from 10 July 2027.
+**Latest: Phase 591** — A daily workflow imports new OpenCheck-tagged Medium posts onto the blog from Medium's RSS feed.
 
 → [Full development history](docs/status.md)
 
