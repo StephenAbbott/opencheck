@@ -1042,13 +1042,14 @@ class ClimateTRACEAdapter(SourceAdapter):
                 "satellite-derived emissions estimates (Climate TRACE). "
                 "LEI resolution uses the GLEIF-certified GEM Entity ID mapping. "
                 "Carries the Global Energy Ownership Tracker's corporate-"
-                "lifecycle records (August 2026): dissolved and amalgamated "
+                "lifecycle records (from August 2026): dissolved and amalgamated "
                 "entities with their successors, and joint-venture flags. "
                 "Enables ESG and climate risk screening by LEI."
             ),
-            license="CC-BY-4.0",
+            license="GEM-CC-BY-4.0",
             attribution=(
-                "Global Energy Monitor, CC BY 4.0. "
+                "Global Energy Monitor, CC BY 4.0 "
+                "(https://globalenergymonitor.org/creative-commons-license). "
                 "Climate TRACE, CC BY 4.0. "
                 "GLEIF GEM Entity ID-to-LEI mapping, CC BY 4.0."
             ),

@@ -1795,3 +1795,37 @@ def test_build_script_and_adapter_agree_on_the_flag_end_to_end(monkeypatch) -> N
     )
     [owner] = _ct_mod._parse_owners("E1")
     assert owner["share_imputed"] is True
+
+
+def test_geot_build_reads_the_november_2026_sheets_and_statuses() -> None:
+    """November 2026 added LNG terminal and chemicals sheets, with status
+    words ("idled", "developing", "mothballed pre-retirement") no earlier
+    sheet used. Unread, the sheets were silently left out; unmapped, the
+    words landed in "other" and the projects stopped counting as live."""
+    import importlib.util
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parent.parent / "scripts" / "build_geot_projects.py"
+    spec = importlib.util.spec_from_file_location("_build_geot_projects", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    trackers = {v[4] for v in module.SHEET_SPEC.values()}
+    assert {"lng_terminal", "chemicals"} <= trackers
+    assert module.SHEET_SPEC["LNG Terminal Ownership"][1:3] == ("ProjectID", "UnitID")
+    assert module._bucket("idled") == "mothballed"
+    assert module._bucket("Developing") == "development"
+    assert module._bucket("mothballed pre-retirement") == "mothballed"
+
+
+def test_climatetrace_licence_links_to_global_energy_monitors_page() -> None:
+    """GEM names its own copy of CC BY 4.0 as the licence to cite."""
+    from opencheck.licensing import source_licensing
+
+    lic = source_licensing("climatetrace")
+    assert lic is not None
+    assert lic.license == "GEM-CC-BY-4.0"
+    assert lic.terms.url == "https://globalenergymonitor.org/creative-commons-license"
+    assert lic.terms.commercial_use == "yes" and lic.terms.attribution_required
+    assert not lic.terms.share_alike

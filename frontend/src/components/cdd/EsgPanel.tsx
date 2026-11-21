@@ -110,6 +110,8 @@ const TRACKER_LABELS: Record<string, string> = {
   oil_ngl_pipeline: "Oil & NGL pipelines",
   steel_plant: "Steel plants",
   cement: "Cement & concrete",
+  lng_terminal: "LNG terminals",
+  chemicals: "Chemicals plants",
 };
 
 function TrackerTable({ projects }: { projects: GeotProjects }) {

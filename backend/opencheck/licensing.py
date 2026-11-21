@@ -165,6 +165,16 @@ _CANONICAL: dict[str, LicenseTerms] = {
         url="https://creativecommons.org/licenses/by/4.0/",
         summary="Commercial use permitted with attribution.",
     ),
+    # Global Energy Monitor publishes its trackers under CC BY 4.0 and names its
+    # own copy of the licence as the one to cite (Stephen, 21 Nov 2026), so the
+    # link goes to GEM's page rather than creativecommons.org.
+    "gem-cc-by-4.0": _terms(
+        "GEM-CC-BY-4.0",
+        "Creative Commons Attribution 4.0 International Public License (Global Energy Monitor)",
+        commercial="yes", attribution=True, share_alike=False, redistribution="yes",
+        url="https://globalenergymonitor.org/creative-commons-license",
+        summary="Commercial use permitted with attribution to Global Energy Monitor.",
+    ),
     "cc-by-sa-4.0": _terms(
         "CC-BY-SA-4.0", "Creative Commons Attribution-ShareAlike 4.0",
         commercial="yes", attribution=True, share_alike=True, redistribution="yes",

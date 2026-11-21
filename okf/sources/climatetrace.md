@@ -1,12 +1,12 @@
 ---
 type: "Data Source"
 title: "Global Energy Monitor / Climate TRACE"
-description: "Global fossil-fuel asset ownership data (GEM) combined with satellite-derived emissions estimates (Climate TRACE). LEI resolution uses the GLEIF-certified GEM Entity ID mapping. Carries the Global Energy Ownership Tracker's corporate-lifecycle records (August 2026): dissolved and amalgamated entities with their successors, and joint-venture flags. Enables ESG and climate risk screening by LEI."
+description: "Global fossil-fuel asset ownership data (GEM) combined with satellite-derived emissions estimates (Climate TRACE). LEI resolution uses the GLEIF-certified GEM Entity ID mapping. Carries the Global Energy Ownership Tracker's corporate-lifecycle records (from August 2026): dissolved and amalgamated entities with their successors, and joint-venture flags. Enables ESG and climate risk screening by LEI."
 resource: "https://globalenergymonitor.org/"
-tags: ["esg", "aggregator", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-11-10"
+tags: ["esg", "aggregator", "GEM-CC-BY-4.0", "commercial-yes"]
+timestamp: "2026-11-21"
 source_id: "climatetrace"
-license: "CC-BY-4.0"
+license: "GEM-CC-BY-4.0"
 commercial_use: "yes"
 category: "esg"
 national_register: false
@@ -14,7 +14,7 @@ national_register: false
 
 # Overview
 
-Global fossil-fuel asset ownership data (GEM) combined with satellite-derived emissions estimates (Climate TRACE). LEI resolution uses the GLEIF-certified GEM Entity ID mapping. Carries the Global Energy Ownership Tracker's corporate-lifecycle records (August 2026): dissolved and amalgamated entities with their successors, and joint-venture flags. Enables ESG and climate risk screening by LEI. Aggregator, cross-border database or ESG source.
+Global fossil-fuel asset ownership data (GEM) combined with satellite-derived emissions estimates (Climate TRACE). LEI resolution uses the GLEIF-certified GEM Entity ID mapping. Carries the Global Energy Ownership Tracker's corporate-lifecycle records (from August 2026): dissolved and amalgamated entities with their successors, and joint-venture flags. Enables ESG and climate risk screening by LEI. Aggregator, cross-border database or ESG source.
 
 - **Source id:** `climatetrace`
 - **Category:** esg (environmental, social & governance)
@@ -25,10 +25,10 @@ Global fossil-fuel asset ownership data (GEM) combined with satellite-derived em
 
 # Licensing
 
-- **Licence:** `CC-BY-4.0` — Creative Commons Attribution 4.0
+- **Licence:** `GEM-CC-BY-4.0` — Creative Commons Attribution 4.0 International Public License (Global Energy Monitor)
 - **Commercial use:** yes · **Attribution:** required · **Share-alike:** no
-- **Attribution line:** Global Energy Monitor, CC BY 4.0. Climate TRACE, CC BY 4.0. GLEIF GEM Entity ID-to-LEI mapping, CC BY 4.0.
-- Commercial use permitted with attribution.
+- **Attribution line:** Global Energy Monitor, CC BY 4.0 (https://globalenergymonitor.org/creative-commons-license). Climate TRACE, CC BY 4.0. GLEIF GEM Entity ID-to-LEI mapping, CC BY 4.0.
+- Commercial use permitted with attribution to Global Energy Monitor.
 
 See the [licensing compatibility matrix](/licensing/matrix.md) for how this licence combines with others at export time.
 

@@ -1,0 +1,18 @@
+---
+title: GEM's November 2026 release, two new trackers, and GEM's own licence page.
+readme: The GEOT artifact is rebuilt from GEM's November 2026 release with LNG terminals and chemicals plants added, and the GEM source now links to Global Energy Monitor's own CC BY 4.0 licence page.
+tests: backend +2
+---
+Global Energy Monitor published a November 2026 Global Energy Ownership Tracker (`Global-Energy-Ownership-Tracker-November-2026-V1.xlsx`, 30,261 entities on All Entities) while the committed `geot_projects.json.gz` was the September release. Rebuilt with `scripts/build_geot_projects.py --release "November 2026"`.
+
+**Two new sheets.** The workbook carries `LNG Terminal Ownership` (44,318 rows, 1,393 parents) and `Chemicals Ownership` (34,186 rows, 1,328 parents) beside the nine the build already read. Unread, they would have been left out silently. They join `SHEET_SPEC` as `lng_terminal` (project `ProjectID`, unit `UnitID`) and `chemicals` (`GEM Plant ID` for both; a plant has one row per product along the same path, which the existing (parent, unit, path, share) dedupe folds into one). Three status words no earlier sheet used are bucketed rather than falling into "other": `idled` (LNG) and `mothballed pre-retirement` (steel, chemicals) as mothballed, `developing` (chemicals) as development. The ESG panel labels the two trackers "LNG terminals" and "Chemicals plants".
+
+**The rebuild.** 12,404 entities (was 11,435), 138,655 live projects (was 125,787; 5,279 LNG and 6,554 chemicals of them), 644 entity-status records (234 dissolved, 139 amalgamated, 277 joint ventures; was 544), 5,645 imputed shares (was 4,902). Pertamina gains 7 LNG and 5 chemicals projects. Every existing header held; Iron Mine's `GEM asset ID` casing is absorbed by the case-insensitive lookup as before.
+
+**GEM fixed two of the August feedback items**: no `Merged Into` value carries the `.0` float suffix any more, and no status URL cell is a stringified Python list (301 single, 84 semicolon-delimited). Still open, and new: two entities (Dow Chemical Canada ULC E100002017738, Lighthouse Resources Inc E100000131840) carry the integer `4` in `Entity Status`, while the About sheet now names a third status, "inactive". The build keeps only `dissolved` / `amalgamated`, so both are left without a status rather than guessed at; 33 successor IDs still name no All Entities row.
+
+**Licence.** GEM publishes the tracker under the Creative Commons Attribution 4.0 International Public License and links its own copy, https://globalenergymonitor.org/creative-commons-license (Stephen, 21 Nov 2026). `climatetrace` now declares `GEM-CC-BY-4.0`, a canonical `licensing` entry with the same terms as `CC-BY-4.0` (commercial use, attribution, no share-alike) and that URL, and the attribution line names it. The OKF licensing matrix, `docs/sources.md` and ATTRIBUTIONS follow; the ATTRIBUTIONS citation moves to "Global Energy Monitor, Global Energy Ownership Tracker, November 2026 release".
+
+The Climate TRACE bucket the adapter reads at runtime also moved: on 12 Nov 2026 it replaced the `_071026` set with `ownership_all_*_October_2026.csv` (19,872 entities, 18,366 relationship rows), same columns as before and still without the lifecycle columns. The adapter picks it by the bucket's `updated` stamp; the month-named file carries no day, so the release is dated by that stamp (2026-11-12). Pertamina (Government of Indonesia, 100%), Fingrid's four owners and the four placeholder IDs are unchanged.
+
+A monthly scheduled task now checks GEM's page and the bucket for a new release; before this the only check was a one-off task that ran on 27 Oct 2026.
