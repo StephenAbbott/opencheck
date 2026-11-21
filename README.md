@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 592** — On phones the blog's header no longer shows a Blog link, matching the rest of the site; the footer still links to it.
+**Latest: Phase 593** — The GEOT artifact is rebuilt from GEM's November 2026 release with LNG terminals and chemicals plants added, and the GEM source now links to Global Energy Monitor's own CC BY 4.0 licence page.
 
 → [Full development history](docs/status.md)
 
