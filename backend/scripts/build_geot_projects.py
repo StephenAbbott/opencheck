@@ -12,7 +12,8 @@ GEOT release (roughly twice a year) and the generated artifact is committed:
 Output: ``opencheck/data/geot_projects.json.gz`` with three data sections.
 
 ``entities`` — a per-entity summary of the precomputed ownership closure in
-the 9 per-tracker sheets:
+the 11 per-tracker sheets (LNG terminals and chemicals joined in the
+November 2026 release):
 
 * Each sheet row is one (ultimate parent, asset unit, ownership path) with an
   *effective* share (product along the path). Shares for one unit sum well
@@ -103,6 +104,15 @@ SHEET_SPEC: dict[str, tuple[str, str, str, str, str]] = {
     "Cement and Concrete Ownership": (
         "Parent GEM Entity ID", "GEM plant ID", "GEM plant ID", "Status", "cement",
     ),
+    # November 2026 added these two sheets. A chemicals plant has one row per
+    # product along the same path; the (parent, unit, path, share) dedupe
+    # below keeps a plant's share from being counted once per product.
+    "LNG Terminal Ownership": (
+        "Parent GEM Entity ID", "ProjectID", "UnitID", "Status", "lng_terminal",
+    ),
+    "Chemicals Ownership": (
+        "Parent GEM Entity ID", "GEM Plant ID", "GEM Plant ID", "Status", "chemicals",
+    ),
 }
 
 CONTROL_THRESHOLD = 50.0
@@ -119,8 +129,11 @@ STATUS_BUCKETS: dict[str, str] = {
     "announced": "development",
     "proposed": "development",
     "in development": "development",
+    "developing": "development",  # chemicals, November 2026
     "mothballed": "mothballed",
     "idle": "mothballed",
+    "idled": "mothballed",  # LNG terminals, November 2026
+    "mothballed pre-retirement": "mothballed",  # steel and chemicals
     "retired": "retired",
     "retired - inferred 2 y": "retired",
     "retired - inferred 4 y": "retired",
