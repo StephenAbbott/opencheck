@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 591** — A daily workflow imports new OpenCheck-tagged Medium posts onto the blog from Medium's RSS feed.
+**Latest: Phase 592** — On phones the blog's header no longer shows a Blog link, matching the rest of the site; the footer still links to it.
 
 → [Full development history](docs/status.md)
 
