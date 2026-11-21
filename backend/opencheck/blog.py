@@ -343,7 +343,9 @@ header.site nav a{color:rgba(255,255,255,.8);text-decoration:none;display:inline
 align-items:center;min-height:44px;transition:color .15s}
 header.site nav a:hover{color:#fff}
 header.site nav a[aria-current]{color:#fff;font-weight:500;border-bottom:2px solid var(--line)}
-@media(min-width:640px){header.site{padding:16px 40px}header.site .in{gap:4px 16px}
+/* SiteHeader's "hidden sm:inline-flex": phones reach the blog from the footer. */
+header.site nav a.nav-blog{display:none}
+@media(min-width:640px){header.site nav a.nav-blog{display:inline-flex}header.site{padding:16px 40px}header.site .in{gap:4px 16px}
 .brand{gap:10px;font-size:20px}.brand .mark{height:28px}header.site nav{gap:0 20px}}
 @media(min-width:768px){header.site .in{justify-content:flex-start}}
 @media(min-width:1024px){header.site{padding-left:64px;padding-right:64px}}
@@ -483,7 +485,8 @@ def _head(
 
 def _header(frontend: str) -> str:
     """SiteHeader (frontend/src/components/SiteChrome.tsx) as plain HTML: the
-    same mark, wordmark and nav, with Blog marked as the current page. The
+    same mark, wordmark and nav, with Blog marked as the current page and,
+    as there, hidden below 640px (phones reach it from the footer). The
     SPA's search field is left out: it starts a lookup, which only the app
     can run."""
     f = html.escape(frontend)
@@ -495,7 +498,7 @@ def _header(frontend: str) -> str:
         '<nav aria-label="Site navigation">'
         f'<a href="{f}/sources">Sources</a><a href="{f}/api">API</a>'
         f'<a href="{f}/features">Features</a>'
-        '<a href="/blog" aria-current="page">Blog</a></nav></div></header>'
+        '<a class="nav-blog" href="/blog" aria-current="page">Blog</a></nav></div></header>'
     )
 
 

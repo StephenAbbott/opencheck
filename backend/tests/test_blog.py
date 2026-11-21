@@ -237,6 +237,22 @@ def test_blog_chrome_matches_the_apps(client: TestClient) -> None:
     assert 'href="/blog/feed.xml">RSS feed</a>' in page
 
 
+def test_blog_link_is_desktop_only_in_the_header(client: TestClient) -> None:
+    """SiteHeader hides its Blog link below sm (640px) and so must the blog's
+    own header (Stephen, 21 Nov 2026); the footer keeps it at every width."""
+    chrome = (
+        Path(__file__).resolve().parents[2] / "frontend/src/components/SiteChrome.tsx"
+    ).read_text()
+    header = chrome[: chrome.index("export function SiteFooter")]
+    assert "hidden sm:inline-flex" in header[header.index("href={BLOG_PATH}") - 400 :]
+    page = client.get("/blog").text
+    assert '<a class="nav-blog" href="/blog" aria-current="page">Blog</a>' in page
+    assert "header.site nav a.nav-blog{display:none}" in page
+    assert "@media(min-width:640px){header.site nav a.nav-blog{display:inline-flex}" in page
+    footer = page[page.index('<footer class="site"') :]
+    assert 'href="/blog"' in footer and "nav-blog" not in footer
+
+
 def test_blog_text_is_smoothed_like_the_apps(client: TestClient) -> None:
     """The app's body is Tailwind `antialiased`; the blog must match or macOS
     draws its wordmark and text bolder (Stephen, 20 Nov 2026)."""
