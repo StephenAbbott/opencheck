@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 594** — The Jersey and Guernsey knowability rows now record their governments' November 2026 responses on legitimate-interest access to beneficial ownership information.
+**Latest: Phase 595** — Poland's register note now says the Sejm passed the bill that would open legitimate-interest access to the CRBR, with the Senate still to come.
 
 → [Full development history](docs/status.md)
 
