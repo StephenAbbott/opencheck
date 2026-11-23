@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseStatusMarkdown, commitUrl } from "./changelog";
+import { changelogView, parseStatusMarkdown, commitUrl } from "./changelog";
 
 const SAMPLE = `# OpenCheck — Development History
 
@@ -115,3 +115,24 @@ describe("parseStatusMarkdown — one sentence as the heading, whatever the row'
   });
 });
 
+
+describe("changelogView", () => {
+  const entries = [5, 4, 3, 2, 1, 0].map((phase) => ({ phase, title: "T.", summary: "", commits: [] }));
+
+  it("keeps the newest entries and counts phases as status.md does (the table starts at 0)", () => {
+    const v = changelogView(entries, 2);
+    expect(v.latest.map((e) => e.phase)).toEqual([5, 4]);
+    expect(v.phaseCount).toBe(5);
+    expect(v.hidden).toBe(4);
+  });
+
+  it("hides nothing when there are fewer entries than the page shows", () => {
+    const v = changelogView(entries.slice(0, 3), 20);
+    expect(v.latest).toHaveLength(3);
+    expect(v.hidden).toBe(0);
+  });
+
+  it("copes with an empty table", () => {
+    expect(changelogView([])).toEqual({ phaseCount: 0, latest: [], hidden: 0 });
+  });
+});
