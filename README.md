@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 598** — The exported report and the BackgroundCheck tab now show dates as "23 Nov 2026" and give identifiers, signals and interests readable names instead of codes.
+**Latest: Phase 599** — The History tab no longer shows a current GLEIF consolidation as ended, names the parent, and words GLEIF's changes and dates instead of showing its codes.
 
 → [Full development history](docs/status.md)
 
