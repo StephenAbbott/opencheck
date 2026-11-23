@@ -45,6 +45,7 @@ from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from .bods.lifecycle import interest_ended, record_closed
+from .ui_dates import ui_date
 from .bods.refs import resolver
 from .bods.undated import is_undated
 from .ownership_math import REASON_WORDS, Edge, figure_text, share_bounds
@@ -592,7 +593,7 @@ def report_footer(payload: Mapping[str, Any] | None) -> list[str]:
     if payload.get("undated_note"):
         out.append(undated_note_line(str(payload["undated_note"])))
     if payload.get("as_of"):
-        out.append(f"Computed from the sources as they stood on {payload['as_of']}.")
+        out.append(f"Computed from the sources as they stood on {ui_date(payload['as_of'])}.")
     extra = len(with_figures(payload)) - REPORT_LIMIT
     if extra > 0:
         plural = "s" if extra != 1 else ""

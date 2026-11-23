@@ -144,12 +144,23 @@ describe("describeRoleInterest", () => {
         type: "shareholding",
         share: { minimum: 25, maximum: 50 },
       })
-    ).toBe("shareholding — 25–50%");
+    ).toBe("Shareholding — 25–50%");
   });
   it("handles exact shares", () => {
     expect(
       describeRoleInterest({ type: "shareholding", share: { exact: 100 } })
-    ).toBe("shareholding — 100%");
+    ).toBe("Shareholding — 100%");
+  });
+  it("words a one-sided band and a bare type without a code's casing", () => {
+    expect(
+      describeRoleInterest({ type: "shareholding", share: { exclusiveMinimum: 25 } })
+    ).toBe("Shareholding — over 25%");
+    expect(describeRoleInterest({ type: "votingRights", share: { maximum: 10 } })).toBe(
+      "Voting rights — up to 10%"
+    );
+    expect(describeRoleInterest({ type: "seniorManagingOfficial" })).toBe(
+      "Senior managing official"
+    );
   });
 });
 

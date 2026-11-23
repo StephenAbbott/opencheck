@@ -14,6 +14,8 @@
  * the cases a reader would otherwise misread carry weight.
  */
 
+import { readableDatesIn } from "../../lib/readableDate";
+
 export type Liveness = "live" | "cached" | "snapshot" | "curated" | "stub";
 
 export interface SourceLiveness {
@@ -118,7 +120,7 @@ const STALE_STYLE = "border-orange-300 bg-orange-50 text-orange-800";
 
 export function livenessTitle(info: SourceLiveness): string {
   const parts: string[] = [];
-  if (info.detail) parts.push(info.detail);
+  if (info.detail) parts.push(readableDatesIn(info.detail));
   if (info.source_as_of) parts.push(`Data as of ${formatDate(info.source_as_of)}`);
   if (info.retrieved_at) {
     parts.push(`Retrieved ${formatDate(info.retrieved_at)}`);
