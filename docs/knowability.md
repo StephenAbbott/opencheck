@@ -1006,7 +1006,7 @@ Data generated 2026-11-23T08:15:00+00:00; sentences rendered as of 2026-11-23. *
 | Sources | https://contratacionesabiertas.oece.gob.pe · https://www.gob.pe/sunat |
 | Notes | Beneficial owners are declared to SUNAT under Decreto Legislativo 1372 (2018) and are not published. OECE's Registro Nacional de Proveedores publishes, as open data, the partners, legal representatives and governing-body members each supplier to the state declares (a self-declaration to a procurement regulator, not an ownership or BO register); OpenCheck reads that file without any person's document number. |
 
-### Poland (PL) — verified 2026-11-04
+### Poland (PL) — verified 2026-11-23
 
 > Centralny Rejestr Beneficjentów Rzeczywistych (CRBR) is accessible to authorities and obliged entities, since 1 Jul 2026. A legitimate-interest route is provided for in law but is not yet open. OpenCheck reads KRS — Polish National Court Register for officers and registered holdings, not beneficial owners.
 
