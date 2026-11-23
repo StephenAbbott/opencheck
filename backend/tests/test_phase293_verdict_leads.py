@@ -199,8 +199,15 @@ def test_low_name_only_pep_and_sanctions_matches_are_leads() -> None:
     assert not is_name_only_lead(_related("RELATED_SANCTIONED", name_match_only=False))
     assert not is_name_only_lead(_related("RELATED_SANCTIONED", identifier_match=True))
     assert not is_name_only_lead(_related("RELATED_SANCTIONED", subject=True))
-    # Debarment and export were not part of the decision.
-    assert not is_name_only_lead(_related("RELATED_DEBARMENT"))
+    # Debarment, export control and counter-sanctions joined them with the
+    # Glyn / Gwyn ticket (23 Nov 2026).
+    for code in ("RELATED_DEBARMENT", "RELATED_EXPORT_CONTROLLED",
+                 "RELATED_EXPORT_CONTROL_LINKED", "RELATED_EXPORT_RISK",
+                 "RELATED_COUNTER_SANCTIONED"):
+        assert is_name_only_lead(_related(code)), code
+    assert not is_name_only_lead(_related("RELATED_DEBARMENT", "medium"))
+    # The company's own debarment is never a lead.
+    assert not is_name_only_lead(_related("DEBARMENT"))
     context = _related("RELATED_PEP_SUBJECT_ROLE")
     context["kind"] = "context"
     assert not is_name_only_lead(context)
@@ -242,3 +249,18 @@ def test_a_clean_control_with_only_a_pep_lead_passes_the_regression() -> None:
     summary = fr.summarise(payload, "549300D2K6PKKKXVNN73")
     assert summary["signals"]["RELATED_PEP"]["leads"] == 1
     assert fr._finding_codes(summary) == {}
+
+
+def test_glyn_limited_reads_clean_with_a_possible_debarment_lead() -> None:
+    """GLYN LIMITED (984500E111FEA839D098), 23 Nov 2026: a low name-only
+    debarment match on a former director read "The records show possible
+    procurement debarment findings." It is a lead to review."""
+    signal = _related(
+        "RELATED_DEBARMENT", party="opencheck-glyn", name="Glyn JONES",
+        matched="Gwyn Jones", former=True,
+    )
+    verdict = build_verdict([signal], [])
+    assert "debarment findings" not in verdict
+    assert verdict.startswith("No risk signals surfaced across the sources that answered.")
+    assert ("A possible name-only debarment match on one related party is "
+            "listed for review.") in verdict

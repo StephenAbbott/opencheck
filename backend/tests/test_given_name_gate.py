@@ -64,6 +64,14 @@ def test_the_akvahim_pair_conflicts() -> None:
         ("БОНДАР ОЛЕНА ВАСИЛІВНА", "Elena Vasilevna Bondar"),
         # A single-token name cannot conflict.
         (OURS, "Рускова"),
+        # One short given name spelt two ways (the Glyn / Gwyn ticket):
+        # vowels, and letters that spell one sound, are spellings.
+        ("Mark Jones", "Marc Jones"),
+        ("Erik Hansen", "Eric Hansen"),
+        ("Carl Olsen", "Karl Olsen"),
+        ("Jane Novak", "Jana Novak"),
+        ("Elena Petrova", "Alena Petrova"),
+        ("Jon Smith", "John Smith"),
     ],
 )
 def test_no_conflict(ours: str, theirs: str) -> None:
@@ -75,6 +83,11 @@ def test_no_conflict(ours: str, theirs: str) -> None:
     [
         ("Robert Frederick Smith", "Robert Frederick White"),
         ("Иван Петров Георгиев", "Димитър Петров Георгиев"),
+        # Two short given names one consonant apart are two names
+        # (GLYN LIMITED, 23 Nov 2026).
+        ("Glyn JONES", "Gwyn Jones"),
+        ("Ivan Petrov", "Ivar Petrov"),
+        ("John Smith", "Joan Smith"),
     ],
 )
 def test_conflict(ours: str, theirs: str) -> None:
@@ -144,3 +157,32 @@ def test_an_agreeing_birth_year_keeps_the_match() -> None:
 def test_entities_are_never_given_name_gated() -> None:
     target = {**_target("Petrova Ruskova Holding"), "kind": "entity"}
     assert _given_names_compatible(target, _hit("Ruskova Petrova Trading"))
+
+
+def test_glyn_is_not_matched_to_a_debarment_record_for_gwyn() -> None:
+    """GLYN LIMITED (NZ), 23 Nov 2026: former director "Glyn JONES" against
+    OpenSanctions' us-fed-excl-gwyn-jones-60504-aurora (HHS and SAM
+    exclusions) scored 0.9 and raised RELATED_DEBARMENT."""
+    hit = SourceHit(
+        source_id="opensanctions",
+        hit_id="us-fed-excl-gwyn-jones-60504-aurora",
+        kind=SearchKind.PERSON,
+        name="Gwyn Jones",
+        summary="",
+        identifiers={},
+        raw={
+            "id": "us-fed-excl-gwyn-jones-60504-aurora",
+            "caption": "Gwyn Jones",
+            "datasets": ["us_hhs_exclusions", "us_sam_exclusions"],
+            "properties": {"topics": ["debarment"], "country": ["us"]},
+        },
+        is_stub=False,
+    )
+    target = {**_target("Glyn JONES"), "nationalities": ("NZ",), "former": True}
+    assert not _given_names_compatible(target, hit)
+    assert _signals_from_os(hit, target, min_score=0.88) == []
+    # The same record against a Gwyn still raises it.
+    same = {**target, "name": "Gwyn JONES"}
+    assert [s.code for s in _signals_from_os(hit, same, min_score=0.88)] == [
+        "RELATED_DEBARMENT"
+    ]
