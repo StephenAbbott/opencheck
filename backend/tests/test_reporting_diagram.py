@@ -190,7 +190,7 @@ def test_closed_record_without_a_date_says_ended_in_the_table():
     # A dated end already reads "to <date>", so it is not said twice.
     rels, by_id = _ceased_bundle()
     d = source_diagram(rels, by_id, source_name="UK Companies House")
-    assert "to 2019-06-18" in d.rows[0][1] and "(ended)" not in d.rows[0][1]
+    assert "to 18 June 2019" in d.rows[0][1] and "(ended)" not in d.rows[0][1]
 
 
 def test_open_record_with_a_past_end_date_is_ended_too():
@@ -379,7 +379,7 @@ def test_a_current_relationship_is_labelled_from_its_current_interests():
     d = source_diagram(rels, by_id, source_name="UK Companies House")
     assert ["Owns 75–100%", "from 2016"] in _labels(d.svg)
     assert "Owns 25–50%" not in d.svg
-    assert "to 2016-04-05" in d.rows[0][1]  # the history is in the table
+    assert "to 5 Apr 2016" in d.rows[0][1]  # the history is in the table
 
 
 def test_wrap_label_keeps_clauses_whole_and_never_cuts_a_word():

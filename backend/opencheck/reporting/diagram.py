@@ -28,6 +28,7 @@ Visual language (matches the on-screen BOVS styling):
 
 from __future__ import annotations
 
+import re
 import textwrap
 from dataclasses import dataclass, field
 from typing import Any
@@ -36,6 +37,7 @@ from xml.sax.saxutils import escape
 from ..bods.lifecycle import ended_phrase, interest_ended, statement_lifecycle
 from ..bods.undated import UNDATED_LABEL, is_undated
 from ..bods.officer_roles import officer_label, officer_position
+from ..ui_dates import ui_date
 
 # Node palette — BOVS node colours.
 _PERSON = "#1d9e75"  # person node (green)
@@ -515,7 +517,7 @@ def _row_interest(interests: list[dict[str, Any]]) -> str:
         return "Relationship"
     parts = []
     for i in interests:
-        detail = i.get("details") or i.get("type") or "interest"
+        detail = i.get("details") or _interest_type_words(i.get("type")) or "Interest"
         share = i.get("share") or {}
         smin = share.get("exclusiveMinimum", share.get("minimum"))
         smax = share.get("maximum")
@@ -528,12 +530,18 @@ def _row_interest(interests: list[dict[str, Any]]) -> str:
             band = f", {smin or 0}–{smax or 100}%"
         dates = []
         if i.get("startDate"):
-            dates.append(f"from {i['startDate']}")
+            dates.append(f"from {ui_date(i['startDate'])}")
         if i.get("endDate"):
-            dates.append(f"to {i['endDate']}")
+            dates.append(f"to {ui_date(i['endDate'])}")
         d = f", {', '.join(dates)}" if dates else ""
         parts.append(f"{detail}{band}{d}")
     return "; ".join(parts)
+
+
+def _interest_type_words(code: object) -> str:
+    """A BODS interest type in words: ``votingRights`` → "Voting rights"."""
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", str(code or "")).lower()
+    return text[:1].upper() + text[1:]
 
 
 def _layer_nodes(nodes: dict, edges: list) -> dict[str, int]:

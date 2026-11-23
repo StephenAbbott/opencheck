@@ -108,3 +108,21 @@ def test_markdown_report_reads_without_codes_or_iso_dates() -> None:
     assert "**Records compared**" in md and "Record Consistency" not in md
     assert "*OpenCheck risk engine*" in md and "*opencheck*" not in md
     assert "As of 2026-11-23" not in md
+
+
+def test_relationship_table_says_dates_and_types_in_words() -> None:
+    from opencheck.reporting.diagram import _row_interest
+
+    text = _row_interest(
+        [
+            {"type": "shareholding", "startDate": "2022-12-29", "endDate": "2024-03"},
+            {"type": "votingRights", "startDate": "2019"},
+        ]
+    )
+    assert text == "Shareholding, from 29 Dec 2022, to Mar 2024; Voting rights, from 2019"
+
+
+def test_ui_date_keeps_the_source_precision() -> None:
+    assert ui_date("2024-03") == "Mar 2024"
+    assert ui_date("2019") == "2019"
+    assert ui_date("2024-13") == "2024-13"

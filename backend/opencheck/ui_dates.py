@@ -15,10 +15,14 @@ MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct
 
 
 def ui_date(iso: object) -> str:
-    """"16 Sept 2026", in UTC, from an ISO date or timestamp."""
+    """"16 Sept 2026", in UTC, from an ISO date or timestamp; a year-month
+    reads "Sept 2026" and a bare year stays as it is."""
     text = str(iso or "").strip()
     if not text:
         return ""
+    if len(text) == 7 and text[4] == "-" and text[:4].isdigit() and text[5:].isdigit():
+        month = int(text[5:])
+        return f"{MONTHS[month - 1]} {text[:4]}" if 1 <= month <= 12 else text
     try:
         if len(text) == 10:
             d = datetime.fromisoformat(text)
