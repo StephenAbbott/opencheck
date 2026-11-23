@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 601** — The relationship tables in the PDF and Markdown reports now show dates as "29 Dec 2022" and interest types in words.
+**Latest: Phase 602** — Prozorro adds the Ukrainian public contracts a company has signed, read daily from Prozorro's API and matched on the EDRPOU.
 
 → [Full development history](docs/status.md)
 
