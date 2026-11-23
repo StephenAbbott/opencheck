@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 595** — Poland's register note now says the Sejm passed the bill that would open legitimate-interest access to the CRBR, with the Senate still to come.
+**Latest: Phase 596** — The changelog page now lists the latest twenty phases under the total phase count and last-updated date, with a link to the full development history on GitHub.
 
 → [Full development history](docs/status.md)
 
