@@ -741,10 +741,51 @@ def patronymics_conflict(
 _GIVEN_NAME_FLOOR = 0.75
 
 
+#: Longest token the one-letter rule below reads. Past it, one letter is a
+#: small share of the name and the edit budget is the better judge.
+_SHORT_GIVEN_NAME = 5
+
+_VOWELS = frozenset("aeiouy")
+
+#: Letter pairs that spell one sound, so a swap between them is a spelling of
+#: one name (Mark / Marc, Erik / Eric, Carl / Karl), never a second name.
+_SAME_SOUND = frozenset(
+    frozenset(p) for p in ("ck", "kq", "cq", "sz", "iy", "vw")
+)
+
+
+def _one_consonant_apart(a: str, b: str) -> bool:
+    """Two short given names that differ in one consonant at one place —
+    Glyn / Gwyn, Ivan / Ivar, John / Joan — are two names, not two
+    spellings of one (the Glyn / Gwyn ticket, 23 Nov 2026).
+
+    Both share three of four letters, so the 0.75 similarity floor passed
+    them as near partners and a debarment record for "Gwyn Jones" reached a
+    director named "Glyn JONES". A swap between two vowels (Jane / Jana,
+    Elena / Alena) or between two letters that spell one sound (Mark /
+    Marc) is still a spelling and is not read here.
+    """
+    if a == b or len(a) != len(b) or len(a) > _SHORT_GIVEN_NAME:
+        return False
+    diffs = [(x, y) for x, y in zip(a, b) if x != y]
+    if len(diffs) != 1:
+        return False
+    x, y = diffs[0]
+    if x in _VOWELS and y in _VOWELS:
+        return False
+    return frozenset((x, y)) not in _SAME_SOUND
+
+
 def _loosely_agrees(token: str, candidates: list[str]) -> bool:
+    key = _father_key(token)
+    distinct = {
+        c for c in candidates
+        if _one_consonant_apart(token, c)
+        and not (len(key) >= 3 and key == _father_key(c))
+    }
+    candidates = [c for c in candidates if c not in distinct]
     if _person_token_agrees(token, candidates):
         return True
-    key = _father_key(token)
     for c in candidates:
         if len(token) >= 3 and len(c) >= 3 and (
             c.startswith(token) or token.startswith(c)

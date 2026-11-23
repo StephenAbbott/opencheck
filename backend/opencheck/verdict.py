@@ -285,6 +285,13 @@ _RELATED_LEAD_CODES = frozenset({
     "RELATED_SANCTIONED",
     "RELATED_SANCTIONS_CONTROLLED",
     "RELATED_SANCTIONS_LINKED",
+    # The Glyn / Gwyn ticket (23 Nov 2026): the same related-party screen
+    # raises these, from the same name match, at the same confidence.
+    "RELATED_DEBARMENT",
+    "RELATED_EXPORT_CONTROLLED",
+    "RELATED_EXPORT_CONTROL_LINKED",
+    "RELATED_EXPORT_RISK",
+    "RELATED_COUNTER_SANCTIONED",
 })
 
 #: The word each lead family is named by, in the order the sentence names them.
@@ -294,6 +301,11 @@ _LEAD_FAMILY = (
     ("RELATED_SANCTIONED", "sanctions"),
     ("RELATED_SANCTIONS_CONTROLLED", "sanctions"),
     ("RELATED_SANCTIONS_LINKED", "sanctions"),
+    ("RELATED_EXPORT_CONTROLLED", "export-control"),
+    ("RELATED_EXPORT_CONTROL_LINKED", "export-control"),
+    ("RELATED_EXPORT_RISK", "export-control"),
+    ("RELATED_DEBARMENT", "debarment"),
+    ("RELATED_COUNTER_SANCTIONED", "counter-sanctions"),
 )
 
 
@@ -384,8 +396,9 @@ def _lead_sentence(leads: list[dict[str, Any]]) -> str | None:
 #: matches on a related person are leads too, and the lead sentence names
 #: the family), 9 = the "No parent is filed" ticket (23 Nov 2026: a GLEIF
 #: reporting exception for one parent level says which level, and that GLEIF
-#: files the other).
-VERDICT_TEMPLATE = 9
+#: files the other), 10 = the Glyn / Gwyn ticket (low name-only related-party
+#: debarment, export-control and counter-sanctions matches are leads too).
+VERDICT_TEMPLATE = 10
 
 
 def _human_day(iso: str | None) -> str | None:
