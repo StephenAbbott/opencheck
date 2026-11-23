@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 599** — The History tab no longer shows a current GLEIF consolidation as ended, names the parent, and words GLEIF's changes and dates instead of showing its codes.
+**Latest: Phase 600** — Two short given names one consonant apart (Glyn and Gwyn, Ivan and Ivar) no longer pass the related-party name gate, and low name-only debarment, export-control and counter-sanctions matches are leads in the verdict.
 
 → [Full development history](docs/status.md)
 
