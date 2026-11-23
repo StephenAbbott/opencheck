@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 593** — The GEOT artifact is rebuilt from GEM's November 2026 release with LNG terminals and chemicals plants added, and the GEM source now links to Global Energy Monitor's own CC BY 4.0 licence page.
+**Latest: Phase 594** — The Jersey and Guernsey knowability rows now record their governments' November 2026 responses on legitimate-interest access to beneficial ownership information.
 
 → [Full development history](docs/status.md)
 
