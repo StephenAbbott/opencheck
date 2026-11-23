@@ -633,6 +633,8 @@ from .mappers.ukraine import (  # noqa: F401  (re-exported, Phase 246)
     founder_is_organisation,
     founder_is_placeholder,
     map_edr_ukraine,
+    _prozorro_uah,
+    map_prozorro_ukraine,
 )
 from .mappers.bulgaria import (  # noqa: F401  (re-exported: the Bulgaria Commercial Register ticket)
     BG_COVERAGE_NOTE,

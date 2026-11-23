@@ -140,6 +140,9 @@ _IDENTIFIER_KEYED = {
     # mtender_moldova: reached from the IDNO GLEIF files; awards are not
     # name-searchable here.
     "mtender_moldova",
+    # prozorro_ukraine: reached from the EDRPOU GLEIF files; contracts are
+    # not name-searchable here.
+    "prozorro_ukraine",
     # find_tender_uk: the same — reached from the Companies House number.
     "find_tender_uk",
     # kimdis_greece: reached from the ΑΦΜ ΓΕΜΗ publishes; contracts are not

@@ -938,6 +938,44 @@ def _md_month(day: str) -> str:
         return day
 
 
+def finding_prozorro_ukraine(bundle: dict[str, Any]) -> str | None:
+    """How many Ukrainian public contracts this company signed.
+
+    Active and terminated contracts are counted (pending and cancelled ones
+    are not), and terminated ones are said. The value is UAH contract values
+    summed by OpenCheck and printed in full (rule 5). The period is the
+    contracts' own signing dates; the harvest reads contracts changed since
+    it began, which the card's footnote states. Contracts are activity,
+    never ownership or risk. A company with none has no card.
+    """
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return None
+    supplier = bundle.get("supplier")
+    if not isinstance(supplier, dict):
+        return None
+    n = int(supplier.get("contracts") or 0)
+    if not n:
+        return None
+    value = int(supplier.get("value_uah") or 0)
+    buyers = int(supplier.get("buyers") or 0)
+    terminated = int(supplier.get("terminated") or 0)
+    first = str(supplier.get("first_date") or "")
+    last = str(supplier.get("last_date") or "")
+    if first and last and first[:7] != last[:7]:
+        span = f" {_md_month(first)} to {_md_month(last)}"
+    elif last:
+        span = f" in {_md_month(last)}"
+    else:
+        span = ""
+    lead = (
+        f"Signed {n:,} Ukrainian public {'contract' if n == 1 else 'contracts'}{span}, "
+        f"UAH values totalling {value:,}"
+    )
+    buyer_clause = f"with {buyers:,} {'buyer' if buyers == 1 else 'buyers'}" if buyers else None
+    ended_clause = f"{terminated:,} terminated" if terminated else None
+    return clauses_to_sentence([lead, buyer_clause, ended_clause])
+
+
 def finding_mtender_moldova(bundle: dict[str, Any]) -> str | None:
     """How many Moldovan public procurements this company was awarded.
 

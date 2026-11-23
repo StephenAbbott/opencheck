@@ -218,6 +218,22 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # Prozorro: the supplier index built daily from OpenCheck's harvest of
+    # Ukraine's procurement contracts, the MTender arrangement. Until it
+    # lands ``prozorro_ukraine`` is not announced (``covers_lei``).
+    try:
+        from .sources.prozorro_ukraine import warm_index as warm_prozorro_index
+
+        stats = await asyncio.to_thread(warm_prozorro_index)
+        log.info("Prozorro index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "Prozorro index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # Compras.gov.br: the supplier index built weekly from the OCP Data
     # Registry's copy of Brazil's procurement awards, the AusTender
     # arrangement. Until it lands ``compras_gov_br`` is not announced.

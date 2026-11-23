@@ -74,6 +74,7 @@ _THIRD_PARTY_SOURCES = {
     "austender",
     "kimdis_greece",
     "mtender_moldova",
+    "prozorro_ukraine",
     "chilecompra",
     "compras_gov_br",
     "climatetrace",

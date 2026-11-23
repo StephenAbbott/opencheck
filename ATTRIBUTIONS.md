@@ -597,6 +597,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Data:** for each supplier with a legal person's IDNO, its latest and largest winning awards (buyer, value, procedure, lots, a link to the procurement on MTender) and totals across every winning award in the file. Matched on the IDNO GLEIF files.
 - **Note:** MTender publishes awards, not contracts. Natural persons and sole traders are not stored, and the contact points on every party are never read.
 
+## Prozorro — Ukrainian public procurement
+
+- **Website:** https://prozorro.gov.ua/ · API at https://public.api.openprocurement.org/api/2.5/ (read daily by OpenCheck; documentation at https://prozorro-api-docs.readthedocs.io/en/master/)
+- **License:** [Creative Commons Attribution 4.0 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+- **Attribution:** "Contains public procurement data from Prozorro, the electronic public procurement system of Ukraine, licensed under CC BY 4.0." OpenCheck changes the data: it keeps a supplier's latest and largest contracts, counts active and terminated contracts only, sums UAH values and converts dates to the Kyiv day.
+- **Data:** for each supplier with an eight-digit EDRPOU, its latest and largest contracts (buyer, value, signing day, procedure, a link to the contract on Prozorro) and totals across the contracts changed on Prozorro since OpenCheck's harvest began. Matched on the EDRPOU GLEIF files.
+- **Note:** contracts with natural persons (a ten-digit РНОКПП, sole traders included) and with a withheld defence supplier are not stored; signatories, addresses and contact points are never read.
+
 ## Compras.gov.br — Brazilian public procurement
 
 - **Website:** https://www.gov.br/compras/pt-br · OCDS copy at the Open Contracting Partnership's Data Registry, https://data.open-contracting.org/en/publication/157

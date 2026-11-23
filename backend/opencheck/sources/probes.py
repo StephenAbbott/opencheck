@@ -1349,6 +1349,29 @@ PROBES: dict[str, SourceProbe] = {
             "before the sweep."
         ),
     ),
+    "prozorro_ukraine": _p(
+        tier="index",
+        subject="Epicentr K LLC (Ukraine, EDRPOU 32490244)",
+        # The lookup's entry point with the anchor's real pair: GLEIF files
+        # Epicentr K's EDRPOU under the ЄДР (RA000567).
+        method="fetch_by_identifiers",
+        args=("254900DZQ8GYA8D33K19", "32490244", "RA000567"),
+        kwargs={"legal_name": "ТОВ \"ЕПІЦЕНТР К\""},
+        expect_fields=("supplier", "buyers", "contracts"),
+        requires_files=("prozorro_ukraine.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt daily: ten days means missed runs.
+        snapshot_max_age_days=10,
+        anchor_lei="254900DZQ8GYA8D33K19",
+        bods_mapper="map_prozorro_ukraine",
+        notes=(
+            "The LEI holder that signed most Prozorro contracts in a 3,000-"
+            "contract sample (23 Nov 2026), reached through the EDRPOU GLEIF "
+            "files. The index is the prozorro-index release asset, rebuilt "
+            "daily by refresh-prozorro-index.yml; warm_bulk_stores.py "
+            "downloads it before the sweep."
+        ),
+    ),
     "eiti_soe": _p(
         tier="index",
         subject="Equinor Energy AS",

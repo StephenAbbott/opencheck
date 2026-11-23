@@ -1,0 +1,115 @@
+name: Refresh Prozorro supplier index
+
+# Rebuilds the Prozorro (Ukrainian public procurement) supplier index and
+# replaces the `prozorro-index` release asset the backend downloads at boot
+# (PROZORRO_DB_URL).
+#
+# The input is OpenCheck's own harvest of Prozorro's API
+# (backend/opencheck/prozorro_harvest.py): the API has no supplier filter,
+# so the contracts feed is read forward and every changed contract fetched.
+# The harvest is kept between runs as one gzipped SQLite asset on the
+# `prozorro-harvest` release: the run downloads it, reads forward from the
+# saved cursor for at most HARVEST_MINUTES, and uploads it again — also when
+# the build later fails, so no reading is lost.
+#
+# A first run starts twelve months back (Stephen's decision A, 23 Nov 2026).
+# About four million contracts change a year and sixteen requests at a time
+# read ~15 a second, so the backfill takes ~16 runs at the budget below;
+# dispatch the workflow by hand until the log says "caught_up". After that a
+# day's changes (~20,000) take about half an hour.
+#
+# Daily (decision D). If Prozorro ever refuses GitHub's runners, the fallback
+# is a hand-run harvest and backend/scripts/replace_release_asset.sh, as for
+# the ЄДР index.
+on:
+  schedule:
+    - cron: "20 3 * * *" # 03:20 UTC daily (05:20 in Kyiv)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-prozorro-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340 # the harvest budget plus the build; under GitHub's 360
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Fetch the harvest kept by the last run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/harvest"
+          if gh release view prozorro-harvest >/dev/null 2>&1; then
+            gh release download prozorro-harvest --dir "$RUNNER_TEMP/harvest" \
+              --pattern 'prozorro_harvest.sqlite.gz' --clobber
+          else
+            echo "No prozorro-harvest release yet: this run starts the backfill."
+          fi
+          ls -la "$RUNNER_TEMP/harvest"
+
+      - name: Read Prozorro's contracts feed forward from the saved cursor
+        id: harvest
+        working-directory: backend
+        env:
+          HARVEST_MINUTES: "270"
+        run: |
+          uv sync
+          uv run python scripts/harvest_prozorro.py --store "$RUNNER_TEMP/harvest" \
+            --budget-minutes "$HARVEST_MINUTES"
+
+      - name: Keep the harvest for the next run
+        if: steps.harvest.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view prozorro-harvest >/dev/null 2>&1 || gh release create prozorro-harvest \
+            --title "Prozorro harvest (working store)" \
+            --notes "OpenCheck's own reading of Prozorro's contracts feed, kept between runs of refresh-prozorro-index.yml: one row per contract with a legal-person supplier (EDRPOU), reduced to the fields the supplier index reads, and the cursors the next run reads from. Contracts with natural persons are not stored; no signatory, contact point or address. Contains public procurement data from Prozorro, licensed under CC BY 4.0. Not an OpenCheck dataset: the input to the prozorro-index build."
+          bash backend/scripts/replace_release_asset.sh prozorro-harvest \
+            "$RUNNER_TEMP/harvest/prozorro_harvest.sqlite.gz" prozorro_harvest.sqlite.gz
+
+      - name: Build the index from the harvest
+        working-directory: backend
+        run: |
+          uv run python scripts/build_prozorro_index.py \
+            --out "$RUNNER_TEMP/prozorro_ukraine.sqlite" --gzip \
+            --harvest "$RUNNER_TEMP/harvest"
+
+      - name: Sanity-check the output (guard against a broken or partial file)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "prozorro_ukraine.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM supplier").fetchone()[0]
+          print(f"{n} supplier EDRPOUs from {meta.get('contracts_counted')} contracts signed {meta.get('data_from')} to {meta.get('data_to')}")
+          print(f"harvest: from {meta.get('harvest_started_from')}, cursor {meta.get('harvest_cursor')}, caught up {meta.get('harvest_caught_up_at') or 'not yet'}")
+          if n < 5000:
+              sys.exit(f"Refusing to publish: only {n} suppliers — likely a source/format change.")
+          PY
+
+      - name: Replace the `prozorro-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view prozorro-index >/dev/null 2>&1 || gh release create prozorro-index \
+            --title "Prozorro supplier index" \
+            --notes "Built by refresh-prozorro-index.yml from OpenCheck's harvest of Prozorro, the electronic public procurement system of Ukraine (CC BY 4.0). Downloaded by the backend at boot (PROZORRO_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh prozorro-index \
+            "$RUNNER_TEMP/prozorro_ukraine.sqlite.gz" prozorro_ukraine.sqlite.gz

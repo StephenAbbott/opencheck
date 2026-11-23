@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-11-21"
+timestamp: "2026-11-23"
 ---
 
 # Source licence matrix
@@ -72,6 +72,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | OpenSanctions (`opensanctions`) | `CC-BY-NC-4.0` | no | yes | no |
 | Pennsylvania Department of State — registered businesses (`pa_dos`) | `PA-Open-Data` | yes | no | no |
 | PRH — Finnish Patent and Registration Office (`prh`) | `CC-BY-4.0` | yes | yes | no |
+| Prozorro — Ukrainian public procurement (`prozorro_ukraine`) | `CC-BY-4.0` | yes | yes | no |
 | Argentina — Registro Nacional de Sociedades and IGJ (`registro_sociedades_argentina`) | `CC-BY-4.0` | yes | yes | no |
 | RPO Slovakia (`rpo_slovakia`) | `CC-BY-4.0` | yes | yes | no |
 | RPVS Slovakia (`rpvs_slovakia`) | `CC-BY-4.0` | yes | yes | no |
