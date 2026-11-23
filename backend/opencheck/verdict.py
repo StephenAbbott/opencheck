@@ -222,9 +222,55 @@ def _structure_sentence(signals: list[dict[str, Any]]) -> str | None:
 
     if "GLEIF_REPORTING_EXCEPTION" in all_codes:
         # A permitted reporting exception, not a failure to disclose.
-        return "No parent is filed with GLEIF, which the LEI reporting rules permit."
+        return _gleif_exception_sentence(signals)
 
     return None
+
+
+_GLEIF_LEVELS = ("direct", "ultimate")
+
+
+def _gleif_excepted_levels(
+    signals: list[dict[str, Any]], code: str
+) -> set[str] | None:
+    """The parent levels ("direct", "ultimate") the ``code`` signals'
+    ``evidence.exceptions[]`` cover, or None when no signal names a level
+    (a hand-built signal, or a shape this module does not know)."""
+    levels: set[str] = set()
+    named = False
+    for s in signals:
+        if s.get("code") != code:
+            continue
+        for e in (s.get("evidence") or {}).get("exceptions") or []:
+            if not isinstance(e, dict):
+                continue
+            rel = str(e.get("relationship") or "").lower()
+            if rel in _GLEIF_LEVELS:
+                levels.add(rel)
+                named = True
+    return levels if named else None
+
+
+def _gleif_exception_sentence(signals: list[dict[str, Any]]) -> str:
+    """Say which parent GLEIF has no record of — never more than that.
+
+    The production check of 23 Nov 2026: EIDE SEAFOOD AS files a ``NO_LEI``
+    exception for its *direct* parent and names an *ultimate* parent (EIDE
+    FJORDBRUK HOLDING AS), and the verdict said "No parent is filed with
+    GLEIF". Each level of GLEIF Level 2 carries either a relationship or an
+    exception, so a level no exception covers — permitted here, or the
+    withheld kind behind ``OPAQUE_OWNERSHIP`` — has a parent on file.
+    """
+    exempt = _gleif_excepted_levels(signals, "GLEIF_REPORTING_EXCEPTION")
+    if exempt is None or exempt >= set(_GLEIF_LEVELS):
+        return "No parent is filed with GLEIF, which the LEI reporting rules permit."
+    level = "direct" if "direct" in exempt else "ultimate"
+    other = "ultimate" if level == "direct" else "direct"
+    sentence = f"GLEIF files no {level} parent, which the LEI reporting rules permit"
+    withheld = _gleif_excepted_levels(signals, "OPAQUE_OWNERSHIP") or set()
+    if other not in withheld:
+        sentence += f"; it files an {other} parent" if other == "ultimate" else f"; it files a {other} parent"
+    return sentence + "."
 
 
 #: Related-party codes whose low, name-only matches are leads, not findings
@@ -336,8 +382,10 @@ def _lead_sentence(leads: list[dict[str, Any]]) -> str | None:
 #: on 10 January 2017, according to the Estonian e-Business Register …"),
 #: 8 = the findings-regression ticket (low name-only PEP and sanctions
 #: matches on a related person are leads too, and the lead sentence names
-#: the family).
-VERDICT_TEMPLATE = 8
+#: the family), 9 = the "No parent is filed" ticket (23 Nov 2026: a GLEIF
+#: reporting exception for one parent level says which level, and that GLEIF
+#: files the other).
+VERDICT_TEMPLATE = 9
 
 
 def _human_day(iso: str | None) -> str | None:

@@ -135,7 +135,7 @@ def test_context_only_report_still_reads_as_no_risk_signals():
     html = build_report_html(report)
     assert "No risk signals were raised" in html
     assert "Structural context" in html
-    assert "No parent in GLEIF (exempt)" in html
+    assert "GLEIF parent exception" in html
 
 
 def test_diagram_and_text_equivalent_present():

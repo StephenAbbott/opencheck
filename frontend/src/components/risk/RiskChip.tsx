@@ -116,7 +116,7 @@ export const RISK_PRESENTATION: Record<
   // structural information, never as a warning. The NON_PUBLIC family of
   // exceptions fires OPAQUE_OWNERSHIP instead.
   GLEIF_REPORTING_EXCEPTION: {
-    label: "No parent in GLEIF (exempt)",
+    label: "GLEIF parent exception",
     classes: CONTEXT_CLASSES,
   },
   TRUST_OR_ARRANGEMENT: {

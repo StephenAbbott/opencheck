@@ -289,3 +289,59 @@ def test_verdict_template_was_bumped_for_the_layer_wording() -> None:
     # 4 = Phase 272 (intermediate layers); 5 = Phase 293 (name-only
     # offshore-leaks person matches are leads, not findings).
     assert VERDICT_TEMPLATE >= 4
+
+
+def _gleif_exc(code: str, *levels: str, reason: str = "NO_LEI") -> dict[str, Any]:
+    return _sig(
+        code,
+        kind="context" if code == "GLEIF_REPORTING_EXCEPTION" else "risk",
+        exceptions=[{"relationship": lv, "reason": reason} for lv in levels],
+    )
+
+
+def test_an_exception_for_the_direct_parent_alone_names_the_level() -> None:
+    # EIDE SEAFOOD AS (1595T7RFSMR9TFCTJX53), production check of 23 Nov
+    # 2026: NO_LEI for the direct parent, an ultimate parent filed (EIDE
+    # FJORDBRUK HOLDING AS). The verdict said "No parent is filed with GLEIF".
+    v = build_verdict([_gleif_exc("GLEIF_REPORTING_EXCEPTION", "direct")], [])
+    assert v is not None
+    assert "No parent is filed" not in v
+    assert v.endswith(
+        "GLEIF files no direct parent, which the LEI reporting rules permit; "
+        "it files an ultimate parent."
+    )
+
+
+def test_an_exception_for_the_ultimate_parent_alone_names_the_level() -> None:
+    v = build_verdict([_gleif_exc("GLEIF_REPORTING_EXCEPTION", "ultimate")], [])
+    assert v is not None and v.endswith(
+        "GLEIF files no ultimate parent, which the LEI reporting rules permit; "
+        "it files a direct parent."
+    )
+
+
+def test_both_levels_excepted_still_reads_no_parent() -> None:
+    v = build_verdict(
+        [_gleif_exc("GLEIF_REPORTING_EXCEPTION", "direct", "ultimate",
+                    reason="NATURAL_PERSONS")],
+        [],
+    )
+    assert v is not None and v.endswith(
+        "No parent is filed with GLEIF, which the LEI reporting rules permit."
+    )
+
+
+def test_a_withheld_other_level_is_not_called_filed() -> None:
+    # Direct permitted (NO_LEI), ultimate withheld (NON_PUBLIC → OPAQUE_OWNERSHIP):
+    # GLEIF has no ultimate parent on file either, so the verdict does not
+    # say it files one.
+    v = build_verdict(
+        [
+            _gleif_exc("GLEIF_REPORTING_EXCEPTION", "direct"),
+            _gleif_exc("OPAQUE_OWNERSHIP", "ultimate", reason="NON_PUBLIC"),
+        ],
+        [],
+    )
+    assert v is not None
+    assert "files an ultimate parent" not in v
+    assert "GLEIF files no direct parent, which the LEI reporting rules permit." in v
