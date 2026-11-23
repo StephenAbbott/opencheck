@@ -1,19 +1,49 @@
+import type { ReactNode } from "react";
 import statusData from "../lib/statusMarkdown.json";
-import { parseStatusMarkdown, commitUrl, REPO_URL } from "../lib/changelog";
+import {
+  CHANGELOG_SHOWN,
+  STATUS_URL,
+  changelogView,
+  commitUrl,
+  parseStatusMarkdown,
+} from "../lib/changelog";
+import { utcDate } from "../lib/savedReport";
 
 /**
  * Changelog — generated at build time from the repo's development-history table
  * (docs/status.md). Every merged pull request gets a phase row there: the stamp
  * workflow writes it on `main` at merge time (`.phases/pending/`, Phase 347), and
- * the next deploy rebuilds this page from it. So the page lists every change, not
- * a curated selection.
+ * the next deploy rebuilds this page from it.
+ *
+ * The page shows the latest CHANGELOG_SHOWN phases only, under the total count
+ * and the date the page was last built, and links to docs/status.md for the
+ * rest (Stephen, 23 Nov 2026: no pagination — GitHub already holds the full
+ * record with search and permanent links).
  *
  * Every card has the same shape whichever era its row was written in: the phase
  * number, ONE sentence in bold as the heading, the sentence after it as a
  * summary, and links to the commit(s) that shipped it (see lib/changelog.ts).
  */
 
-const ENTRIES = parseStatusMarkdown((statusData as { markdown: string }).markdown);
+const STATUS = statusData as { markdown: string; generatedAt?: string };
+const VIEW = changelogView(parseStatusMarkdown(STATUS.markdown));
+/** `generatedAt` is written by the prebuild hook on every deploy and by the
+ * stamp when a phase merges, so it is when this page last changed. */
+const UPDATED = STATUS.generatedAt ? utcDate(STATUS.generatedAt) : null;
+
+function HistoryLink({ children }: { children: ReactNode }) {
+  return (
+    <a
+      href={STATUS_URL}
+      target="_blank"
+      rel="noreferrer"
+      className="underline text-oo-blue hover:text-oo-burst"
+    >
+      {children}
+      <span className="sr-only"> (opens in new tab)</span>
+    </a>
+  );
+}
 
 export function ChangelogPage() {
   return (
@@ -27,24 +57,25 @@ export function ChangelogPage() {
       >
         Changelog
       </h2>
-      <p className="text-oo-body leading-[1.75] text-oo-muted mb-6 max-w-2xl">
+      <p className="text-oo-body leading-[1.75] text-oo-muted mb-3 max-w-2xl">
         What's new in OpenCheck, newest first. Each pull request is given the
         next phase number when it merges and is recorded in the project's{" "}
-        <a
-          href={`${REPO_URL}/blob/main/docs/status.md`}
-          target="_blank"
-          rel="noreferrer"
-          className="underline text-oo-blue hover:text-oo-burst"
-        >
-          development history
-          <span className="sr-only"> (opens in new tab)</span>
-        </a>
-        ; it appears here once that release is deployed. Each entry links to the
-        commit that shipped it.
+        <HistoryLink>development history</HistoryLink>; it appears here once
+        that release is deployed. Each entry links to the commit that shipped it.
+      </p>
+      <p
+        data-testid="changelog-facts"
+        className="text-oo-small text-oo-ink mb-6 max-w-2xl"
+      >
+        <strong className="font-semibold">
+          {VIEW.phaseCount.toLocaleString("en-GB")} phases shipped
+        </strong>
+        {UPDATED && <> · last updated {UPDATED}</>}
+        {VIEW.hidden > 0 && <> · showing the latest {VIEW.latest.length}</>}
       </p>
 
       <ol className="space-y-3">
-        {ENTRIES.map((e, i) => (
+        {VIEW.latest.map((e, i) => (
           <li key={e.phase}>
             <article className="bg-white border border-oo-rule rounded-oo p-5">
               <div className="flex items-center gap-2">
@@ -99,6 +130,17 @@ export function ChangelogPage() {
           </li>
         ))}
       </ol>
+
+      {VIEW.hidden > 0 && (
+        <p className="text-oo-body text-oo-muted mt-6 max-w-2xl">
+          That is the latest {CHANGELOG_SHOWN}.{" "}
+          <HistoryLink>
+            Read all {VIEW.phaseCount.toLocaleString("en-GB")} phases in the
+            full development history on GitHub
+          </HistoryLink>
+          .
+        </p>
+      )}
     </section>
   );
 }

@@ -26,6 +26,15 @@ export interface ChangelogEntry {
 
 export const REPO_URL = "https://github.com/StephenAbbott/opencheck";
 
+/** The full record: every phase, with GitHub's search and permanent links. */
+export const STATUS_URL = `${REPO_URL}/blob/main/docs/status.md`;
+
+/** How many phases the /changelog page lists. At the project's pace twenty is
+ * roughly the last week; the rest is one link away in docs/status.md. A page of
+ * every phase (594 on 23 Nov 2026) was too long to read, and pagination would
+ * have rebuilt what GitHub already gives the full file. */
+export const CHANGELOG_SHOWN = 20;
+
 export function commitUrl(hash: string): string {
   return `${REPO_URL}/commit/${hash}`;
 }
@@ -138,4 +147,19 @@ export function parseStatusMarkdown(md: string): ChangelogEntry[] {
   }
   entries.sort((a, b) => b.phase - a.phase);
   return entries;
+}
+
+/** The page's header facts: the latest phase number (the count docs/status.md
+ * spells out — "shipped through N phases" — since the table starts at Phase 0)
+ * and the newest `shown` entries. */
+export function changelogView(
+  entries: ChangelogEntry[],
+  shown: number = CHANGELOG_SHOWN,
+): { phaseCount: number; latest: ChangelogEntry[]; hidden: number } {
+  const latest = entries.slice(0, shown);
+  return {
+    phaseCount: entries.length > 0 ? entries[0].phase : 0,
+    latest,
+    hidden: entries.length - latest.length,
+  };
 }
