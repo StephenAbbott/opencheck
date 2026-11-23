@@ -71,6 +71,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .bods.lifecycle import interest_ended, record_closed
+from .ui_dates import ui_date
 from .bods.refs import resolver
 from .integrated_ownership import EXCLUDED_DESCRIPTIONS, EXCLUDED_SOURCES, party_name, source_key
 from .ownership_math import percent_text
@@ -1043,7 +1044,7 @@ def report_footer(signal: Mapping[str, Any] | None) -> list[str]:
         )
         lines.append("Designated parties read: " + "; ".join(said) + ".")
     if ev.get("as_of"):
-        lines.append(f"Computed from the sources as they stood on {ev['as_of']}.")
+        lines.append(f"Computed from the sources as they stood on {ui_date(ev['as_of'])}.")
     lines.append(str(ev.get("credit") or METHOD_CREDIT))
     return lines
 

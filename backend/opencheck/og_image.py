@@ -28,6 +28,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from . import names as _names_mod
+from .ui_dates import ui_date
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 
@@ -245,20 +246,6 @@ def card_alt_text(
         f"{len(codes)} risk signal{plural} found: {named}{tail}. "
         f"Prompts the viewer to visit opencheck.world for details."
     )
-
-
-_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"]
-
-
-def ui_date(iso: str) -> str:
-    """"16 Sept 2026", in UTC — the saved-report page's own date format."""
-    from datetime import datetime, timezone
-
-    try:
-        d = datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone(timezone.utc)
-    except ValueError:
-        return str(iso)[:10]
-    return f"{d.day} {_MONTHS[d.month - 1]} {d.year}"
 
 
 def _saved_alt(subject: str, lei: str, signals: list[dict[str, Any]], saved_at: str) -> str:

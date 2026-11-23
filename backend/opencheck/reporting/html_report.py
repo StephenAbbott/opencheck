@@ -21,11 +21,13 @@ from html import escape
 from typing import Any
 
 from ..bods.refs import statement_index
+from ..identifier_labels import identifier_label
 from ..knowability import report_statements
 from ..coverage import coverage_sentence, report_coverage
 from ..lei_registration import report_value as lei_registration_value
 from ..lei_successor import report_value as lei_successor_value
 from ..listing import describe as listing_line
+from ..ui_dates import ui_date
 from .diagram import source_diagram
 
 LIVE_BASE = "opencheck.world"
@@ -117,11 +119,6 @@ _LOGO = (
     "</svg>"
 )
 
-_ID_LABELS = {
-    "company_number": "Company registration number",
-    "lei": "Legal Entity Identifier (LEI)",
-    "vat": "VAT number",
-}
 
 
 def _registry():
@@ -197,7 +194,7 @@ def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> str:
         # The derived set carries the LEI too; it is already the first row.
         if not v or v == report.get("lei"):
             continue
-        rows.append((_ID_LABELS.get(k, k.replace("_", " ").capitalize()), v))
+        rows.append((identifier_label(k), v))
     # Any extra schemes the subject entity itself publishes.
     seen = {v for _, v in rows}
     for i in ((subject or {}).get("recordDetails") or {}).get("identifiers") or []:
@@ -535,7 +532,21 @@ def _signal_label(code: str) -> str:
     from ..og_image import SIGNAL_STYLE  # lazy — Pillow import lives there
 
     style = SIGNAL_STYLE.get(code)
-    return style[0] if style else code.replace("_", " ").title()
+    if style:
+        return style[0]
+    return _REPORT_ONLY_LABELS.get(code) or code.replace("_", " ").title()
+
+
+#: Codes the share card never draws (so ``og_image.SIGNAL_STYLE`` has no row
+#: for them) but the report lists, under the frontend chip's own label
+#: (``RISK_PRESENTATION`` in RiskChip.tsx).
+_REPORT_ONLY_LABELS = {
+    "RECORD_CONSISTENCY": "Records compared",
+}
+
+#: Signal ``source_id`` values that name OpenCheck itself, not a source.
+_ENGINE_SOURCE_IDS = frozenset({"", "opencheck"})
+_ENGINE_NAME = "OpenCheck risk engine"
 
 
 def _split_signals_by_kind(report: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -586,11 +597,18 @@ def _signal_source_name(sig: dict[str, Any], reg: Any) -> str:
     names: list[str] = []
     for sid in ids:
         src = reg.get(sid) if sid else None
-        name = src.info.name if src else (sid or "OpenCheck risk engine")
+        if src:
+            name = src.info.name
+        elif sid in _ENGINE_SOURCE_IDS:
+            name = _ENGINE_NAME
+        else:
+            from ..bods.statements import SOURCE_NAMES
+
+            name = SOURCE_NAMES.get(sid, sid)
         if name not in names:
             names.append(name)
     if len(names) <= 1:
-        return names[0] if names else "OpenCheck risk engine"
+        return names[0] if names else _ENGINE_NAME
     return ", ".join(names[:-1]) + " and " + names[-1]
 
 
@@ -720,7 +738,7 @@ def _knowability(report: dict[str, Any]) -> str:
     paras = []
     for st in ([subject] if subject else []) + chain:
         badge = (
-            f"checked {escape(st['last_verified'])}" if st.get("last_verified")
+            f"checked {escape(ui_date(st['last_verified']))}" if st.get("last_verified")
             else ("no register notes held" if st.get("stated_absence") else "unverified draft")
         )
         paras.append(
@@ -730,7 +748,7 @@ def _knowability(report: dict[str, Any]) -> str:
     note = (
         "These sentences describe each register, not this company, and are dated: they are the "
         "facts OpenCheck held"
-        + (f" as of {escape(ks['as_of'])}" if ks.get("as_of") else "")
+        + (f" as of {escape(ui_date(ks['as_of']))}" if ks.get("as_of") else "")
         + ". An owner absent from this report is read against them."
     )
     return (

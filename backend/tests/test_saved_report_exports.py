@@ -351,9 +351,9 @@ def test_markdown_carries_the_frozen_knowability_paragraphs(client: TestClient, 
     meta = _saved(client)
     md = client.post("/export/markdown", json={"lei": LEI, "saved_report_id": meta["report_id"]}).text
     assert "## What can be known" in md
-    assert "**United Kingdom** (checked 2026-09-16) — PSC register frozen sentence from the day of the run." in md
+    assert "**United Kingdom** (checked 16 Sept 2026) — PSC register frozen sentence from the day of the run." in md
     assert "**Cayman Islands** (unverified draft) — Cayman frozen sentence from the day of the run." in md
-    assert "facts OpenCheck held as of 2026-09-16" in md
+    assert "facts OpenCheck held as of 16 Sept 2026" in md
     # Subject first, chain after; the subject is not repeated from the chain.
     assert md.count("frozen sentence from the day of the run") == 2
     assert md.index("United Kingdom** (checked") < md.index("Cayman Islands** (unverified")
