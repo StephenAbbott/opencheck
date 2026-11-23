@@ -648,6 +648,25 @@ def test_gleif_no_lei_exception_wording_says_parent_exists() -> None:
     assert "a parent exists" in signals[0].summary.lower()
 
 
+def test_gleif_exception_for_one_level_names_that_level() -> None:
+    # EIDE SEAFOOD AS shape (23 Nov 2026): NO_LEI for the direct parent only;
+    # GLEIF files the ultimate parent, so the summary must not say no parent.
+    raw = _gleif_raw("NO_LEI", kinds=("direct",))
+    signals = assess_bundle(
+        "gleif", raw, [{"statementType": "entityStatement"}], hit_id="X"
+    )
+    assert signals[0].summary.startswith(
+        "No direct accounting-consolidation parent is reported to GLEIF"
+    )
+    both = assess_bundle(
+        "gleif", _gleif_raw("NO_LEI", kinds=("direct", "ultimate")),
+        [{"statementType": "entityStatement"}], hit_id="X",
+    )
+    assert both[0].summary.startswith(
+        "No accounting-consolidation parent is reported to GLEIF"
+    )
+
+
 def test_gleif_non_public_exception_fires_opaque_ownership() -> None:
     raw = _gleif_raw("NON_PUBLIC")
     signals = assess_bundle(
