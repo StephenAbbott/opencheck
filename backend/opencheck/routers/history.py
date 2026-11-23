@@ -50,6 +50,10 @@ class HistoryEntry(BaseModel):
     sources: list[str]
     corroborating_sources: list[str] = []
     counterparty: str | None = None
+    #: The counterparty's name where OpenCheck holds it — a GLEIF parent's
+    #: legal name, read from the Golden Copy mirror. Null otherwise; the row
+    #: then shows the identifier alone.
+    counterparty_name: str | None = None
     interest_start_date: str | None = None
     interest_end_date: str | None = None
     boosted: bool = False
@@ -180,6 +184,7 @@ async def history(
             sources=e.sources,
             corroborating_sources=sorted({c.source_id for c in e.corroborating}),
             counterparty=e.counterparty,
+            counterparty_name=e.counterparty_name,
             interest_start_date=e.interest_start_date,
             interest_end_date=e.interest_end_date,
             boosted=e.boosted,
@@ -199,7 +204,8 @@ async def history(
                 value_old=ev.value_old,
                 value_new=ev.value_new,
                 change_type=ev.change_type.value if ev.change_type else None,
-                label=(
+                label=ev.label
+                or (
                     CHANGE_TYPES[ev.change_type].label
                     if ev.change_type and ev.change_type in CHANGE_TYPES
                     else None

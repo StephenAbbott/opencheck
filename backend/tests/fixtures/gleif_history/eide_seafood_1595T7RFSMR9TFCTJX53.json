@@ -1,0 +1,1115 @@
+{
+ "_note": "GLEIF /lei-records/{lei}/field-modifications as served on 23 Nov 2026 (CC0), page size 200, newest first. Kept verbatim: the History tab's period pairing depends on this order.",
+ "data": [
+  {
+   "type": "field-modifications",
+   "id": "57bb5de9-efb3-45d6-bac4-90475e99daea",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "UPDATE",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:RegistrationStatus",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": "ISSUED",
+    "valueNew": "LAPSED",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "ca3e29ee-0cdb-40e6-bcb8-abe5abec15fb",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "UPDATE",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:LastUpdateDate",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": "2026-05-01T14:17:28+02:00",
+    "valueNew": "2026-08-12T12:24:00+02:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "bdc823b5-956f-4874-9ba1-2375bcc8774c",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:PostalCode",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "5640",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "53e3f50d-9fa7-4e22-92c1-1fea7f95fb22",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:Country",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "1510c4d4-6e63-4dd0-b28d-e63c0f7760b0",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:Region",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO-46",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d0c444c6-dcc1-45f1-9f1e-c69a5631200a",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:City",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "EIKELANDSOSEN",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "00e76819-0f89-4f9a-9ab1-74061a243d48",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:FirstAddressLine",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "Stoeavegen 98",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "463d6acf-17ea-46af-851c-14c1d99a55c0",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/@xml:lang",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "no",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "9dc79a6e-7fb6-45b1-a6d0-7833ca7cb344",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/@type",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "PREFERRED_ASCII_TRANSLITERATED_HEADQUARTERS_ADDRESS",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "559fbf93-3dd0-40ca-a1bd-91dd02fc69df",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:PostalCode",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "5640",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "f2025b6a-1450-4368-bd4f-47e561cddb58",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:Country",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "02326091-0b7f-4f7a-a256-c2fe13fdab53",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:Region",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO-46",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "494f0a90-0944-4483-a4fe-866d0e3a18fa",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:City",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "EIKELANDSOSEN",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "00c9f022-3c23-486e-8aac-f17ff5c507a6",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/lei:FirstAddressLine",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "Stoeavegen 98",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "2bcf6d20-1391-4214-8d05-08f850b1882f",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/@xml:lang",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "no",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "fa6611fa-df6e-4db8-9b62-6e14a53e7ffc",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "UPDATE",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:RegistrationStatus",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": "PUBLISHED",
+    "valueNew": "LAPSED",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "e6e9bb65-54fe-478f-a4ac-ae4df59c13fc",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:TransliteratedOtherAddresses/lei:TransliteratedOtherAddress/@type",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "PREFERRED_ASCII_TRANSLITERATED_LEGAL_ADDRESS",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "cfa74342-4871-4ccc-856b-3ff4cc3f010b",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "UPDATE",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:LastUpdateDate",
+    "date": "2026-08-13T00:00:00Z",
+    "valueOld": "2026-05-04T20:18:26+02:00",
+    "valueNew": "2026-08-12T12:25:33+02:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "c8f04a82-7a67-4801-836e-be2028a64b39",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "UPDATE",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:LastUpdateDate",
+    "date": "2026-05-05T00:00:00Z",
+    "valueOld": "2025-08-12T11:38:33+02:00",
+    "valueNew": "2026-05-01T14:17:28+02:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "e908c4ec-3b2b-4ea3-886e-52dee774e02f",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:Region",
+    "date": "2026-05-05T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO-46",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "3ab3786d-a5f1-4509-92a3-5fb28064e6c7",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INSERT",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:Region",
+    "date": "2026-05-05T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO-46",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "38d14bf3-eb44-42fd-a755-f9ff51662540",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "UPDATE",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:LastUpdateDate",
+    "date": "2026-05-05T00:00:00Z",
+    "valueOld": "2025-08-12T11:42:52+02:00",
+    "valueNew": "2026-05-04T20:18:26+02:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "849f664a-8628-4675-8685-62371370ef44",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:ValidationAuthority/lei:ValidationAuthorityEntityID",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "929106474",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "021f0cf1-4754-4ce1-830d-0e6450deda0c",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:ValidationAuthority/lei:ValidationAuthorityID",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "RA000472",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "47afaa05-04a3-4499-a0b6-fafa6669fd15",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:ValidationSources",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "FULLY_CORROBORATED",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "7fdaf78f-b2a2-46c0-8d99-a526eb198bf1",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:ManagingLOU",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "98450045AN5EB5FDC780",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "4a4c0904-51f4-485a-95f6-d18b16e6d3ef",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:NextRenewalDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2026-08-12T11:38:33+02:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "72dfd496-fe79-4191-972d-00143f105b39",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:RegistrationStatus",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ISSUED",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d05cf1bb-fcb6-4145-90b4-53fab658a340",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:LastUpdateDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-08-12T11:38:33+02:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "172425ca-877f-4c62-89b6-918e21c5b364",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:InitialRegistrationDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-08-12T11:38:33+02:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "187dfcac-22ad-4a2a-bd38-e223fcfccfc4",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:EntityCreationDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2022-03-09T00:00:00+00:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "5f78199c-d251-4574-ae27-d2e1c31aa1d4",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ValidationDocuments",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACCOUNTS_FILING",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "5038270e-9832-419e-8457-970f88e10038",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:EntityStatus",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACTIVE",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "e658793e-f0f6-44f5-96ef-804d8cb7b22a",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ValidationSources",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "FULLY_CORROBORATED",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "459c64c1-13bb-4b6f-b77c-1cdfa10d3d5c",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalForm/lei:EntityLegalFormCode",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "YI42",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "3ee46e91-ddad-489e-ade1-178a8d3a1506",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ManagingLOU",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "98450045AN5EB5FDC780",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "5c7aa0e0-2e67-46fa-8ae6-1b0b919655cb",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:EntityCategory",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "GENERAL",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "355b227f-85be-4bf0-bb73-c5d1d6b9fab0",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:NextRenewalDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2026-08-12T11:38:33+02:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "cc0065cb-d29f-4977-8179-1633aadf9439",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalJurisdiction",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "b4bced4b-1426-4174-be46-eba28e952eb3",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:RegistrationStatus",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "PUBLISHED",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "eca6480e-dff6-454d-b203-499780eb21a1",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:RegistrationAuthority/lei:RegistrationAuthorityEntityID",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "929106474",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "3458ba08-3a28-4f64-bc23-c1c8dfa716e8",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:LastUpdateDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-08-12T11:42:52+02:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "0a258e65-09ad-4dd2-b10b-19b274cbd67d",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:RegistrationAuthority/lei:RegistrationAuthorityID",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "RA000472",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "3fac697b-a760-4c14-b715-a92ccbe25a73",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:InitialRegistrationDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-08-12T11:38:33+02:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "596e65aa-9c3a-4a7a-b85c-2b73ae239e87",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:PostalCode",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "5640",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "2eb03a30-e6a5-4eb0-93c0-9d667bcabf27",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipQualifiers/rr:RelationshipQualifier/rr:QualifierCategory",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "IFRS",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "23b40e7b-7f77-4190-b88b-e523d45286b7",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:Country",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d1fb2170-c965-465b-9c09-32460d55b1d5",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipQualifiers/rr:RelationshipQualifier/rr:QualifierDimension",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACCOUNTING_STANDARD",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "f4cc9928-12bd-4c40-9887-3c4371e87ba2",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:City",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "EIKELANDSOSEN",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "0006d967-4665-400b-9e7a-e95ac5b2d91e",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipStatus",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACTIVE",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d3f041ab-0130-47bb-81a1-27fc37128f89",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:FirstAddressLine",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "Støavegen 98",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "b7b66306-0432-4741-8965-1d4dade6aa23",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACCOUNTING_PERIOD",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d0f34e96-e25a-4379-936b-9ab527f5cab7",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/@xml:lang",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "no",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "e63826c7-b282-4435-a877-e7b1406bf74d",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:EndDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2023-12-31T00:00:00+01:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "4d23c230-d82f-4524-aa41-f91a285830bf",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:PostalCode",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "5640",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "366a94c7-2cb0-4777-996b-0812588fb714",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2023-01-01T00:00:00+01:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "49e93ddd-27c2-48d7-936a-f46816242c03",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:Country",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "474dadea-27d6-4f72-a5fe-a1b8f34ff0d2",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "RELATIONSHIP_PERIOD",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "65cd6eeb-e10e-4b3b-b17b-1972ad0b11fa",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:City",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "EIKELANDSOSEN",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "132dd1aa-6653-40bc-b0e2-28c887982e70",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2022-12-30T00:00:00+01:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "75ab56d4-5896-4679-9f26-09b7f05ccb8c",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:FirstAddressLine",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "Støavegen 98",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "cc9f42dd-eff4-4ed2-9e66-de4d86d07eae",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipType",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "IS_ULTIMATELY_CONSOLIDATED_BY",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d703cebf-d758-4e83-97b4-ce7f84895adf",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/@xml:lang",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "no",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "ebb7284a-648b-45ce-a2af-99f3bf1c7522",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:EndNode/rr:NodeIDType",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "LEI",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "5fca4704-afcb-4caa-a10f-c4ef7557ac70",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalName/@xml:lang",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "no",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "eb08b2ed-85dc-4429-9437-fac580e856df",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:EndNode/rr:NodeID",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "636700DMOPCUTPDHD616",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "98d7df8a-45a7-45ce-ab52-af8ba494f2e8",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "REPEX",
+    "modificationType": "INITIAL",
+    "field": "/repex:ReportingExceptionData/repex:ReportingExceptions/repex:Exception/repex:ExceptionReason",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "NO_LEI",
+    "context": {
+     "exceptionCategory": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "fdf1acef-ea31-444e-85f4-3887c039a682",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalName",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "EIDE SEAFOOD AS",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "9d1b88c9-ae27-4078-8caf-dd4c33405527",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "REPEX",
+    "modificationType": "INITIAL",
+    "field": "/repex:ReportingExceptionData/repex:ReportingExceptions/repex:Exception/repex:ExceptionCategory",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+    "context": {
+     "exceptionCategory": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "6cc24efd-5e71-4255-8cb9-cd2ccf8cd889",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:StartNode/rr:NodeIDType",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "LEI",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "a8c7d9aa-2370-490d-a9de-a299d6b3c93f",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:LEI",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "1595T7RFSMR9TFCTJX53",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "22206d62-85b3-45b0-bba3-86aa7b797b10",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:StartNode/rr:NodeID",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "1595T7RFSMR9TFCTJX53",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "636700DMOPCUTPDHD616"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "b231cda7-ff32-45cb-87b9-9df4f65da396",
+   "attributes": {
+    "lei": "1595T7RFSMR9TFCTJX53",
+    "recordType": "REPEX",
+    "modificationType": "INITIAL",
+    "field": "/repex:ReportingExceptionData/repex:ReportingExceptions/repex:Exception/repex:LEI",
+    "date": "2025-08-13T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "1595T7RFSMR9TFCTJX53",
+    "context": {
+     "exceptionCategory": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT"
+    }
+   }
+  }
+ ],
+ "meta": {
+  "goldenCopy": {
+   "publishDate": "2026-11-23T00:00:00Z"
+  },
+  "pagination": {
+   "currentPage": 1,
+   "perPage": 200,
+   "from": 1,
+   "to": 73,
+   "total": 73,
+   "lastPage": 1
+  }
+ }
+}

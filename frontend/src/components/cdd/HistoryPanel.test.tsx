@@ -179,7 +179,7 @@ describe("the timeline", () => {
     expect(within(rail).getAllByRole("listitem")).toHaveLength(10);
     // Newest first: the endpoint returns oldest-first, which is right for an
     // audit trail and wrong for a reader.
-    expect(within(rail).getAllByRole("listitem")[0]).toHaveTextContent("2023-06-01");
+    expect(within(rail).getAllByRole("listitem")[0]).toHaveTextContent("1 June 2023");
 
     await userEvent.click(screen.getByRole("button", { name: "Show all 14 rows" }));
     expect(within(rail).getAllByRole("listitem")).toHaveLength(14);
