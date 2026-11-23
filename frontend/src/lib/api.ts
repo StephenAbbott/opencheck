@@ -998,6 +998,9 @@ export interface HistoryEntry {
   sources: string[];
   corroborating_sources: string[];
   counterparty: string | null;
+  /** The counterparty's name where OpenCheck holds it (a GLEIF parent's
+   *  legal name, from the Golden Copy mirror). Absent or null: show the id. */
+  counterparty_name?: string | null;
   interest_start_date: string | null;
   interest_end_date: string | null;
   boosted: boolean;

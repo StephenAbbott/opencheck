@@ -343,9 +343,22 @@ export function sireneYearOnly(basis: string, sources: readonly string[]): boole
   return basis === "recorded" && sources.length > 0 && sources.every((s) => s === "sirene");
 }
 
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * The date as a row shows it: the ISO day, or for an INSEE processing date
- * "recorded by INSEE in <year>" — never a day the register did not mean.
+ * A day in words, "30 Dec 2022" — the house form (`utcDate`). Anything that is
+ * not a whole ISO day (a year, a year and month) is shown as given, never
+ * completed to a day the source did not state.
+ */
+export function dayText(date: string | null | undefined): string | null {
+  if (!date) return null;
+  const day = date.slice(0, 10);
+  return ISO_DAY.test(day) ? utcDate(`${day}T00:00:00Z`) : date;
+}
+
+/**
+ * The date as a row shows it: the day in words, or for an INSEE processing
+ * date "recorded by INSEE in <year>" — never a day the register did not mean.
  */
 export function dateText(
   date: string | null | undefined,
@@ -354,7 +367,47 @@ export function dateText(
 ): string | null {
   if (!date) return null;
   if (sireneYearOnly(basis, sources)) return `recorded by INSEE in ${date.slice(0, 4)}`;
-  return date;
+  return dayText(date);
+}
+
+/**
+ * The change a notable row shows under its label. A GLEIF consolidation row
+ * carries GLEIF's relationship in words and no "before" (the backend words
+ * it: "Consolidated by its ultimate parent"), so it is shown without an arrow
+ * from nothing.
+ */
+export function transitionText(entry: HistoryEntry): string | null {
+  if (!entry.value_old && !entry.value_new) return null;
+  if (!entry.value_old && entry.record_type === "relationship") return entry.value_new;
+  return `${entry.value_old ?? "—"} → ${entry.value_new ?? "—"}`;
+}
+
+const LEI_SHAPE = /^[0-9A-Z]{18}[0-9]{2}$/;
+
+/**
+ * The other end of a row: the parent's name with its LEI where OpenCheck holds
+ * the name, the LEI said as one where it does not, else the source's own text
+ * (a Companies House officer's name).
+ */
+export function counterpartyText(entry: HistoryEntry): string | null {
+  const party = entry.counterparty;
+  if (!party) return null;
+  const isLei = LEI_SHAPE.test(party);
+  if (entry.counterparty_name) {
+    return isLei ? `${entry.counterparty_name} · LEI ${party}` : entry.counterparty_name;
+  }
+  return isLei ? `LEI ${party}` : party;
+}
+
+/**
+ * The relationship's own period, for an ownership or control row: "from
+ * 30 Dec 2022", with "to …" only where the source gives the relationship an
+ * end. GLEIF's accounting periods are never this period.
+ */
+export function interestText(entry: HistoryEntry): string | null {
+  if (entry.tier !== 1 || !entry.interest_start_date) return null;
+  const from = `from ${dayText(entry.interest_start_date)}`;
+  return entry.interest_end_date ? `${from} to ${dayText(entry.interest_end_date)}` : from;
 }
 
 /**

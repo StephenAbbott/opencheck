@@ -210,15 +210,16 @@ def test_relationship_validation_reference_is_noise():
 def test_relationship_interest_dates_use_period_not_publish_date():
     # The Market Bidco parent was PUBLISHED on 2023-11-25, but the relationship
     # period shows consolidation began 2021-11-01. The interest start must be the
-    # economic date, not the publish date.
+    # economic date, not the publish date. Listed as GLEIF serves the log:
+    # newest first, each period's PeriodType before its dates.
     mods = [
-        _rr_mod("rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
-                "INITIAL", None, "2021-11-01T00:00:00Z"),
-        _rr_mod("rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:EndDate",
-                "INITIAL", None, "2022-10-30T00:00:00Z"),
-        _rr_mod("rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
-                "INITIAL", None, "2023-11-24T00:00:00Z"),
+        _rr_mod(_PERIOD + "rr:PeriodType", "INITIAL", None, "RELATIONSHIP_PERIOD"),
+        _rr_mod(_PERIOD + "rr:EndDate", "INITIAL", None, "2022-10-30T00:00:00Z"),
+        _rr_mod(_PERIOD + "rr:StartDate", "INITIAL", None, "2021-11-01T00:00:00Z"),
     ]
     start, end = relationship_interest_dates(mods)
     assert start == "2021-11-01"
     assert end == "2022-10-30"
+
+
+_PERIOD = "rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/"

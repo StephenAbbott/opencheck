@@ -1,0 +1,1220 @@
+{
+ "_note": "GLEIF /lei-records/{lei}/field-modifications as served on 23 Nov 2026 (CC0), page size 200, newest first. Kept verbatim: the History tab's period pairing depends on this order.",
+ "data": [
+  {
+   "type": "field-modifications",
+   "id": "9bfcfccc-7ba9-4a1e-a9ba-56fa2429ca58",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ValidationReference",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "https://www.sec.gov/ix?doc=/Archives/edgar/data/0000077476/000007747626000007/pep-20251227.htm",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d8d3bc20-e2b1-4a3a-9e00-257cde68cd02",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ValidationReference",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "https://www.sec.gov/ix?doc=/Archives/edgar/data/0000077476/000007747626000007/pep-20251227.htm",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "2bd50d88-dba5-4551-a3b1-f7b0aaca039a",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ValidationDocuments",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "REGULATORY_FILING",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "9bb634d4-6f52-414d-a73a-592e2386590b",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ValidationDocuments",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "REGULATORY_FILING",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "b5e1ac6f-3872-4591-83c8-eada037c4e6b",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ValidationSources",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "FULLY_CORROBORATED",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "35dbcfd8-b5b1-4e0b-bc41-980649159421",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ValidationSources",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "FULLY_CORROBORATED",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "7511e0f8-c11f-475d-9ee4-f84bb2882c7d",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ManagingLOU",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "529900T8BM49AURSDO55",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "99ee2619-6ecc-4bd4-8ccc-4ed77b4d9b9a",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:ManagingLOU",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "529900T8BM49AURSDO55",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "60503fc5-086c-4fca-8ce2-9523937ebda9",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:NextRenewalDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2027-07-30T13:25:11+00:00",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "97735125-ec4d-4274-af89-e110321c912e",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:NextRenewalDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2027-07-30T13:25:11+00:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "94020cfa-dd1b-4d56-90cb-29268ebeb914",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:RegistrationStatus",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "PUBLISHED",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "b8fa8c81-c733-421e-b071-0c15bf3ec642",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:RegistrationStatus",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "PUBLISHED",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d3d03589-89f6-411b-9e39-764dc6a27f41",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:LastUpdateDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2026-07-30T13:25:09+00:00",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "4bde28e2-32bb-417c-944c-09cd3dcb0e96",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:LastUpdateDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2026-07-30T13:25:09+00:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "a3a536f2-96d4-46e5-9f95-d4bb7150dab2",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:InitialRegistrationDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2026-07-30T13:25:09+00:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "bbd8ef33-d7b6-4fac-82f0-9fa1ed7c53b2",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Registration/rr:InitialRegistrationDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2026-07-30T13:25:09+00:00",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "a6bdcb32-d34a-48b7-8e99-9236ded16d6f",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipQualifiers/rr:RelationshipQualifier/rr:QualifierCategory",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "US_GAAP",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d266bca5-2e87-46bd-a6e6-10299f6e5408",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipQualifiers/rr:RelationshipQualifier/rr:QualifierCategory",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "US_GAAP",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "db17ad04-63c8-455a-8257-d06c66c28871",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipQualifiers/rr:RelationshipQualifier/rr:QualifierDimension",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACCOUNTING_STANDARD",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "c5227f0b-3b83-41a0-8f74-44d5ac92024f",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipQualifiers/rr:RelationshipQualifier/rr:QualifierDimension",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACCOUNTING_STANDARD",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "876f078a-7020-4c1c-8c9e-e1de5e2b901d",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipStatus",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACTIVE",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "953733b0-7a0a-4c43-8559-d43f3b1dbc69",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipStatus",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACTIVE",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "78f220ee-3e83-43e8-8f5d-d77ebb3a7d60",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "DOCUMENT_FILING_PERIOD",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "0a28d2c6-a189-4d31-ae8f-0556dea3aebd",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "DOCUMENT_FILING_PERIOD",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "3ead9434-708d-4bbe-a4ee-b0fbc58b165c",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-01-01T00:00:00+00:00",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "5f2cf03c-97dd-418d-87ed-e11e3f7bede8",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-01-01T00:00:00+00:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "661d2990-51d7-4b0f-9b07-2667f824d15f",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "RELATIONSHIP_PERIOD",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "215e52aa-a4ad-418e-bfe5-5595dc544729",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "RELATIONSHIP_PERIOD",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "6cbc407c-168c-4387-8579-b7590a01b1d8",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "1959-04-07T00:00:00+00:00",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "b51651db-1795-4d36-975c-29b7a600ad2c",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "1959-04-07T00:00:00+00:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "42d16ae4-46d9-4f62-a6f1-21507e667379",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACCOUNTING_PERIOD",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "fab51e2d-c4ca-4f79-8032-47e3addb59d2",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACCOUNTING_PERIOD",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "f440874e-bd61-4883-87dc-30f9a492b37d",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:EndDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-12-31T00:00:00+00:00",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "8af7b9ed-f56d-42c9-9ef6-f05317599133",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:EndDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-12-31T00:00:00+00:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "2e30e5f7-ab79-47c6-b106-5c4ada63e626",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-01-01T00:00:00+00:00",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "be05b8ae-0e1c-47b0-a590-95f282e7a197",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "2025-01-01T00:00:00+00:00",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "39083640-1aa7-4d58-92c5-0941ba9e2174",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "IS_DIRECTLY_CONSOLIDATED_BY",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "ca0861f6-4376-4057-8098-94de4243a255",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:RelationshipType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "IS_ULTIMATELY_CONSOLIDATED_BY",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "c0a8b7ae-ba7c-4686-87b9-4c59b3c704b2",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:EndNode/rr:NodeIDType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "LEI",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "e0f7e455-9f70-4bea-ab7e-45c06f1ce7bf",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:EndNode/rr:NodeIDType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "LEI",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "346858e6-bfce-4d5c-844a-1b5b3563469b",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:EndNode/rr:NodeID",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "FJSUNZKFNQ5YPJ5OT455",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "ce32b6b6-453f-49ea-b896-142f67e404b3",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:EndNode/rr:NodeID",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "FJSUNZKFNQ5YPJ5OT455",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "fc12e74a-6093-4737-996c-e8fea539ee4a",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:StartNode/rr:NodeIDType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "LEI",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "b8167fec-3cc6-41ea-8261-648a0bfdf3c9",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:StartNode/rr:NodeIDType",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "LEI",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d140726f-cee8-467e-b730-bfe17ace516c",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:StartNode/rr:NodeID",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "984500D899C841ADC669",
+    "context": {
+     "relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "b55bfe2c-f4a6-4d28-a63b-9e81ffb67568",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "RR",
+    "modificationType": "INITIAL",
+    "field": "/rr:RelationshipData/rr:RelationshipRecords/rr:RelationshipRecord/rr:Relationship/rr:StartNode/rr:NodeID",
+    "date": "2026-07-31T00:00:00Z",
+    "valueOld": null,
+    "valueNew": "984500D899C841ADC669",
+    "context": {
+     "relationshipType": "IS_ULTIMATELY_CONSOLIDATED_BY",
+     "endNode": "FJSUNZKFNQ5YPJ5OT455"
+    }
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "43d4b904-9b2e-4f11-bb4a-c1e4c7870ed4",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:ValidationAuthority/lei:ValidationAuthorityEntityID",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "30-53764771-6",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "47aa68c2-b3d4-4932-8f10-468da61b82ee",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:ValidationAuthority/lei:ValidationAuthorityID",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "RA000009",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "5ef777fa-6a60-4182-ac1c-b976eec7e00f",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:ValidationSources",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "FULLY_CORROBORATED",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "731c8f19-d498-49fd-b0a6-5dffd03bda57",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:ManagingLOU",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "529900T8BM49AURSDO55",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "e1b03dd2-aacc-4245-ae17-c3f83524777d",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:NextRenewalDate",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "2027-07-30T13:25:11+00:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "a742d185-a245-42c5-9b37-24f881ef3225",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:RegistrationStatus",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "ISSUED",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "221b0d41-3b88-4ce6-b5bf-06cef032ad6b",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:LastUpdateDate",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "2026-07-30T13:25:09+00:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "0f77dca7-9379-4aae-8236-d6dfa5b44657",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Registration/lei:InitialRegistrationDate",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "2026-07-30T13:25:09+00:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "9ff3078a-851c-413e-ada0-6cf8d9ab9117",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:EntityCreationDate",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "1959-04-07T00:00:00+00:00",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "0d5199e9-cdd6-4892-a5fe-f55586b3e14d",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:EntityStatus",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "ACTIVE",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "1239f0a3-7417-47e8-be70-10d23b2d7773",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalForm/lei:EntityLegalFormCode",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "U82F",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "c6bffd0a-acda-4932-b20a-66a060f5acdc",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:EntityCategory",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "GENERAL",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "6aa0881f-b594-4654-836f-bdc33dbfa3d3",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalJurisdiction",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "AR",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "ed83422f-a9bc-41d3-a42c-84325d5e710e",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:RegistrationAuthority/lei:RegistrationAuthorityEntityID",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "30-53764771-6",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "4597a83e-deed-495a-85c8-7b4eb9a7312e",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:RegistrationAuthority/lei:RegistrationAuthorityID",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "RA000009",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "99be9172-34c0-4f04-a694-04a8e411c421",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:PostalCode",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "B1605EAB",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "35de204e-6d9a-4f50-b71f-97dcb100b29e",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:Country",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "AR",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "ff403c17-d209-42b9-bb83-6a8fdc217cb3",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:Region",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "AR-B",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "3c4cb19c-56c5-4d7e-afab-588aafd45bc0",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:City",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "MUNRO",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "294ba609-3ced-4de5-823b-0ade708188e7",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/lei:FirstAddressLine",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "CAZADORES DE COQUIMBO 2860 Piso:3",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "d6fe05a4-88bd-4f29-922f-1b80b8b435d7",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:HeadquartersAddress/@xml:lang",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "es",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "4769ab0a-e0ff-4b0b-9702-564c50f0410c",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:PostalCode",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "B1605EAB",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "8eaf7bfc-585c-4c72-bdf2-8b7ace98b81b",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:Country",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "AR",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "a82f9bc5-3378-4842-9f93-5cc295861b26",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:Region",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "AR-B",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "c93c18af-22ce-4e93-a5a7-f026e6a87bdc",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:City",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "MUNRO",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "a01ea89d-c7de-42ad-a007-799c2e78af8c",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/lei:FirstAddressLine",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "CAZADORES DE COQUIMBO 2860 Piso:3",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "aeb836c0-1dd7-477b-8e11-3be055c719a1",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalAddress/@xml:lang",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "es",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "86094961-8b78-499d-a688-d06324f8c305",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalName/@xml:lang",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "es",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "9b2235cb-285d-4738-9176-48db6218e8a5",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:Entity/lei:LegalName",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "PEPSICO DE ARGENTINA SOCIEDAD DE RESPONSABILIDAD LIMITADA",
+    "context": null
+   }
+  },
+  {
+   "type": "field-modifications",
+   "id": "e7386138-fe10-47e2-a073-56809d70c8bd",
+   "attributes": {
+    "lei": "984500D899C841ADC669",
+    "recordType": "LEI",
+    "modificationType": "INITIAL",
+    "field": "/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:LEI",
+    "date": "2026-07-30T16:00:00Z",
+    "valueOld": null,
+    "valueNew": "984500D899C841ADC669",
+    "context": null
+   }
+  }
+ ],
+ "meta": {
+  "goldenCopy": {
+   "publishDate": "2026-11-23T00:00:00Z"
+  },
+  "pagination": {
+   "currentPage": 1,
+   "perPage": 200,
+   "from": 1,
+   "to": 76,
+   "total": 76,
+   "lastPage": 1
+  }
+ }
+}

@@ -219,8 +219,20 @@ the GLEIF **`RelationshipPeriod`** (ACCOUNTING_PERIOD / RELATIONSHIP_PERIOD),
 first *published* the Market Bidco parent on **2023-11-25**, but the relationship
 period shows consolidation began **2021-11-01** — a ~2-year reporting lag. Put
 the economic date (2021-11-01) on the interest and keep the recording date
-(2023-11-25) as `event_date` / provenance. (Pin down RELATIONSHIP_PERIOD vs
-ACCOUNTING_PERIOD precedence — see open questions.)
+(2023-11-25) as `event_date` / provenance.
+
+**Only the RELATIONSHIP_PERIOD dates the interest** (settled 23 Nov 2026). GLEIF
+files an ACCOUNTING_PERIOD (and sometimes a DOCUMENT_FILING_PERIOD) beside it,
+and its end is the end of the accounts that evidence the link, not of the link.
+The log's paths carry no period index, so `relationship_periods` pairs each
+`StartDate` / `EndDate` with the `PeriodType` that follows it in document order
+(the log read oldest first), finds a later update by the value it replaces, and
+gives no dates when the log cannot be paired. Until then the History tab took
+the earliest start and the latest end across all periods, and EIDE SEAFOOD AS's
+current ultimate parent read "from 2022-12-30 to 2023-12-31". The rows say
+"Consolidating parent recorded / removed" and "Consolidated by its ultimate
+(direct) parent", name the parent from the Golden Copy mirror beside its LEI,
+and never show GLEIF's codelist value.
 
 **OpenCheck already has half the spine.** `_stable_id(source_id, local_id)` is
 deterministic, so the same entity already gets a **stable `recordId` across
