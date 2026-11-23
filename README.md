@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 600** — Two short given names one consonant apart (Glyn and Gwyn, Ivan and Ivar) no longer pass the related-party name gate, and low name-only debarment, export-control and counter-sanctions matches are leads in the verdict.
+**Latest: Phase 601** — The relationship tables in the PDF and Markdown reports now show dates as "29 Dec 2022" and interest types in words.
 
 → [Full development history](docs/status.md)
 
