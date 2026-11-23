@@ -588,3 +588,51 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=[interest],
             source_url=source_url,
         )
+
+
+# ---------------------------------------------------------------------------
+# Ukraine — Prozorro (public procurement contracts)
+# ---------------------------------------------------------------------------
+
+
+def _prozorro_uah(value: int) -> str:
+    """Contract values summed in full — ``UAH 1,249,028``, never rounded."""
+    return f"UAH {value:,}"
+
+
+@content_addressed
+def map_prozorro_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a Prozorro fetch bundle to one BODS entity statement: the
+    supplier, with what it signed in the entity's details. Contracts are
+    not ownership, so no relationship is drawn."""
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return
+    supplier = bundle.get("supplier") or {}
+    edrpou = str(bundle.get("edrpou") or "").strip()
+    if not supplier or not edrpou:
+        return
+    contracts = int(supplier.get("contracts") or 0)
+    parts = [
+        "Supplier on Ukrainian public contracts published on Prozorro",
+        f"{contracts:,} contract{'s' if contracts != 1 else ''} signed with values in UAH "
+        f"summing to {_prozorro_uah(int(supplier.get('value_uah') or 0))}",
+    ]
+    terminated = int(supplier.get("terminated") or 0)
+    if terminated:
+        parts.append(f"{terminated:,} of them terminated")
+    first, last = supplier.get("first_date"), supplier.get("last_date")
+    if first and last:
+        parts.append(f"signed {first} to {last}")
+    name = (supplier.get("name") or bundle.get("legal_name") or "").strip()
+    yield make_entity_statement(
+        source_id="prozorro_ukraine",
+        local_id=edrpou,
+        name=name or edrpou,
+        identifiers=[{"id": edrpou, "scheme": _UA_SCHEME, "schemeName": _UA_SCHEME_NAME}],
+        jurisdiction=_UA_JURISDICTION,
+        entity_details="; ".join(parts),
+        source_url=bundle.get("link") or None,
+        # The latest contract Prozorro published for this supplier — its own
+        # dated assertion about the record (the TED latest-notice precedent).
+        statement_date=last or None,
+    )

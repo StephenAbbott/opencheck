@@ -97,6 +97,7 @@ from .hit_builders import (  # noqa: F401
     _bh_austender,
     _bh_kimdis_greece,
     _bh_mtender_moldova,
+    _bh_prozorro_ukraine,
     _bh_chilecompra,
     _bh_compras_gov_br,
     _bh_find_tender_uk,
@@ -1443,6 +1444,27 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
                 legal_name=ctx.legal_name,
             ),
         ))
+    # Prozorro — Ukrainian public contracts, the MTender shape: gated on an
+    # eight-digit EDRPOU filed under a Ukrainian authority, and on the index
+    # being present.
+    ua_adapter = REGISTRY.get("prozorro_ukraine")
+    if (
+        ua_adapter is not None
+        and hasattr(ua_adapter, "fetch_by_identifiers")
+        and hasattr(ua_adapter, "applies_to")
+        and ua_adapter.applies_to(ctx.registered_at, ctx.registered_as)
+        and _want("prozorro_ukraine")
+        and _offline_index_covers(ua_adapter, ctx.lei)
+    ):
+        tasks.append((
+            "prozorro_ukraine",
+            ua_adapter.fetch_by_identifiers(
+                ctx.lei,
+                ctx.registered_as,
+                ctx.registered_at,
+                legal_name=ctx.legal_name,
+            ),
+        ))
     # ΚΗΜΔΗΣ — Greek public contracts, read live: gated on a ΓΕΜΗ number
     # under RA000685 / RA000376 and on live reads with a ΓΕΜΗ key (the ΑΦΜ
     # it searches by comes from ΓΕΜΗ).
@@ -1537,6 +1559,9 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     if source_id == "mtender_moldova":
         # No awards on MTender is an answer with no card, not a finding.
         return _bh_mtender_moldova(result, ctx) if result.get("supplier") else None
+    if source_id == "prozorro_ukraine":
+        # No contracts on Prozorro is an answer with no card, not a finding.
+        return _bh_prozorro_ukraine(result, ctx) if result.get("supplier") else None
     if source_id == "compras_gov_br":
         # No awards on Compras.gov.br is an answer with no card, not a finding.
         return _bh_compras_gov_br(result, ctx) if result.get("supplier") else None
@@ -2692,13 +2717,14 @@ def _split_subject_key(key: str) -> tuple[str, str, str]:
 def _register_procurement(scheme: str, local_id: str, legal_name: str) -> list[tuple[str, Any]]:
     """Procurement sources a register-anchored lookup can ask by the number.
 
-    Find a Tender for a Companies House number, MTender for a Moldovan IDNO
-    and Compras.gov.br for a CNPJ, each when its index is present (a source
-    that cannot answer is never announced).
+    Find a Tender for a Companies House number, MTender for a Moldovan IDNO,
+    Prozorro for a Ukrainian EDRPOU and Compras.gov.br for a CNPJ, each when
+    its index is present (a source that cannot answer is never announced).
     """
     from ..sources.compras_gov_br import ComprasGovBrAdapter
     from ..sources.find_tender_uk import FindTenderUkAdapter
     from ..sources.mtender_moldova import MTenderMoldovaAdapter
+    from ..sources.prozorro_ukraine import ProzorroUkraineAdapter
 
     if scheme == "MD-IDNO":
         md = REGISTRY.get("mtender_moldova")
@@ -2710,6 +2736,17 @@ def _register_procurement(scheme: str, local_id: str, legal_name: str) -> list[t
         return [(
             "mtender_moldova",
             md.fetch_by_identifiers("", local_id, "RA000451", legal_name=legal_name),
+        )]
+    if scheme == "UA-EDR":
+        ua = REGISTRY.get("prozorro_ukraine")
+        if not isinstance(ua, ProzorroUkraineAdapter) or not ua.covers_lei(""):
+            return []
+        # Any Ukrainian authority will do: the adapter reads the number.
+        if not ua.applies_to("RA000567", local_id):
+            return []
+        return [(
+            "prozorro_ukraine",
+            ua.fetch_by_identifiers("", local_id, "RA000567", legal_name=legal_name),
         )]
     if scheme == "BR-CNPJ":
         br = REGISTRY.get("compras_gov_br")

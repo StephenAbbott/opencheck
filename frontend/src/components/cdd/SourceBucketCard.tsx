@@ -209,6 +209,10 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
       const awards = raw.awards as { url?: string }[] | undefined;
       return awards?.[0]?.url || "https://mtender.gov.md/";
     }
+    case "prozorro_ukraine": {
+      const contracts = raw.contracts as { url?: string }[] | undefined;
+      return contracts?.[0]?.url || "https://prozorro.gov.ua/";
+    }
     case "kimdis_greece": {
       const contracts = raw.contracts as { url?: string }[] | undefined;
       return contracts?.[0]?.url || "https://cerpp.eprocurement.gov.gr/khmdhs-opendata/help";
@@ -1530,6 +1534,112 @@ export function MTenderAwardsList({ hit }: { hit: SourceHit }) {
 }
 
 /**
+ * ProzorroContractsList — Ukrainian public contracts (prozorro_ukraine
+ * source), the MTender card's counterpart.
+ *
+ * Lists the supplier's latest and largest contracts, newest first, each
+ * linked to its page on Prozorro, with buyer, value, signing day and
+ * procedure. A terminated contract says so. The footnote states the totals
+ * the list is drawn from and the period OpenCheck's harvest covers: contracts
+ * changed on Prozorro since the harvest began, not every contract ever.
+ */
+export function ProzorroContractsList({ hit }: { hit: SourceHit }) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+  if (hit.source_id !== "prozorro_ukraine") return null;
+  const raw = hit.raw as Record<string, unknown> | undefined;
+  const contracts = (raw?.contracts ?? []) as {
+    id: string;
+    ref?: string;
+    signed?: string | null;
+    buyer?: string;
+    title?: string;
+    value?: number | null;
+    currency?: string;
+    procedure?: string;
+    status?: string;
+    url?: string;
+  }[];
+  if (!contracts.length) return null;
+  const supplier = (raw?.supplier ?? {}) as {
+    contracts?: number;
+    terminated?: number;
+    value_uah?: number;
+    other_currency?: number;
+    first_date?: string | null;
+    last_date?: string | null;
+  };
+  const since = (raw?.harvest_started_from as string | null | undefined) || "";
+  const shown = expanded ? contracts : contracts.slice(0, 5);
+
+  return (
+    <RowList
+      controls={listId}
+      total={contracts.length}
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      moreLabel="contract"
+      items={shown.map((c) => ({
+        key: c.id,
+        title: (
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-oo-blue hover:underline underline-offset-2"
+          >
+            {c.title || `Contract ${c.ref || c.id}`}
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+        ),
+        meta: (
+          <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            {[
+              c.buyer,
+              c.value ? `${c.currency || "UAH"} ${Number(c.value).toLocaleString()}` : "",
+              c.signed ? `signed ${c.signed}` : "",
+              c.procedure,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            {c.status === "terminated" ? (
+              <Chip tone="neutral" size="sm">terminated</Chip>
+            ) : null}
+          </span>
+        ),
+      }))}
+      footnote={
+        <>
+          The latest and largest contracts on Prozorro
+          {supplier.contracts ? (
+            <>
+              {" "}— of {supplier.contracts.toLocaleString()} contracts signed
+              {supplier.first_date && supplier.last_date
+                ? ` from ${supplier.first_date} to ${supplier.last_date}`
+                : ""}
+              {supplier.terminated
+                ? ` (${supplier.terminated.toLocaleString()} since terminated)`
+                : ""}
+              , with UAH values totalling UAH{" "}
+              {(supplier.value_uah ?? 0).toLocaleString()} (OpenCheck&apos;s sum
+              {supplier.other_currency
+                ? `; ${supplier.other_currency} in another currency not added`
+                : ""}
+              )
+            </>
+          ) : null}
+          . Active and terminated contracts are counted; pending and cancelled
+          ones are not.
+          {since
+            ? ` OpenCheck reads the contracts changed on Prozorro since ${since}, so an older contract not amended since is not here.`
+            : ""}
+        </>
+      }
+    />
+  );
+}
+
+/**
  * ComprasGovBrAwardsList — Brazilian public procurement awards
  * (compras_gov_br source), the AusTender card's counterpart.
  *
@@ -1858,6 +1968,7 @@ function HitRow({
       <AusTenderContractsList hit={hit} />
       <KimdisContractsList hit={hit} />
       <MTenderAwardsList hit={hit} />
+      <ProzorroContractsList hit={hit} />
       <ComprasGovBrAwardsList hit={hit} />
       <FindTenderAwardsList hit={hit} />
       {/* Risk findings only (Phase 245). A structural observation — "No

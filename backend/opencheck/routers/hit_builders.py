@@ -2073,6 +2073,34 @@ def _bh_mtender_moldova(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_prozorro_ukraine(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Prozorro — the MTender shape.
+
+    Only reached for an EDRPOU with counted contracts. No identifier is
+    asserted on the hit: contracts are activity matched on an identifier,
+    not a register confirming one. The EDRPOU rides on the BODS entity
+    statement.
+    """
+    from ..findings import finding_prozorro_ukraine
+
+    supplier = r.get("supplier") or {}
+    edrpou = str(r.get("edrpou") or "")
+    n = int(supplier.get("contracts") or 0)
+    parts = [f"{n:,} Ukrainian public contract{'s' if n != 1 else ''}"]
+    if supplier.get("first_date") and supplier.get("last_date"):
+        first, last = str(supplier["first_date"])[:4], str(supplier["last_date"])[:4]
+        parts.append(first if first == last else f"{first}–{last}")
+    parts.append(f"UA-EDR {edrpou}")
+    return _hit(
+        "prozorro_ukraine", edrpou or ctx.lei,
+        name=str(supplier.get("name") or ctx.legal_name or ctx.lei),
+        summary=" · ".join(parts),
+        finding=finding_prozorro_ukraine(r),
+        identifiers={},
+        raw=r,
+    )
+
+
 def _bh_kimdis_greece(r: dict, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for ΚΗΜΔΗΣ — the AusTender shape.
 
