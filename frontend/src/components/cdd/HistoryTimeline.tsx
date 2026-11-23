@@ -16,7 +16,11 @@ import type { HistoryEntry, HistoryRawChange, HistoryResponse } from "../../lib/
 import {
   basisLabel,
   boardRowPersonHref,
+  counterpartyText,
   dateText,
+  dayText,
+  interestText,
+  transitionText,
   boardRowPersonId,
   historySourceLabel,
   recordUrl,
@@ -108,16 +112,11 @@ function NotableRow({
   registryNumbers: Record<string, string>;
 }) {
   const accent = tierAccent(entry.tier);
-  const transition =
-    entry.value_old || entry.value_new
-      ? `${entry.value_old ?? "—"} → ${entry.value_new ?? "—"}`
-      : null;
+  const transition = transitionText(entry);
+  const party = counterpartyText(entry);
   // For ownership changes the economic interest start matters more than the
   // (possibly lagged) recorded date.
-  const interest =
-    entry.interest_start_date && entry.tier === 1
-      ? `from ${entry.interest_start_date}${entry.interest_end_date ? ` to ${entry.interest_end_date}` : ""}`
-      : null;
+  const interest = interestText(entry);
 
   return (
     <li className="relative pl-8 pb-5 last:pb-0">
@@ -152,9 +151,9 @@ function NotableRow({
             {transition}
           </p>
         )}
-        {entry.counterparty && (
+        {party && (
           <p className="mt-0.5 font-mono text-oo-meta text-oo-muted break-words">
-            {entry.counterparty}
+            {party}
           </p>
         )}
         {interest && (
@@ -240,7 +239,7 @@ function BoardRow({
         aria-hidden
       />
       <div className="text-oo-meta">
-        <span className="font-mono text-oo-muted">{raw.event_date ?? "—"}</span>
+        <span className="font-mono text-oo-muted">{dayText(raw.event_date) ?? "—"}</span>
         <span className="mx-1.5 text-oo-muted">·</span>
         <span className="font-mono text-oo-muted">{historySourceLabel(raw.source_id)}</span>
         <span className="mx-1.5 text-oo-muted">·</span>

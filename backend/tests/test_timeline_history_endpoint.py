@@ -67,6 +67,15 @@ _GLEIF_MODS = {
         _mod({
             "lei": _LEI, "recordType": "RR", "modificationType": "INITIAL",
             "field": _RR_PREFIX
+            + "rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+            "date": "2023-11-25T00:00:00Z", "valueOld": None,
+            "valueNew": "RELATIONSHIP_PERIOD",
+            "context": {"relationshipType": "IS_DIRECTLY_CONSOLIDATED_BY",
+                        "endNode": "549300RKU7UEPSC42U63"},
+        }),
+        _mod({
+            "lei": _LEI, "recordType": "RR", "modificationType": "INITIAL",
+            "field": _RR_PREFIX
             + "rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
             "date": "2023-11-25T00:00:00Z", "valueOld": None,
             "valueNew": "2021-11-01T00:00:00Z",

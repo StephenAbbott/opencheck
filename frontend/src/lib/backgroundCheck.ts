@@ -169,17 +169,18 @@ export function describeRoleInterest(interest: Record<string, unknown>): string 
   if (details) return details;
   const type = str(interest.type);
   if (!type) return "Interest (unspecified)";
-  // camelCase → words, e.g. seniorManagingOfficial → "senior managing official"
-  const words = type.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  // camelCase → words, e.g. seniorManagingOfficial → "Senior managing official"
+  const lower = type.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  const words = lower.charAt(0).toUpperCase() + lower.slice(1);
   const share = rec(interest.share);
   const exact = share.exact;
   if (typeof exact === "number") return `${words} — ${exact}%`;
-  const min = share.minimum;
-  const max = share.maximum;
-  if (typeof min === "number" || typeof max === "number") {
-    return `${words} — ${min ?? "?"}–${max ?? "?"}%`;
-  }
-  return words.charAt(0).toUpperCase() + words.slice(1);
+  const min = typeof share.minimum === "number" ? share.minimum : share.exclusiveMinimum;
+  const max = typeof share.maximum === "number" ? share.maximum : share.exclusiveMaximum;
+  if (typeof min === "number" && typeof max === "number") return `${words} — ${min}–${max}%`;
+  if (typeof min === "number") return `${words} — over ${min}%`;
+  if (typeof max === "number") return `${words} — up to ${max}%`;
+  return words;
 }
 
 /**

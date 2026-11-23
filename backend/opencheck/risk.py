@@ -1872,13 +1872,23 @@ def _gleif_exception_signals(
                 f"{reason or 'unspecified'} for the {' and '.join(rels)}"
                 f" parent ({text})"
             )
+        # Say which level has no parent on file: an exception for one level
+        # leaves the other filed (EIDE SEAFOOD AS: no direct parent, an
+        # ultimate parent named — the production check of 23 Nov 2026).
+        levels = {e["relationship"] for e in exempt}
+        level = (
+            ""
+            if levels >= {"direct", "ultimate"}
+            else ("direct " if "direct" in levels else "ultimate ")
+        )
         signals.append(
             RiskSignal(
                 code=GLEIF_REPORTING_EXCEPTION,
                 confidence="high",
                 kind="context",
                 summary=(
-                    "No accounting-consolidation parent is reported to GLEIF: "
+                    f"No {level}accounting-consolidation parent is reported"
+                    " to GLEIF: "
                     + "; ".join(parts)
                     + ". Structural context, not a risk finding — these are"
                     " permitted exceptions under the LEI ROC policy, and"

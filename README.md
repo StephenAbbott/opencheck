@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 596** — The changelog page now lists the latest twenty phases under the total phase count and last-updated date, with a link to the full development history on GitHub.
+**Latest: Phase 599** — The History tab no longer shows a current GLEIF consolidation as ended, names the parent, and words GLEIF's changes and dates instead of showing its codes.
 
 → [Full development history](docs/status.md)
 

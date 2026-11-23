@@ -288,6 +288,11 @@ class ChangeEvent:
     # BODACC notice on bodacc.fr). None for every other source, whose rows
     # link back through the register's record instead.
     record_url: str | None = None
+    # The source's own wording for this change, where the codelist's label
+    # would say something untrue of it: GLEIF Level 2 is accounting
+    # consolidation, so a GLEIF relationship row reads "Consolidating parent
+    # recorded", never "Owner / parent added". None: the codelist label.
+    label: str | None = None
 
     @property
     def is_notable(self) -> bool:

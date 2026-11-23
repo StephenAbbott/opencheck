@@ -55,6 +55,8 @@ def _build():
     gleif_rr_mods = [
         _rr_mod("rr:Relationship/rr:RelationshipType", "INITIAL", None,
                 "IS_DIRECTLY_CONSOLIDATED_BY"),
+        _rr_mod("rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:PeriodType",
+                "INITIAL", None, "RELATIONSHIP_PERIOD"),
         _rr_mod("rr:Relationship/rr:RelationshipPeriods/rr:RelationshipPeriod/rr:StartDate",
                 "INITIAL", None, "2021-11-01T00:00:00Z"),
         _rr_mod("rr:Registration/rr:NextRenewalDate", "UPDATE",
@@ -78,8 +80,8 @@ def _entries_of(tl, change_type):
 
 def test_raw_events_include_noise():
     tl = _build()
-    # 4 LEI mods + 3 RR mods + 4 CH filings = 11 raw events, noise included.
-    assert len(tl.events) == 11
+    # 4 LEI mods + 4 RR mods + 4 CH filings = 12 raw events, noise included.
+    assert len(tl.events) == 12
     assert any(e.change_type is None for e in tl.events)  # noise present
 
 

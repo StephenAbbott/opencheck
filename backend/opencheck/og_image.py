@@ -28,6 +28,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from . import names as _names_mod
+from .ui_dates import ui_date
 
 _FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 
@@ -70,7 +71,7 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     "OFFSHORE_LEAKS": ("Offshore leaks", "#fffbeb", "#92400e"),
     "OPAQUE_OWNERSHIP": ("Opaque ownership", "#f1f5f9", "#334155"),
     # Context, not risk — a permitted GLEIF Level 2 reporting exception.
-    "GLEIF_REPORTING_EXCEPTION": ("No parent in GLEIF (exempt)", "#f8fafc", "#334155"),
+    "GLEIF_REPORTING_EXCEPTION": ("GLEIF parent exception", "#f8fafc", "#334155"),
     "TRUST_OR_ARRANGEMENT": ("Trust / arrangement", "#eef2ff", "#4338ca"),
     "NON_EU_JURISDICTION": ("Outside EU/EEA", "#fff7ed", "#c2410c"),
     # Context (Phase 273) — never counted on the card, labelled if shown.
@@ -245,20 +246,6 @@ def card_alt_text(
         f"{len(codes)} risk signal{plural} found: {named}{tail}. "
         f"Prompts the viewer to visit opencheck.world for details."
     )
-
-
-_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"]
-
-
-def ui_date(iso: str) -> str:
-    """"16 Sept 2026", in UTC — the saved-report page's own date format."""
-    from datetime import datetime, timezone
-
-    try:
-        d = datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone(timezone.utc)
-    except ValueError:
-        return str(iso)[:10]
-    return f"{d.day} {_MONTHS[d.month - 1]} {d.year}"
 
 
 def _saved_alt(subject: str, lei: str, signals: list[dict[str, Any]], saved_at: str) -> str:

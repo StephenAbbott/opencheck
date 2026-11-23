@@ -72,6 +72,7 @@ from ..config import get_settings
 from ..http import build_client
 from .ariregister import ariregister_change_events, card_entry_events, general_events
 from .assemble import Timeline, assemble_timeline
+from .model import RecordType
 from .bodacc import bodacc_change_events
 from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
@@ -712,7 +713,36 @@ async def fetch_timeline(lei: str) -> Timeline:
         not gleif_record_available and company_number_basis is None
     )
     timeline.company_number_basis = company_number_basis
+    await _name_gleif_parents(timeline)
     return timeline
+
+
+async def _name_gleif_parents(timeline: Timeline) -> None:
+    """Name each GLEIF parent the timeline shows by its LEI, from the Golden
+    Copy mirror — a local read, never a GLEIF call. Without the mirror, or
+    for a parent it does not hold, the row shows the LEI alone."""
+    leis = {
+        e.counterparty
+        for e in timeline.notable
+        if e.counterparty and "gleif" in e.sources
+        and e.record_type is RecordType.RELATIONSHIP
+    }
+    if not leis:
+        return
+    from ..entity_pages import get_store
+
+    store = get_store()
+    if store is None:
+        return
+    try:
+        rows = await asyncio.to_thread(store.get_many, sorted(leis))
+    except Exception:  # noqa: BLE001 — a name is a courtesy, never a failure
+        log.warning("GLEIF parent names not read from the mirror", exc_info=True)
+        return
+    for e in timeline.notable:
+        row = rows.get(e.counterparty or "")
+        if row is not None and row.name and "gleif" in e.sources:
+            e.counterparty_name = row.name
 
 
 __all__ = ["fetch_timeline"]

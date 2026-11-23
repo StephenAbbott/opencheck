@@ -16,6 +16,7 @@ import pytest
 
 from opencheck import sanctions_ownership as so
 from opencheck.risk import SANCTIONS_OWNERSHIP_TEST, SANCTIONS_OWNERSHIP_TEST_POSSIBLE
+from opencheck.ui_dates import ui_date
 
 _BACKEND = Path(__file__).resolve().parents[1]
 AS_OF = "2026-10-15"
@@ -337,7 +338,7 @@ def test_report_rows_list_each_regime_side_by_side():
     assert [r[0] for r in rows] == ["OFAC (US)", "EU", "UK", "Canada"]
     assert rows[1][2] == so.RESULT_WORDS[so.RESULT_NONE]
     footer = " ".join(so.report_footer(_report_signal()))
-    assert "not computed" in footer and AS_OF in footer and "T-Rank" in footer
+    assert "not computed" in footer and ui_date(AS_OF) in footer and "T-Rank" in footer
 
 
 def test_the_html_and_markdown_reports_print_the_table():

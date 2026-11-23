@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { readableDate } from "../../lib/readableDate";
 import { PERSON_VERB, sourceLabel } from "../../lib/vocab";
 import { Button } from "../ui";
 import { Explain } from "../ui/Explain";
@@ -413,7 +414,7 @@ function PersonCard({
             )}
             {person.birthYear && (
               <span className="ml-2 font-sans font-normal text-oo-meta text-oo-muted">
-                b. {person.birthDate}
+                b. {readableDate(person.birthDate)}
               </span>
             )}
           </p>
@@ -436,10 +437,10 @@ function PersonCard({
                   <span className="text-oo-muted"> — {role.subjectName}</span>
                 )}
                 {(role.startDate || role.endDate) && (
-                  <span className="text-oo-muted font-mono text-[11px]">
+                  <span className="text-oo-muted text-[11px]">
                     {" "}
-                    ({role.startDate ?? "…"}
-                    {role.endDate ? ` → ${role.endDate}` : ""})
+                    ({role.startDate ? readableDate(role.startDate) : "…"}
+                    {role.endDate ? ` → ${readableDate(role.endDate)}` : ""})
                   </span>
                 )}
               </li>
@@ -931,7 +932,7 @@ function AppointmentsList({ data }: { data: PersonAppointmentsResponse }) {
       <p className="text-[11px] text-oo-ink mb-1.5">
         <span className="font-medium">{data.name ?? "This officer"}</span>
         {data.birth_date && (
-          <span className="text-oo-muted"> (b. {data.birth_date})</span>
+          <span className="text-oo-muted"> (b. {readableDate(data.birth_date)})</span>
         )}{" "}
         — {data.total_results ?? data.appointments.length} appointment
         {(data.total_results ?? data.appointments.length) === 1 ? "" : "s"} under
@@ -948,10 +949,10 @@ function AppointmentsList({ data }: { data: PersonAppointmentsResponse }) {
             )}
             {a.role && <span> — {a.role}</span>}
             {a.appointed_on && (
-              <span className="text-oo-muted font-mono text-[10px]">
+              <span className="text-oo-muted text-[10px]">
                 {" "}
-                ({a.appointed_on}
-                {a.resigned_on ? ` → ${a.resigned_on}` : " → present"})
+                ({readableDate(a.appointed_on)}
+                {a.resigned_on ? ` → ${readableDate(a.resigned_on)}` : " → present"})
               </span>
             )}
             {a.resigned_on ? (

@@ -602,6 +602,7 @@ def report_table(payload: Mapping[str, Any] | None) -> list[tuple[str, str]]:
 def report_footer(payload: Mapping[str, Any] | None) -> list[str]:
     """The notes under the table: the not-covered line, then the rule."""
     from .bods.statements import SOURCE_NAMES
+    from .ui_dates import ui_date
 
     out = []
     names = [SOURCE_NAMES.get(sid, sid) for sid in (payload or {}).get("not_covered") or []]
@@ -612,7 +613,7 @@ def report_footer(payload: Mapping[str, Any] | None) -> list[str]:
         "from a source is not an exemption: \"None on record\" means the record "
         "carries no owner and no reason. These values describe; none feeds the "
         "risk signals or the verdict."
-        + (f" As of {payload['as_of']}." if payload and payload.get("as_of") else "")
+        + (f" As of {ui_date(payload['as_of'])}." if payload and payload.get("as_of") else "")
     )
     return out
 

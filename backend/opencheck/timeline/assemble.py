@@ -85,6 +85,9 @@ class TimelineEntry:
     interest_start_date: str | None = None
     interest_end_date: str | None = None
     counterparty: str | None = None
+    #: The counterparty's name, where OpenCheck can read it (a GLEIF parent's
+    #: legal name from the Golden Copy mirror). Set by the fetch service.
+    counterparty_name: str | None = None
     record_url: str | None = None
     boosted: bool = False
 
@@ -170,12 +173,15 @@ def _chrono_key(ev_date: str | None) -> tuple[bool, date]:
 # --------------------------------------------------------------------------- #
 
 def _classify_gleif_relationships(rr_mods: list[dict]) -> list[ChangeEvent]:
-    """Classify RR modifications grouped by parent (context.endNode), attaching
-    that relationship's economic period dates to its ownership events."""
-    by_parent: dict[str | None, list[dict]] = defaultdict(list)
+    """Classify RR modifications grouped by relationship (its type and parent,
+    from ``context``), attaching that relationship's period dates to its
+    ownership events. Keyed on the type too: a direct and an ultimate
+    consolidation by one parent (PepsiCo de Argentina) are two relationship
+    records with periods of their own."""
+    by_parent: dict[tuple[str | None, str | None], list[dict]] = defaultdict(list)
     for mod in rr_mods:
         context = mod.get("context") or {}
-        by_parent[context.get("endNode")].append(mod)
+        by_parent[(context.get("relationshipType"), context.get("endNode"))].append(mod)
 
     events: list[ChangeEvent] = []
     for mods in by_parent.values():
@@ -220,7 +226,7 @@ def _make_entry(cluster: list[ChangeEvent]) -> TimelineEntry:
         change_type=primary.change_type,
         tier=primary.tier,
         record_type=primary.record_type,
-        label=spec.label,
+        label=primary.label or spec.label,
         date=primary.event_date,
         date_basis=primary.date_basis,
         date_confidence=primary.date_confidence,

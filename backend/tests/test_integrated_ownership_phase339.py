@@ -274,7 +274,7 @@ def test_the_html_report_prints_the_frozen_table():
         "<td>State</td><td>34%*</td><td>OpenSanctions</td>"
         "<td>directly and through Holding A</td>"
     ) in html
-    assert "2026-01-02" in html and "T-Rank" in html
+    assert "2 Jan 2026" in html and "T-Rank" in html
 
 
 def test_the_markdown_report_prints_the_frozen_table():

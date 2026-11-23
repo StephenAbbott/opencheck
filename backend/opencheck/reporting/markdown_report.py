@@ -20,18 +20,19 @@ from __future__ import annotations
 from typing import Any
 
 from ..bods.refs import statement_index
+from ..identifier_labels import identifier_label
 from ..knowability import report_statements
 from ..coverage import coverage_sentence, report_coverage
 from ..lei_registration import report_value as lei_registration_value
 from ..lei_successor import report_value as lei_successor_value
 from ..listing import describe as listing_line
+from ..ui_dates import ui_date
 from .diagram import source_diagram
 from .html_report import (
     _signal_source_name,
     _CHECKS_CLEAR,
     _CONTEXT_NOTE,
     _DISPOSITION_LABELS,
-    _ID_LABELS,
     LIVE_BASE,
     _cite_labels,
     _assessment,
@@ -97,7 +98,7 @@ def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> list
         # The derived set carries the LEI too; it is already the first row.
         if not v or v == report.get("lei"):
             continue
-        rows.append([_ID_LABELS.get(k, k.replace("_", " ").capitalize()), f"`{v}`"])
+        rows.append([identifier_label(k), f"`{v}`"])
     seen = {r[1] for r in rows}
     for i in ((subject or {}).get("recordDetails") or {}).get("identifiers") or []:
         val = i.get("id")
@@ -406,11 +407,11 @@ def _knowability(report: dict[str, Any]) -> list[str]:
     lines = ["## What can be known", ""]
     for st in ([subject] if subject else []) + chain:
         badge = (
-            f"checked {st['last_verified']}" if st.get("last_verified")
+            f"checked {ui_date(st['last_verified'])}" if st.get("last_verified")
             else ("no register notes held" if st.get("stated_absence") else "unverified draft")
         )
         lines += [f"**{st.get('name') or st.get('code') or ''}** ({badge}) — {st.get('sentence') or ''}", ""]
-    as_of = f" as of {ks['as_of']}" if ks.get("as_of") else ""
+    as_of = f" as of {ui_date(ks['as_of'])}" if ks.get("as_of") else ""
     lines += [
         "_These sentences describe each register, not this company, and are dated: they are the "
         f"facts OpenCheck held{as_of}. An owner absent from this report is read against them._",

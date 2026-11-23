@@ -306,6 +306,7 @@ The Time Machine: how the company's records changed, merged across every registe
 | `sources` | `list[str]` | `required` | — |
 | `corroborating_sources` | `list[str]` | `[]` | — |
 | `counterparty` | `str \| None` | `None` | — |
+| `counterparty_name` | `str \| None` | `None` | The counterparty's name where OpenCheck holds it — a GLEIF parent's legal name, read from the Golden Copy mirror. Null otherwise; the row then shows the identifier alone. |
 | `interest_start_date` | `str \| None` | `None` | — |
 | `interest_end_date` | `str \| None` | `None` | — |
 | `boosted` | `bool` | `False` | — |

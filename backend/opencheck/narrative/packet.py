@@ -233,7 +233,7 @@ _RISK_LABELS = {
     "TRUST_OR_ARRANGEMENT": "Trust / arrangement",
     "NOMINEE": "Nominee arrangement",
     "OPAQUE_OWNERSHIP": "Opaque ownership (party withheld or unidentified)",
-    "GLEIF_REPORTING_EXCEPTION": "No parent in GLEIF (permitted reporting exception)",
+    "GLEIF_REPORTING_EXCEPTION": "GLEIF parent exception (permitted; for the direct parent, the ultimate or both)",
     "POSSIBLE_OBFUSCATION": "Opacity with layering (advisory)",
     "SANCTIONED_SECURITY": "Sanctioned securities",
     "COMPLEX_OWNERSHIP_LAYERS": "Layered ownership (intermediate corporate layers)",

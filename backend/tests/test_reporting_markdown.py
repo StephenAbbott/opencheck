@@ -157,7 +157,7 @@ def test_context_signals_render_under_structural_context_not_risk():
     # A context-only report still reads as no risk signals raised.
     assert "**No risk signals were raised**" in md
     # The context bullet must come after the Structural context heading.
-    assert md.index("### Structural context") < md.index("No parent in GLEIF (exempt)")
+    assert md.index("### Structural context") < md.index("GLEIF parent exception")
 
 
 def test_checks_clear_sentence_matches_current_checks():

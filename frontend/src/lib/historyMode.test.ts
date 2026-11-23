@@ -20,7 +20,11 @@ import {
   boardUncheckedNotice,
   buildTimelineRows,
   corroboratedCount,
+  counterpartyText,
   dateText,
+  dayText,
+  interestText,
+  transitionText,
   datedSpan,
   HISTORY_SOURCES,
   historyDegradedNotice,
@@ -652,7 +656,7 @@ describe("Sirene history (the Sirene history ticket)", () => {
     expect(sireneYearOnly("recorded", ["gleif", "sirene"])).toBe(false);
     expect(sireneYearOnly("effective", ["sirene"])).toBe(false);
     expect(dateText("2003-01-01", "recorded", ["sirene"])).toBe("recorded by INSEE in 2003");
-    expect(dateText("2021-05-28", "effective", ["sirene"])).toBe("2021-05-28");
+    expect(dateText("2021-05-28", "effective", ["sirene"])).toBe("28 May 2021");
     expect(dateText(null, "recorded", ["sirene"])).toBeNull();
     expect(basisLabel("recorded", ["sirene"])).toBe("");
     expect(basisLabel("recorded", ["gleif", "sirene"])).toBe("as recorded by GLEIF");
@@ -741,5 +745,62 @@ describe("JOAFE on the History tab", () => {
       "Journal officiel (JOAFE) returned an error, so its notices were not read. An empty timeline from it is unchecked, not a quiet company — try again later.",
     ]);
     expect(historyDegradedNotice(data)).toBeNull();
+  });
+});
+
+
+// The History-tab GLEIF ticket (23 Nov 2026): EIDE SEAFOOD AS showed
+// "— → IS_ULTIMATELY_CONSOLIDATED_BY", a bare parent LEI, "from 2022-12-30
+// to 2023-12-31" for a consolidation GLEIF still files as current, and ISO days.
+describe("GLEIF consolidation rows", () => {
+  const consolidation = {
+    change_type: "OWNER_ADDED",
+    label: "Consolidating parent recorded",
+    tier: 1,
+    record_type: "relationship",
+    date: "2025-08-13",
+    date_basis: "recorded",
+    date_confidence: "medium",
+    value_old: null,
+    value_new: "Consolidated by its ultimate parent",
+    sources: ["gleif"],
+    corroborating_sources: [],
+    counterparty: "636700DMOPCUTPDHD616",
+    counterparty_name: "A PARENT AS",
+    interest_start_date: "2022-12-30",
+    interest_end_date: null,
+    boosted: false,
+  };
+
+  it("dates a row in words", () => {
+    expect(dateText("2025-08-13", "recorded", ["gleif"])).toBe("13 Aug 2025");
+    expect(dayText("2016-09-16")).toBe("16 Sept 2016");
+    // never completes a partial date
+    expect(dayText("2016")).toBe("2016");
+  });
+
+  it("shows the relationship's words, not GLEIF's code or an arrow from nothing", () => {
+    expect(transitionText(consolidation)).toBe("Consolidated by its ultimate parent");
+    expect(transitionText({ ...consolidation, record_type: "entity" })).toBe(
+      "— → Consolidated by its ultimate parent",
+    );
+  });
+
+  it("names the parent beside its LEI, or says the identifier is an LEI", () => {
+    expect(counterpartyText(consolidation)).toBe("A PARENT AS · LEI 636700DMOPCUTPDHD616");
+    expect(counterpartyText({ ...consolidation, counterparty_name: null })).toBe(
+      "LEI 636700DMOPCUTPDHD616",
+    );
+    expect(counterpartyText({ ...consolidation, counterparty: "BENNETT, Kelly Brian" })).toBe(
+      "A PARENT AS",
+    );
+  });
+
+  it("gives a current consolidation no end", () => {
+    expect(interestText(consolidation)).toBe("from 30 Dec 2022");
+    expect(interestText({ ...consolidation, interest_end_date: "2024-06-30" })).toBe(
+      "from 30 Dec 2022 to 30 June 2024",
+    );
+    expect(interestText({ ...consolidation, tier: 2 })).toBeNull();
   });
 });
