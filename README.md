@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 597** — The verdict and the GLEIF exception chip say which parent level GLEIF has no record of, instead of claiming no parent is filed.
+**Latest: Phase 598** — The exported report and the BackgroundCheck tab now show dates as "23 Nov 2026" and give identifiers, signals and interests readable names instead of codes.
 
 → [Full development history](docs/status.md)
 
