@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 611** — The jurisdictions table now links the 6AMLD transposition measures Austria, Greece, Italy and Spain notified to the European Commission.
+**Latest: Phase 612** — OpenCheck's own pages now reach search engines with their own titles and descriptions, a site sitemap and an llms.txt, and shared checks get link previews on LinkedIn and X.
 
 → [Full development history](docs/status.md)
 
