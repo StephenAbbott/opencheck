@@ -28,6 +28,8 @@ from pathlib import Path
 
 #: The share of the time budget the tenders feed may use on one run.
 METHODS_SHARE = 0.3
+#: The share kept at the end for the procedures the forward read missed.
+FILL_SHARE = 0.2
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -37,8 +39,10 @@ from opencheck.prozorro_harvest import (  # noqa: E402
     HarvestError,
     Store,
     client,
+    fill_missing_methods,
     harvest,
     harvest_methods,
+    harvest_methods_back,
 )
 
 
@@ -72,7 +76,16 @@ def main() -> int:
             started = time.monotonic()
             methods_deadline = min(deadline, started + (deadline - started) * METHODS_SHARE)
             result.update(harvest_methods(http, store, deadline=methods_deadline))
-            result.update(harvest(http, store, deadline=deadline, workers=args.workers))
+            result.update(harvest(http, store, deadline=deadline - (deadline - started) * FILL_SHARE,
+                                  workers=args.workers))
+            # Then the procedures the forward read cannot give: the tenders
+            # feed backwards from the harvest's start, then any tender still
+            # missing one at a time. After the contracts, which leave them
+            # the last FILL_SHARE of the budget (more once caught up).
+            now = time.monotonic()
+            result.update(harvest_methods_back(http, store, deadline=now + (deadline - now) / 2))
+            result.update(fill_missing_methods(http, store, deadline=deadline,
+                                               workers=args.workers))
     except HarvestError as exc:
         print(f"Harvest failed: {exc}", file=sys.stderr)
         status = 1

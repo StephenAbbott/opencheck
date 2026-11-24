@@ -1539,7 +1539,9 @@ export function MTenderAwardsList({ hit }: { hit: SourceHit }) {
  *
  * Lists the supplier's latest and largest contracts, newest first, each
  * linked to its page on Prozorro, with buyer, value, signing day and
- * procedure. A terminated contract says so. The footnote states the totals
+ * procedure. A contract Prozorro marks terminated is labelled "ended": the
+ * status is given when a contract ends, carried out or broken off. The
+ * footnote states the totals
  * the list is drawn from and the period OpenCheck's harvest covers: contracts
  * changed on Prozorro since the harvest began, not every contract ever.
  */
@@ -1603,7 +1605,7 @@ export function ProzorroContractsList({ hit }: { hit: SourceHit }) {
               .filter(Boolean)
               .join(" · ")}
             {c.status === "terminated" ? (
-              <Chip tone="neutral" size="sm">terminated</Chip>
+              <Chip tone="neutral" size="sm">ended</Chip>
             ) : null}
           </span>
         ),
@@ -1618,7 +1620,7 @@ export function ProzorroContractsList({ hit }: { hit: SourceHit }) {
                 ? ` from ${supplier.first_date} to ${supplier.last_date}`
                 : ""}
               {supplier.terminated
-                ? ` (${supplier.terminated.toLocaleString()} since terminated)`
+                ? ` (${supplier.terminated.toLocaleString()} since ended)`
                 : ""}
               , with UAH values totalling UAH{" "}
               {(supplier.value_uah ?? 0).toLocaleString()} (OpenCheck&apos;s sum
@@ -1628,8 +1630,10 @@ export function ProzorroContractsList({ hit }: { hit: SourceHit }) {
               )
             </>
           ) : null}
-          . Active and terminated contracts are counted; pending and cancelled
-          ones are not.
+          . Live and ended contracts are counted; pending and cancelled ones
+          are not. Prozorro marks a contract ended (&ldquo;terminated&rdquo;)
+          when it is carried out or broken off; OpenCheck does not tell the two
+          apart.
           {since
             ? ` OpenCheck reads the contracts changed on Prozorro since ${since}, so an older contract not amended since is not here.`
             : ""}

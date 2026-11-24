@@ -619,7 +619,7 @@ def map_prozorro_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     ]
     terminated = int(supplier.get("terminated") or 0)
     if terminated:
-        parts.append(f"{terminated:,} of them terminated")
+        parts.append(f"{terminated:,} of them since ended")
     first, last = supplier.get("first_date"), supplier.get("last_date")
     if first and last:
         parts.append(f"signed {first} to {last}")

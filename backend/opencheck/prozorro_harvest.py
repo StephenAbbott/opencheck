@@ -26,6 +26,18 @@ The API (measured 23 Nov 2026)
   ``opt_fields=procurementMethodType,contracts`` on the feed itself, so the
   procedure of every tender that has contracts is read a page at a time, with
   no per-tender request, and kept by tender id.
+* A contract can change long after its tender last did — most often when it
+  ends — so reading the tenders feed forward from the harvest's start missed
+  the tender of 43% of the contracts after two runs (24 Nov 2026; the tenders
+  had last changed a few days after signing, before the start).
+  ``harvest_methods_back`` therefore also reads the feed backwards
+  (``descending=1``) from the start to ``BACK_DAYS`` before it, and
+  ``fill_missing_methods`` reads any tender still missing one at a time
+  (``GET /tenders/{id}``, a whole tender: ~37 a second with sixteen workers
+  on 24 Nov 2026; at most ``FILL_PER_RUN`` a run). The backward read keeps
+  the procedures of tenders the backfill has yet to reach; the fill closes
+  what is left now. A tender Prozorro no longer has is kept with an empty
+  procedure, so it is not asked for again.
 
 What is kept (Stephen's decisions A–D, 23 Nov 2026)
 ---------------------------------------------------
@@ -81,6 +93,10 @@ ATTEMPTS = len(BACKOFF_S) + 1
 TIMEOUT_S = 60.0
 TITLE_CHARS = 120
 STORE_SCHEMA_VERSION = "1"
+#: How far before the harvest's start the tenders feed is read backwards.
+BACK_DAYS = 730
+#: Tenders read one at a time on one run, once the backward read is done.
+FILL_PER_RUN = 60000
 _USER_AGENT = "OpenCheck (+https://github.com/StephenAbbott/opencheck)"
 _KYIV = ZoneInfo("Europe/Kyiv")
 
@@ -343,10 +359,21 @@ class Store:
             ),
         )
 
-    def put_method(self, tender_id: str, method: str) -> None:
-        self.conn.execute(
-            "INSERT OR REPLACE INTO tender_method VALUES (?, ?)", (_key(tender_id), method)
+    def put_method(self, tender_id: str, method: str, *, replace: bool = True) -> None:
+        verb = "INSERT OR REPLACE" if replace else "INSERT OR IGNORE"
+        self.conn.execute(f"{verb} INTO tender_method VALUES (?, ?)", (_key(tender_id), method))
+
+    def missing_methods(self, limit: int) -> list[str]:
+        """Tender ids of stored contracts whose procedure is not kept, the
+        contracts signed most recently first."""
+        rows = self.conn.execute(
+            "SELECT c.tender_id, MAX(c.signed) AS day FROM contract c "
+            "LEFT JOIN tender_method t ON t.id = c.tender_id "
+            "WHERE c.tender_id IS NOT NULL AND t.id IS NULL "
+            "GROUP BY c.tender_id ORDER BY day DESC LIMIT ?",
+            (limit,),
         )
+        return [hex_id(r[0]) for r in rows]
 
     def count(self) -> int:
         return int(self.conn.execute("SELECT COUNT(*) FROM contract").fetchone()[0])
@@ -454,6 +481,107 @@ def harvest_methods(
     store.set("tenders_cursor", cursor)
     store.commit()
     return {"tenders_outcome": outcome, **counts}
+
+
+def harvest_methods_back(
+    http: httpx.Client, store: Store, *, deadline: float | None = None
+) -> dict[str, Any]:
+    """Read the tenders feed backwards from the harvest's start to
+    ``BACK_DAYS`` before it, keeping each procedure a forward read has not
+    already kept. Its cursor is ``tenders_back_cursor``; ``tenders_back_done``
+    is set when it reaches the floor or the feed's beginning."""
+    if store.get("tenders_back_done"):
+        return {"tenders_back_outcome": "done", "tender_back_pages": 0}
+    started = store.get("started_from")
+    start_at = offset_moment(started)
+    if start_at is None:
+        return {"tenders_back_outcome": "not_started", "tender_back_pages": 0}
+    floor = start_at - timedelta(days=BACK_DAYS)
+    cursor = store.get("tenders_back_cursor") or str(started)
+    pages = 0
+    outcome = "deadline"
+    while deadline is None or time.monotonic() < deadline:
+        params: dict[str, Any] = {
+            "limit": PAGE_LIMIT, "offset": cursor, "descending": 1,
+            "opt_fields": "procurementMethodType,contracts",
+        }
+        try:
+            page = _get(http, API_BASE + "tenders", params)
+            if not isinstance(page, dict) or not isinstance(page.get("data"), list):
+                raise HarvestError("tenders listing is not the feed's shape")
+        except HarvestError as exc:
+            logger.warning("prozorro harvest: backward tenders read stopped at %s: %s", cursor, exc)
+            outcome = "listing_failed"
+            break
+        rows = page["data"]
+        for row in rows:
+            if row.get("contracts") and row.get("id"):
+                store.put_method(
+                    str(row["id"]), str(row.get("procurementMethodType") or ""), replace=False
+                )
+        pages += 1
+        nxt = _next(page)
+        moment = offset_moment(nxt)
+        if not rows or not nxt or nxt == cursor or moment is None or moment < floor:
+            outcome = "done"
+            store.set("tenders_back_done", datetime.now(UTC).isoformat(timespec="seconds"))
+            store.set("tenders_back_cursor", nxt or cursor)
+            store.commit()
+            break
+        cursor = nxt
+        store.set("tenders_back_cursor", cursor)
+        store.commit()
+    back_at = offset_moment(store.get("tenders_back_cursor"))
+    return {
+        "tenders_back_outcome": outcome,
+        "tender_back_pages": pages,
+        "tenders_back_at": back_at.isoformat(timespec="seconds") if back_at else None,
+    }
+
+
+def fill_missing_methods(
+    http: httpx.Client,
+    store: Store,
+    *,
+    deadline: float | None = None,
+    limit: int = FILL_PER_RUN,
+    workers: int = WORKERS,
+) -> dict[str, Any]:
+    """Read, one at a time, the tenders of stored contracts whose procedure
+    the feeds did not give, the most recently signed first. A tender that
+    answers 404 is kept with an empty procedure (never asked again); one
+    that fails is left for the next run."""
+    counts = {"tenders_filled": 0, "tenders_gone": 0, "tenders_fill_failed": 0}
+    ids = store.missing_methods(limit)
+    if not ids:
+        return {"fill_outcome": "none_missing", **counts}
+
+    def one(tender_id: str) -> tuple[str, Any]:
+        if deadline is not None and time.monotonic() >= deadline:
+            return tender_id, "skipped"
+        try:
+            return tender_id, _get(http, f"{API_BASE}tenders/{tender_id}")
+        except HarvestError:
+            return tender_id, "failed"
+
+    outcome = "done"
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+        for tender_id, doc in pool.map(one, ids):
+            if doc == "skipped":
+                outcome = "deadline"
+                continue
+            if doc == "failed":
+                counts["tenders_fill_failed"] += 1
+                continue
+            data = doc.get("data") if isinstance(doc, dict) else None
+            if isinstance(data, dict):
+                store.put_method(tender_id, str(data.get("procurementMethodType") or ""))
+                counts["tenders_filled"] += 1
+            else:
+                store.put_method(tender_id, "")
+                counts["tenders_gone"] += 1
+    store.commit()
+    return {"fill_outcome": outcome, **counts}
 
 
 def harvest(

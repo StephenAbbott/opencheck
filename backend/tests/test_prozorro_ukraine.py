@@ -203,9 +203,20 @@ class FakeProzorro:
     def __init__(self, contract_pages: list[list[dict]], tender_pages: list[list[dict]]):
         self.contract_pages = contract_pages
         self.tender_pages = tender_pages
+        #: The tenders feed read backwards (``descending=1``): page i, with
+        #: the timestamp its next offset stands at.
+        self.back_pages: list[tuple[list[dict], int]] = []
         self.docs: dict[str, dict] = {}
+        self.tender_docs: dict[str, dict] = {}
         self.fail_contract: set[str] = set()
         self.calls: list[str] = []
+
+    def _back(self, offset: str) -> httpx.Response:
+        index = int(offset.split(".")[1]) if offset.count(".") >= 2 else 0
+        if index >= len(self.back_pages):
+            return httpx.Response(200, json={"data": [], "next_page": {"offset": offset}})
+        rows, moment = self.back_pages[index]
+        return httpx.Response(200, json={"data": rows, "next_page": {"offset": f"{moment}.{index + 1}.1.y"}})
 
     def _feed(self, pages: list[list[dict]], offset: str) -> httpx.Response:
         index = int(offset.split(".")[1]) if offset.count(".") else 0
@@ -218,7 +229,15 @@ class FakeProzorro:
         self.calls.append(path)
         offset = request.url.params.get("offset", "")
         if path.endswith("/tenders"):
+            if request.url.params.get("descending") == "1":
+                return self._back(offset)
             return self._feed(self.tender_pages, offset)
+        if "/tenders/" in path:
+            tid = path.rsplit("/", 1)[-1]
+            if tid in self.fail_contract:
+                return httpx.Response(503)
+            tdoc = self.tender_docs.get(tid)
+            return httpx.Response(404) if tdoc is None else httpx.Response(200, json={"data": tdoc})
         if path.endswith("/contracts"):
             assert "opt_fields" not in request.url.params
             return self._feed(self.contract_pages, offset)
@@ -331,6 +350,88 @@ def test_the_store_refuses_another_schema(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Procedures the forward read misses (24 Nov 2026)
+# ---------------------------------------------------------------------------
+
+T9 = "9" * 32  # the terminated contract's tender, last changed before the start
+TA = "a" * 32  # ОРАНТА's tender
+
+
+def _start_moment(store: ph.Store) -> int:
+    return int(float(str(store.get("started_from")).split(".")[0]))
+
+
+def test_the_tenders_feed_is_read_backwards_to_the_floor(tmp_path: Path) -> None:
+    fake = _fake()
+    store, _ = _harvest(tmp_path, fake)
+    start = _start_moment(store)
+    day = 86400
+    fake.back_pages = [
+        # T1 again with another procedure: the forward read's value stands.
+        ([{"id": T9, "procurementMethodType": "reporting", "contracts": [{}]},
+          {"id": T1, "procurementMethodType": "belowThreshold", "contracts": [{}]},
+          {"id": "4" * 32, "procurementMethodType": "reporting"}], start - 30 * day),
+        ([{"id": TA, "procurementMethodType": "priceQuotation", "contracts": [{}]}],
+         start - (ph.BACK_DAYS + 1) * day),
+        ([{"id": "5" * 32, "procurementMethodType": "reporting", "contracts": [{}]}], start - 800 * day),
+    ]
+    with httpx.Client(transport=httpx.MockTransport(fake)) as http:
+        result = ph.harvest_methods_back(http, store)
+    assert result["tenders_back_outcome"] == "done"
+    assert result["tender_back_pages"] == 2  # stopped once past the floor
+    assert store.get("tenders_back_done")
+    methods = {ph.hex_id(k): m for k, m in store.conn.execute("SELECT id, method FROM tender_method")}
+    assert methods[T9] == "reporting" and methods[TA] == "priceQuotation"
+    assert methods[T1] == "reporting"  # not overwritten
+    assert "4" * 32 not in methods and "5" * 32 not in methods
+    assert store.missing_methods(10) == []
+    with httpx.Client(transport=httpx.MockTransport(fake)) as http:
+        assert ph.harvest_methods_back(http, store)["tenders_back_outcome"] == "done"
+    store.close()
+
+
+def test_the_backward_read_resumes_from_its_cursor(tmp_path: Path) -> None:
+    fake = _fake()
+    store, _ = _harvest(tmp_path, fake)
+    start = _start_moment(store)
+    fake.back_pages = [([{"id": T9, "procurementMethodType": "reporting", "contracts": [{}]}], start - 86400)]
+    with httpx.Client(transport=httpx.MockTransport(fake)) as http:
+        first = ph.harvest_methods_back(http, store, deadline=0.0)
+    assert first["tenders_back_outcome"] == "deadline" and first["tender_back_pages"] == 0
+    assert not store.get("tenders_back_done")
+    store.close()
+
+
+def test_missing_tenders_are_read_one_at_a_time(tmp_path: Path) -> None:
+    fake = _fake()
+    store, _ = _harvest(tmp_path, fake)
+    assert set(store.missing_methods(10)) == {T9, TA}
+    fake.tender_docs = {T9: {"id": T9, "procurementMethodType": "reporting"}}  # TA: 404
+    with httpx.Client(transport=httpx.MockTransport(fake)) as http:
+        result = ph.fill_missing_methods(http, store, workers=2)
+    assert result == {"fill_outcome": "done", "tenders_filled": 1, "tenders_gone": 1,
+                      "tenders_fill_failed": 0}
+    methods = {ph.hex_id(k): m for k, m in store.conn.execute("SELECT id, method FROM tender_method")}
+    assert methods[T9] == "reporting" and methods[TA] == ""  # gone: never asked again
+    assert store.missing_methods(10) == []
+    with httpx.Client(transport=httpx.MockTransport(fake)) as http:
+        assert ph.fill_missing_methods(http, store)["fill_outcome"] == "none_missing"
+    store.close()
+
+
+def test_a_tender_that_fails_is_left_for_the_next_run(tmp_path: Path) -> None:
+    fake = _fake()
+    store, _ = _harvest(tmp_path, fake)
+    fake.tender_docs = {T9: {"id": T9, "procurementMethodType": "reporting"}}
+    fake.fail_contract.add(TA)
+    with httpx.Client(transport=httpx.MockTransport(fake)) as http:
+        result = ph.fill_missing_methods(http, store, workers=2)
+    assert result["tenders_filled"] == 1 and result["tenders_fill_failed"] == 1
+    assert store.missing_methods(10) == [TA]
+    store.close()
+
+
+# ---------------------------------------------------------------------------
 # The index
 # ---------------------------------------------------------------------------
 
@@ -386,6 +487,33 @@ def test_cancelled_contracts_are_not_counted_and_terminated_are(built) -> None:
     ).fetchone()
     assert row[:4] == (3, 1, 10559 + 3656 + 700, 2)
     assert json.loads(row[4]) == {"O": 1, "R": 1, "U": 1}
+
+
+@pytest.mark.parametrize(
+    ("day", "expected"),
+    [("2026-01-13", "2026-01-13"), ("2015-01-01", "2015-01-01"), ("2004-03-16", None),
+     ("2014-12-31", None), ("2027-01-01", None), ("", None), (None, None), ("2026-1-3", None)],
+)
+def test_plausible_signing_days(day, expected) -> None:
+    assert prozorro_ukraine.plausible_day(day, "2026-11-25") == expected
+
+
+def test_an_impossible_signing_day_is_counted_without_its_date(tmp_path: Path) -> None:
+    fake = _fake()
+    old = _ids(1, 40)[0]
+    fake.contract_pages.append([{"id": old}])
+    fake.docs[old] = _contract(old, EPICENTR, amount="100", signed="2004-03-16T10:00:00+02:00")
+    store, _ = _harvest(tmp_path / "harvest", fake)
+    store.close()
+    out = tmp_path / "prozorro_ukraine.sqlite"
+    meta = build_index(tmp_path / "harvest" / ph.STORE_NAME, out)
+    assert meta["signed_date_implausible"] == "1"
+    assert meta["data_from"] == "2026-01-13"
+    conn = sqlite3.connect(out)
+    assert conn.execute(
+        "SELECT contracts, first_date FROM supplier WHERE edrpou = ?", (int(EPICENTR),)
+    ).fetchone() == (4, "2026-01-13")
+    assert conn.execute("SELECT signed FROM contract WHERE id = ?", (old,)).fetchone() == (None,)
 
 
 def test_another_currency_is_counted_not_converted(built) -> None:
@@ -463,9 +591,22 @@ def test_not_a_register_adapter() -> None:
 async def test_finding(built) -> None:
     bundle = await REGISTRY["prozorro_ukraine"].fetch(EPICENTR)
     assert finding_prozorro_ukraine(bundle) == (
-        "Signed 3 Ukrainian public contracts January 2026 to March 2026, "
-        "UAH values totalling 14,915, with 2 buyers, 1 terminated."
+        "Signed 3 Ukrainian public contracts January 2026 to March 2026, 1 since ended, "
+        "UAH values totalling 14,915, with 2 buyers."
     )
+
+
+def test_finding_keeps_the_ended_count_on_a_large_supplier() -> None:
+    # Epicentr K on production, 24 Nov 2026: the ended count fell off the
+    # 140-character cap when it came last. Now the buyers go first.
+    bundle = {"supplier": {"contracts": 10055, "terminated": 3311, "value_uah": 187844514,
+                           "buyers": 2187, "first_date": "2020-10-09", "last_date": "2026-01-02"}}
+    sentence = finding_prozorro_ukraine(bundle)
+    assert sentence == (
+        "Signed 10,055 Ukrainian public contracts October 2020 to January 2026, "
+        "3,311 since ended, UAH values totalling 187,844,514."
+    )
+    assert "terminated" not in sentence
 
 
 async def test_result_hit_asserts_no_identifier(built) -> None:
@@ -490,7 +631,7 @@ async def test_mapper_emits_one_entity_with_the_edrpou(built) -> None:
     assert rd["identifiers"][0]["scheme"] == "UA-EDR"
     assert rd["jurisdiction"]["code"] == "UA"
     assert "UAH 14,915" in rd["entityType"]["details"]
-    assert "1 of them terminated" in rd["entityType"]["details"]
+    assert "1 of them since ended" in rd["entityType"]["details"]
     assert statements[0]["statementDate"] == "2026-03-03"
 
 

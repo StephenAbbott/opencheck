@@ -25,6 +25,13 @@ What is counted (Stephen's decisions A–D, 23 Nov 2026)
   harvest's start (``harvest_started_from``), never as "all contracts".
 * ``active`` and ``terminated`` contracts are counted, terminated ones
   labelled; ``pending`` (not yet signed) and ``cancelled`` are left out.
+  Prozorro gives a contract ``terminated`` when it ends, whether it was
+  carried out or broken off (a completed contract carries ``amountPaid``
+  and an empty ``terminationDetails``), so the card says "ended".
+* A signing day before ``FIRST_SIGNING_DAY`` or after the build is not a
+  real date (one contract in the harvest says 2004-03-16, three more 2004
+  to 2012): the contract is counted with no date, and the day is left out
+  of every period (``signed_date_implausible`` in ``meta``).
 * Only a legal person's eight-digit EDRPOU is ever stored. A ten-digit
   РНОКПП — a natural person, sole traders included — is dropped by the
   harvester and is never in the store or the index.
@@ -55,7 +62,7 @@ import sqlite3
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -87,6 +94,17 @@ LARGEST_KEPT = 3
 
 #: Decision C: the statuses counted. ``pending`` and ``cancelled`` are not.
 COUNTED_STATUSES = frozenset({"active", "terminated"})
+#: The earliest signing day taken as real: Prozorro opened in February 2015.
+FIRST_SIGNING_DAY = "2015-01-01"
+
+
+def plausible_day(day: str | None, latest: str) -> str | None:
+    """A signing day, or None when it is before ``FIRST_SIGNING_DAY``, after
+    *latest* (the build's day), or not a ``YYYY-MM-DD`` day at all."""
+    text = str(day or "")
+    if len(text) != 10 or text[4] != "-" or text[7] != "-":
+        return None
+    return text if FIRST_SIGNING_DAY <= text <= latest else None
 
 #: ``procurementMethodType`` (on the tender) → a one-letter code.
 _METHODS: dict[str, str] = {
@@ -268,11 +286,13 @@ def build_index(
     counts = {
         k: 0
         for k in ("contracts_in_harvest", "contracts_counted", "contracts_pending",
-                  "contracts_cancelled", "contracts_other_status", "method_not_read")
+                  "contracts_cancelled", "contracts_other_status", "method_not_read",
+                  "signed_date_implausible")
     }
     buyers_used: set[int] = set()
     data_from, data_to = "9999-99-99", ""
     suppliers = 0
+    latest_day = (datetime.now(UTC) + timedelta(days=1)).date().isoformat()
 
     def flush(edrpou: int, sup: _Supplier) -> None:
         nonlocal suppliers
@@ -327,7 +347,9 @@ def build_index(
         else:
             sup.other_currency += 1
         sup.methods[code] = sup.methods.get(code, 0) + 1
-        day = str(signed or "")
+        day = plausible_day(signed, latest_day) or ""
+        if signed and not day:
+            counts["signed_date_implausible"] += 1
         if day:
             data_from, data_to = min(data_from, day), max(data_to, day)
             sup.first, sup.last = min(sup.first, day), max(sup.last, day)
