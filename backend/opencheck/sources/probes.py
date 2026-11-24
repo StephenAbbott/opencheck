@@ -602,21 +602,30 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "kimdis_greece": _p(
         tier="live",
-        subject="ΑΚΤΩΡ ΑΝΩΝΥΜΗ ΤΕΧΝΙΚΗ ΕΤΑΙΡΕΙΑ (ΑΦΜ 094207780)",
+        subject="ΔΟΜΙΚΗ ΚΡΗΤΗΣ Α.Ε. (ΑΦΜ 094121006)",
         # The ΑΦΜ directly: the lookup reaches it through ΓΕΜΗ (key-gated),
         # but ΚΗΜΔΗΣ itself is keyless and is what this probe checks.
-        args=("094207780",),
-        kwargs={"legal_name": "ΑΚΤΩΡ ΑΝΩΝΥΜΗ ΤΕΧΝΙΚΗ ΕΤΑΙΡΕΙΑ"},
+        args=("094121006",),
+        kwargs={"legal_name": "ΔΟΜΙΚΗ ΚΡΗΤΗΣ ΑΝΩΝΥΜΟΣ-ΤΕΧΝΙΚΗ-ΕΜΠΟΡΙΚΗ-ΞΕΝΟΔΟΧΕΙΑΚΗ- ΒΙΟΜΗΧΑΝΙΚΗ ΕΤΑΙΡΕΙΑ."},
         expect_fields=("supplier", "contracts"),
-        anchor_lei="213800W5DCON145PRT93",
+        anchor_lei="2138003DIAN6FB8TLI23",
         bods_mapper="map_kimdis_greece",
         notes=(
-            "A construction company with about 180 contract records on "
-            "ΚΗΜΔΗΣ since 2017 (13 Nov 2026), so the read is ~38 calls, "
-            "inside the cap. ``expect_fields`` asserts the supplier totals "
-            "and the kept contracts, so a renamed ``vatNumber`` filter or "
-            "contractor field reads as a failure rather than a quiet 404 "
-            "(which ΚΗΜΔΗΣ answers for 'no contracts')."
+            "A Cretan construction company with about 100 contract records "
+            "on ΚΗΜΔΗΣ since 2017, so the whole history is one call per "
+            "180-day window (21 on 24 Nov 2026), far inside ``MAX_CALLS``, "
+            "and every window answered in under 1.5 s. The ΑΦΜ is the one "
+            "ΓΕΜΗ publishes for the anchor LEI's ΓΕΜΗ number 077089627000 "
+            "(production lookup, 24 Nov 2026), and ΚΗΜΔΗΣ names the "
+            "contractor ΔΟΜΙΚΗ ΚΡΗΤΗΣ Α.Ε. Until 24 Nov 2026 the probe read "
+            "094207780 as ΑΚΤΩΡ: that ΑΦΜ is ΙΝΤΡΑΚΟΜ ΚΑΤΑΣΚΕΥΕΣ's, and its "
+            "2018-06-25..2018-12-21 window never answers, so the probe read "
+            "degraded every week whatever the API did. Choose a replacement "
+            "the same way: check every window answers first. "
+            "``expect_fields`` asserts the supplier totals and the kept "
+            "contracts, so a renamed ``vatNumber`` filter or contractor "
+            "field reads as a failure rather than a quiet 404 (which ΚΗΜΔΗΣ "
+            "answers for 'no contracts')."
         ),
     ),
     "gleif": _p(
