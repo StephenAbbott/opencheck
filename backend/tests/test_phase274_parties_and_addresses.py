@@ -242,7 +242,10 @@ def _unspecified_subject(party: dict[str, Any]) -> dict[str, Any]:
 
 
 def _edges(cypher: str) -> list[str]:
-    return [line for line in cypher.splitlines() if "OWNS_OR_CONTROLS" in line]
+    return [
+        line for line in cypher.splitlines()
+        if "OWNS_OR_CONTROLS" in line and not line.startswith("//")
+    ]
 
 
 def test_cypher_keeps_an_edge_to_an_unspecified_owner() -> None:
@@ -258,8 +261,8 @@ def test_cypher_keeps_an_edge_to_an_unspecified_owner() -> None:
     assert "u.side = 'interestedParty'" in merge
 
     (edge,) = _edges(cy)
-    assert f"(a {{id: '{node_id}'}})" in edge
-    assert f"(b {{id: '{subject['statementId']}'}})" in edge
+    assert f"(a:UnspecifiedParty {{id: '{node_id}'}})" in edge
+    assert f"(b:Entity {{id: '{subject['statementId']}'}})" in edge
     assert "r.interest = 'shareholding'" in edge
     # The placeholder is MERGEd before the edge that MATCHes it.
     assert cy.index(merge) < cy.index(edge)
@@ -271,7 +274,10 @@ def test_cypher_keeps_an_edge_from_an_unspecified_subject() -> None:
     assert "MERGE (u:UnspecifiedParty {id: 'rel-subj#subject'})" in cy
     assert "u.reason = 'unknown'" in cy
     (edge,) = _edges(cy)
-    assert f"(a {{id: '{owner['statementId']}'}}), (b {{id: 'rel-subj#subject'}})" in edge
+    assert (
+        f"(a:Entity {{id: '{owner['statementId']}'}}) "
+        "MATCH (b:UnspecifiedParty {id: 'rel-subj#subject'})"
+    ) in edge
 
 
 def test_cypher_placeholders_are_per_statement_not_per_reason() -> None:

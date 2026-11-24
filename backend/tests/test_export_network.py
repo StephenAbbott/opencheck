@@ -54,7 +54,7 @@ def test_to_cypher_emits_nodes_and_owner_to_owned_edge():
     # The edge runs owner (interested party) → owned (subject).
     net = _network()
     person_id, entity_id = net[1]["statementId"], net[0]["statementId"]
-    assert f"(a {{id: '{person_id}'}}), (b {{id: '{entity_id}'}})" in cy
+    assert f"(a:Person {{id: '{person_id}'}}) MATCH (b:Entity {{id: '{entity_id}'}})" in cy
 
 
 def test_to_cypher_escapes_quotes():

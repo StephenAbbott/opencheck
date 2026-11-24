@@ -336,7 +336,15 @@ async def export(
 
     if format == "cypher":
         return Response(
-            content=to_cypher(payload.bods).encode("utf-8"),
+            content=to_cypher(
+                payload.bods,
+                # A saved report judges "ended" on its own run's day.
+                as_of=(
+                    saved.saved["run_completed_at"][:10]
+                    if saved and saved.saved.get("run_completed_at")
+                    else None
+                ),
+            ).encode("utf-8"),
             media_type="text/plain; charset=utf-8",
             headers={
                 "Content-Disposition": (

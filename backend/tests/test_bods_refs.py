@@ -112,8 +112,9 @@ def test_risk_walks_the_chain_through_record_id_references() -> None:
 
 def test_exports_link_the_parties_they_name() -> None:
     cypher = to_cypher(BUNDLE)
-    assert f"MATCH (a {{id: '{HEAD_SID}'}}), (b {{id: '{MID_SID}'}})" in cypher
-    assert "meip-entity" not in cypher.split("MATCH")[1], "edges use the node ids"
+    assert f"MATCH (a:Entity {{id: '{HEAD_SID}'}}) MATCH (b:Entity {{id: '{MID_SID}'}})" in cypher
+    edges = [ln for ln in cypher.splitlines() if ln.startswith("MATCH (a:")]
+    assert edges and not any("{id: 'meip-entity" in ln for ln in edges), "edges use the node ids"
 
     ftm = map_to_ftm(BUNDLE)
     links = [e for e in ftm if e["schema"] in ("Ownership", "UnknownLink", "Directorship")]
