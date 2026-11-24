@@ -528,6 +528,91 @@ def test_run_paces_between_subjects_and_reports_a_failed_lookup() -> None:
     assert "No previous report to compare against." in md
 
 
+def test_fetch_lookup_retries_a_gateway_error() -> None:
+    calls: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(502) if len(calls) == 1 else httpx.Response(200, json=_payload())
+
+    slept: list[float] = []
+    got = fr.fetch_lookup(_client(handler), "https://api.example", LEI, sleep=slept.append)
+    assert got.payload is not None and got.attempts == 2 and slept == [30.0]
+
+
+_OUTAGE = {"source_id": "wikidata", "check": "source_fetch", "reason": "timeout", "detail": "x"}
+_CAP = {
+    "source_id": "opencheck",
+    "check": "cross_source_names",
+    "reason": "truncated",
+    "detail": "x",
+}
+
+
+def _run_twice(
+    first: dict[str, Any], second: dict[str, Any]
+) -> tuple[dict[str, Any], list[float], int]:
+    calls: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(200, json=first if len(calls) == 1 else second)
+
+    slept: list[float] = []
+    report = asyncio.run(
+        fr.run(
+            [_exp()],
+            client=_client(handler),
+            base_url="https://api.example",
+            rules=RULES,
+            cards={},
+            sleep=slept.append,
+            stamps={"verdict_template": 4, "signal_rules": 2, "signal_rules_changed": {}},
+            now=lambda: "2026-11-24T08:30:00Z",
+            rerun_wait_s=99.0,
+        )
+    )
+    return report, slept, len(calls)
+
+
+def test_a_failure_during_a_source_outage_is_looked_up_again() -> None:
+    # The 23 Nov 2026 shape: Wikidata did not answer, a signal fell below its
+    # floor; the next lookup found it again.
+    bad = _payload(degraded_sources=[_OUTAGE, _CAP])
+    bad["risk_signals"][0]["confidence"] = "medium"
+    report, slept, calls = _run_twice(bad, _payload())
+    (subject,) = report["subjects"]
+    assert calls == 2 and slept == [99.0]
+    assert subject["findings"] == []
+    assert subject["rerun"]["after"] == ["wikidata:source_fetch"]
+    assert [f["check"] for f in subject["rerun"]["first_findings"]] == ["missing_signal"]
+    assert not fr.failed(report)
+    md = fr.render_markdown(report)
+    assert "Looked up again" in md and "`wikidata:source_fetch`" in md
+    assert "the second lookup met the expectations" in md
+
+
+def test_a_failure_that_repeats_on_the_second_lookup_still_fails() -> None:
+    bad = _payload(degraded_sources=[_OUTAGE])
+    bad["risk_signals"][0]["confidence"] = "medium"
+    report, _, calls = _run_twice(bad, bad)
+    assert calls == 2 and fr.failed(report)
+    assert "the second lookup failed the same way" in fr.render_markdown(report)
+
+
+def test_a_screen_cap_alone_is_not_a_reason_to_look_up_again() -> None:
+    bad = _payload(degraded_sources=[_CAP])
+    bad["risk_signals"][0]["confidence"] = "medium"
+    report, slept, calls = _run_twice(bad, _payload())
+    assert calls == 1 and slept == [] and "rerun" not in report["subjects"][0]
+    assert fr.failed(report)
+
+
+def test_a_passing_subject_is_not_looked_up_again_whatever_was_degraded() -> None:
+    report, _, calls = _run_twice(_payload(degraded_sources=[_OUTAGE]), _payload())
+    assert calls == 1 and "rerun" not in report["subjects"][0]
+
+
 # --- week over week -------------------------------------------------------------------
 
 
