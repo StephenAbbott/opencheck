@@ -33,7 +33,7 @@ from typing import AsyncIterator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from slowapi.errors import RateLimitExceeded
 
@@ -830,11 +830,27 @@ if _frontend_dist:
 
     from fastapi.responses import FileResponse
 
+    from fastapi.responses import HTMLResponse as _HTMLResponse
+
+    from . import site_pages as _site_pages
+
     _DIST = _Path(_frontend_dist).resolve()
     _INDEX = _DIST / "index.html"
     if not _INDEX.exists():
         log.warning("OPENCHECK_FRONTEND_DIST=%s has no index.html; not serving SPA", _DIST)
     else:
+        _INDEX_HTML = _INDEX.read_text(encoding="utf-8")
+
+        def _shell(path: str, cache_control: str) -> Response:
+            """The SPA shell, with the page's own head for a known page
+            (site_pages.py) so a crawler does not read every view as ``/``."""
+            frontend = (get_settings().frontend_origin or "").rstrip("/")
+            if not frontend.startswith("http"):
+                frontend = "https://opencheck.world"
+            page = _site_pages.render_shell(_INDEX_HTML, path, frontend)
+            if page is None:
+                return FileResponse(_INDEX, headers={"Cache-Control": cache_control})
+            return _HTMLResponse(page, headers={"Cache-Control": cache_control})
 
         @app.middleware("http")
         async def _spa_view_negotiation(request: Request, call_next):  # type: ignore[no-untyped-def]
@@ -854,11 +870,11 @@ if _frontend_dist:
                 and request.url.path == "/sources"
                 and request.headers.get("accept", "").lstrip().startswith("text/html")
             ):
-                return FileResponse(_INDEX, headers={"Cache-Control": "no-cache"})
+                return _shell("/sources", "no-cache")
             return await call_next(request)
 
         @app.get("/{spa_path:path}", include_in_schema=False)
-        async def spa_fallback(spa_path: str) -> FileResponse:
+        async def spa_fallback(spa_path: str) -> Response:
             """Static files from the dist, index.html for everything else.
 
             Registered after every API route, so it only sees paths nothing
@@ -874,7 +890,7 @@ if _frontend_dist:
                     candidate,
                     headers={"Cache-Control": spa_cache_control(spa_path)},
                 )
-            return FileResponse(_INDEX, headers={"Cache-Control": spa_cache_control("index.html")})
+            return _shell(spa_path, spa_cache_control("index.html"))
 
 
 # Access log + per-window request counters (opencheck/memwatch.py). Registered
