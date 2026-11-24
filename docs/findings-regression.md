@@ -130,11 +130,23 @@ For each subject, in file-name order:
 
 1. `GET /lookup?lei=…&refresh=true` on the deployed API. This is a fresh run,
    charged to the runner's per-IP lookup budget (Phase 234). A 429 or 503
-   waits out its `Retry-After` (capped at 120 s), up to two retries.
+   waits out its `Retry-After` (capped at 120 s), up to two retries; a 502 or
+   504 (Render's edge while an instance restarts) waits 30 s the same way.
 2. The MCP `opencheck_lookup` tool for the same LEI. It has no `refresh`
    argument and replays the run from step 1 out of the server's 15-minute
    cache, so it costs nothing and describes the same run.
-3. Wait `--pace` seconds (60 by default) before the next subject.
+3. If the subject failed **and** the run recorded a source that did not
+   answer — any `degraded_sources` entry except a screen's cap (`truncated`)
+   or a missing key (`not_configured`) — wait three minutes and look it up
+   once more; the second lookup decides, at most four times a run. The report
+   keeps the first lookup's findings under the subject (`rerun` in the JSON,
+   "Looked up again" in the Markdown). Why: on 23 Nov 2026 all three failures
+   were outages the run had recorded — Wikidata did not answer (Eli Lilly lost
+   Katherine Baicker's birth year, so RELATED_PEP fell to medium; Eesti
+   Energia lost its second LEI confirmation), and a refused GLEIF anchor fell
+   back to the Golden Copy without the OpenCorporates id, so Ørsted had no
+   officers and no PEP signals. Each was back on the next lookup.
+4. Wait `--pace` seconds (60 by default) before the next subject.
 
 One fresh lookup a minute stays inside the per-IP lookup budget (10/min) and
 leaves the process-wide GLEIF throttle (50/min) to readers. Twelve subjects

@@ -62,6 +62,13 @@ Every finding names its class, because the class says where to look:
     The remaining per-file shapes, and the MCP tool disagreeing with
     ``/lookup`` about the same run.
 
+A subject that fails while one of its sources did not answer (a
+``degraded_sources`` entry other than a screen's cap or a missing key) is
+looked up once more after ``RERUN_WAIT_S``, and the second lookup decides.
+Both are in the report (``rerun``): an outage is a finding about that night,
+not about the engine, and the run said so honestly; a failure that repeats
+on the second lookup is the one to read.
+
 What it does not assert: the label maps (og_image, RiskChip, graphStyle,
 narrative packet) against the backend's code list. ``tests/test_signal_label_coverage.py``
 does that on every PR, offline, which is the better place for it.
@@ -116,6 +123,28 @@ _INCOMPLETE_VERDICT = re.compile(r"did not run|did not answer|answered only in p
 DEFAULT_PACE_S = 60.0
 MAX_RETRIES = 2
 _MAX_RETRY_WAIT_S = 120.0
+
+#: Statuses worth asking again: a rate limit, a full pipeline gate, and the
+#: gateway errors Render's edge answers while an instance restarts (Birtley's
+#: HTTP 502 of 17 Nov 2026 failed a run on one request).
+_RETRY_STATUSES = frozenset({429, 502, 503, 504})
+
+#: A subject that fails while one of its own sources did not answer is looked
+#: up once more, after this pause (the findings-regression failures of
+#: 23 Nov 2026: a Wikidata outage took Eli Lilly's birth-year corroboration and
+#: Eesti Energia's second LEI confirmation, and a refused GLEIF anchor left
+#: Ørsted without its OpenCorporates officers — every absence explained by a
+#: degradation the run recorded, and gone on the next lookup).
+RERUN_WAIT_S = 180.0
+
+#: At most this many second lookups a run: each costs the pause plus a lookup
+#: (~4 min), and the job's budget is 45 minutes against a ~20-minute run. A
+#: night bad enough to need more is worth reading as it is.
+MAX_RERUNS = 4
+
+#: Degradation reasons that describe the run's shape, not an upstream failure,
+#: so a second lookup would read the same: a screen's cap, a missing key.
+_STABLE_DEGRADATION_REASONS = frozenset({"truncated", "not_configured"})
 
 FAIL = "fail"
 WARN = "warn"
@@ -584,11 +613,13 @@ def _check_disclosure(exp: Mapping[str, Any], payload: Mapping[str, Any]) -> lis
         got = list((sources.get(sid) or {}).get("values") or [])
         for value in expected:
             if value not in got:
-                out.append(Finding(
-                    "disclosure",
-                    f"{sid}: expected disclosure value {value!r}, got {got or 'none'}",
-                    FAIL,
-                ))
+                out.append(
+                    Finding(
+                        "disclosure",
+                        f"{sid}: expected disclosure value {value!r}, got {got or 'none'}",
+                        FAIL,
+                    )
+                )
     return out
 
 
@@ -768,7 +799,7 @@ def fetch_lookup(
                 sleep(30.0)
                 continue
             break
-        if resp.status_code in (429, 503) and attempt < retries:
+        if resp.status_code in _RETRY_STATUSES and attempt < retries:
             try:
                 wait = float(resp.headers.get("Retry-After", "30"))
             except ValueError:
@@ -790,6 +821,20 @@ def fetch_lookup(
     return result
 
 
+def transient_degradations(payload: Mapping[str, Any]) -> list[str]:
+    """``source:check`` of every degradation a second lookup might not repeat.
+
+    A source that did not answer (or answered in part) is transient; a
+    related-party screen's cap or a missing credential is the run's shape.
+    """
+    out: set[str] = set()
+    for d in payload.get("degraded_sources") or []:
+        if d.get("reason") in _STABLE_DEGRADATION_REASONS:
+            continue
+        out.add(f"{d.get('source_id')}:{d.get('check')}")
+    return sorted(out)
+
+
 async def run(
     expectations: list[dict[str, Any]],
     *,
@@ -804,8 +849,13 @@ async def run(
     stamps: Mapping[str, Any] | None = None,
     commit: str | None = None,
     now: Callable[[], str] | None = None,
+    rerun_wait_s: float = RERUN_WAIT_S,
 ) -> dict[str, Any]:
-    """Run every expectation against production and build the report."""
+    """Run every expectation against production and build the report.
+
+    A subject that fails while a source it read did not answer is looked up
+    once more (``transient_degradations``); the report keeps both attempts.
+    """
     stamp_now = now or (lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     report: dict[str, Any] = {
         "generated_at": stamp_now(),
@@ -815,6 +865,7 @@ async def run(
         "compared_against": (previous or {}).get("generated_at"),
         "subjects": [],
     }
+    reruns_left = MAX_RERUNS
     for i, exp in enumerate(expectations):
         if i:
             sleep(pace_s)
@@ -834,13 +885,34 @@ async def run(
             entry["summary"] = None
             report["subjects"].append(entry)
             continue
-        mcp: dict[str, Any] | None = None
-        if mcp_call is not None:
-            try:
-                mcp = await mcp_call(exp["lei"])
-            except Exception as exc:
-                mcp = {"error": type(exc).__name__}
-        findings, summary = evaluate(exp, fetched.payload, rules=rules, cards=cards, mcp=mcp)
+
+        async def judge(payload: dict[str, Any]) -> tuple[list[Finding], dict[str, Any]]:
+            mcp: dict[str, Any] | None = None
+            if mcp_call is not None:
+                try:
+                    mcp = await mcp_call(exp["lei"])
+                except Exception as exc:
+                    mcp = {"error": type(exc).__name__}
+            return evaluate(exp, payload, rules=rules, cards=cards, mcp=mcp)
+
+        findings, summary = await judge(fetched.payload)
+        transient = transient_degradations(fetched.payload)
+        if transient and reruns_left and any(f.severity == FAIL for f in findings):
+            reruns_left -= 1
+            # Once, and said: the first attempt's findings stay in the report.
+            sleep(rerun_wait_s)
+            again = fetch_lookup(client, base_url, exp["lei"], sleep=sleep)
+            entry["rerun"] = {
+                "after": transient,
+                "first_findings": [f.to_dict() for f in findings],
+                "first_run_completed_at": summary.get("run_completed_at"),
+            }
+            entry["attempts"] += again.attempts
+            entry["seconds"] = round(entry["seconds"] + again.seconds, 1)
+            if again.payload is not None:
+                findings, summary = await judge(again.payload)
+            else:
+                entry["rerun"]["error"] = again.error
         entry["findings"] = [f.to_dict() for f in findings]
         entry["summary"] = summary
         report["subjects"].append(entry)
@@ -912,13 +984,31 @@ def render_markdown(report: Mapping[str, Any]) -> str:
             lines.append(f"- `{check}`: {n}")
         lines.append("")
     for s in report.get("subjects", []):
-        if not s.get("findings"):
+        rerun = s.get("rerun")
+        if not s.get("findings") and not rerun:
             continue
         lines.append(f"### {s['name']} (`{s['lei']}`)")
         lines.append("")
-        for f in s["findings"]:
+        for f in s.get("findings") or []:
             icon = "❌" if f["severity"] == FAIL else "⚠️"
             lines.append(f"- {icon} `{f['check']}` — {f['message']}")
+        if rerun:
+            first = [f for f in rerun.get("first_findings") or [] if f["severity"] == FAIL]
+            outcome = (
+                f"the second attempt failed too ({rerun['error']})"
+                if rerun.get("error")
+                else (
+                    "the second lookup failed the same way"
+                    if s.get("findings") and any(f["severity"] == FAIL for f in s["findings"])
+                    else "the second lookup met the expectations"
+                )
+            )
+            lines.append(
+                f"- 🔁 Looked up again: the first lookup failed {len(first)} check(s) while "
+                f"{', '.join(f'`{k}`' for k in rerun['after'])} did not answer; {outcome}."
+            )
+            for f in first:
+                lines.append(f"  - first lookup: `{f['check']}` — {f['message']}")
         lines.append("")
     lines.append("## Since the last report")
     lines.append("")
