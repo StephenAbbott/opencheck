@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 612** — OpenCheck's own pages now reach search engines with their own titles and descriptions, a site sitemap and an llms.txt, and shared checks get link previews on LinkedIn and X.
+**Latest: Phase 613** — The Cypher export now keeps one edge per source's statement, with its source, licence, dates, share and an ownership flag, and runs without APOC.
 
 → [Full development history](docs/status.md)
 
