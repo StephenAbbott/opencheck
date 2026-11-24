@@ -249,9 +249,9 @@ def to_cypher(bods: list[dict[str, Any]], as_of: str | None = None) -> str:
     """
     lines: list[str] = [
         "// OpenCheck network — Neo4j / Cypher projection. MERGE = idempotent.",
-        "// Core Cypher only: no APOC, no LOAD CSV. The three CREATE INDEX lines",
-        "// are Neo4j 5 syntax; on another engine drop them (they only speed up",
-        "// the MATCHes).",
+        "// Core Cypher only: no APOC, no LOAD CSV. Loads as written on Neo4j 5",
+        "// and Relate; on Memgraph drop the three CREATE INDEX lines (Neo4j",
+        "// syntax; they only speed up the MATCHes).",
         "// One OWNS_OR_CONTROLS edge per BODS relationship statement, never merged",
         "// across sources. Before you query, read the rules:",
         "//   * r.notOwnership: GLEIF consolidation / MEIP membership, not ownership.",

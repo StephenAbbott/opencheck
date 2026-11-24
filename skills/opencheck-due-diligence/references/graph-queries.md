@@ -24,13 +24,13 @@ under "Cypher edge properties".
 ## Loading
 
 - The export is plain Cypher: no APOC, no `LOAD CSV`. On Neo4j 5 run it with
-  `cypher-shell -f network.cypher`. Its three `CREATE INDEX` lines are Neo4j
-  syntax; on Memgraph or Relate delete them first.
+  `cypher-shell -f network.cypher`; Relate (1.2.0) runs it as written. Its
+  three `CREATE INDEX` lines are Neo4j syntax: on Memgraph delete them first.
 - The bulk zips' `import.cypher` needs APOC (`apoc.convert.fromJsonList`) and
   fails on a Neo4j without it, and on Relate. Rebuild the graph from the
   release's `.bods.jsonl.gz` with `bods-neo4j to-cypher` instead: same graph,
-  core Cypher only (`--dialect memgraph` or `--dialect none` for other
-  engines).
+  core Cypher only (`--dialect memgraph` for Memgraph). For a large graph on
+  Neo4j, `bods-neo4j to-neo4j` (the driver) is faster and lighter.
 - **Relate** (Neo4j Labs' embedded engine) sends usage telemetry by default.
   Turn it off before you open anything a user would not want reported, and
   say that you did. It is a Labs project: fine for exploring a published
