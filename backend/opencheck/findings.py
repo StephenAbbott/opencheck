@@ -942,7 +942,11 @@ def finding_prozorro_ukraine(bundle: dict[str, Any]) -> str | None:
     """How many Ukrainian public contracts this company signed.
 
     Active and terminated contracts are counted (pending and cancelled ones
-    are not), and terminated ones are said. The value is UAH contract values
+    are not), and the terminated ones are said as "since ended": Prozorro
+    gives a contract that status when it ends, carried out or ended early,
+    so "terminated" would read as a contract broken off. The count comes
+    second, ahead of the value, so the 140-character cap drops the buyers
+    first (Epicentr K lost it there, 24 Nov 2026). The value is UAH contract values
     summed by OpenCheck and printed in full (rule 5). The period is the
     contracts' own signing dates; the harvest reads contracts changed since
     it began, which the card's footnote states. Contracts are activity,
@@ -967,13 +971,11 @@ def finding_prozorro_ukraine(bundle: dict[str, Any]) -> str | None:
         span = f" in {_md_month(last)}"
     else:
         span = ""
-    lead = (
-        f"Signed {n:,} Ukrainian public {'contract' if n == 1 else 'contracts'}{span}, "
-        f"UAH values totalling {value:,}"
-    )
+    lead = f"Signed {n:,} Ukrainian public {'contract' if n == 1 else 'contracts'}{span}"
+    ended_clause = f"{terminated:,} since ended" if terminated else None
+    value_clause = f"UAH values totalling {value:,}"
     buyer_clause = f"with {buyers:,} {'buyer' if buyers == 1 else 'buyers'}" if buyers else None
-    ended_clause = f"{terminated:,} terminated" if terminated else None
-    return clauses_to_sentence([lead, buyer_clause, ended_clause])
+    return clauses_to_sentence([lead, ended_clause, value_clause, buyer_clause])
 
 
 def finding_mtender_moldova(bundle: dict[str, Any]) -> str | None:

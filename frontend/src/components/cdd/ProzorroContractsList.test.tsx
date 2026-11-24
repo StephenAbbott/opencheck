@@ -1,7 +1,7 @@
 /**
  * ProzorroContractsList — the Prozorro card lists the contracts themselves,
  * the way the MTender card lists its awards. Checked here: each contract
- * links to its page on Prozorro, a terminated contract says so, the footnote
+ * links to its page on Prozorro, a contract Prozorro marks terminated is labelled ended, the footnote
  * names what is counted and the period the harvest covers, and the list
  * expands past five.
  */
@@ -65,16 +65,16 @@ describe("ProzorroContractsList", () => {
     expect(meta).toContain("signed 2026-11-20");
     expect(meta).toContain("reported (direct contract)");
     expect(screen.getByText(/12 contracts signed/)).toBeTruthy();
-    expect(screen.getByText(/2 since terminated/)).toBeTruthy();
+    expect(screen.getByText(/2 since ended/)).toBeTruthy();
     expect(screen.getByText(/1 in another currency not added/)).toBeTruthy();
     expect(screen.getByText(/changed on Prozorro since 2025-11-23/)).toBeTruthy();
   });
 
-  it("marks a terminated contract and only that one", () => {
+  it("labels a terminated contract ended, and only that one", () => {
     render(
       <ProzorroContractsList hit={hit([contract(0), contract(1, { status: "terminated" })])} />,
     );
-    expect(screen.getAllByText("terminated")).toHaveLength(1);
+    expect(screen.getAllByText("ended")).toHaveLength(1);
   });
 
   it("names the contract by its Prozorro number when it has no title", () => {
