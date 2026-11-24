@@ -61,7 +61,7 @@ from __future__ import annotations
 
 import copy
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 from ..matching import canonical_identifier
@@ -292,11 +292,28 @@ def apply_network_subjects(
     return out
 
 
-def network_subjects(statements: list[dict[str, Any]], ref: str) -> dict[str, str]:
+def network_subjects(
+    statements: list[dict[str, Any]],
+    ref: str,
+    *,
+    corroborated: Mapping[str, Iterable[str]] | None = None,
+) -> dict[str, str]:
     """Each source's subject record in a merged bundle about ``ref``: source
     key → the ``recordId`` of that source's member of the subject's referent
     group. The networks ``stamp_merged`` stamps, read without stamping — a
-    release build uses it to know which records are network subjects."""
+    release build uses it to know which records are network subjects.
+
+    ``corroborated`` (source id → hit ids) names the records the lookup
+    itself accepted as the subject on a shared identifier — OpenAleph's
+    ``identifier_corroborated`` hits, whose registration number equals the
+    subject's. It is read only for a source with no member in the referent
+    group: a sanctions-list record of Bank Saderat PLC files ``01126618``
+    with two countries (``ir``, ``gb``), so its number carries no country
+    (``ftm_registration_country``) and joins no group, and two such records
+    deepened in one lookup named two subjects (the BODS quality sweep of
+    23 Nov 2026). The lowest ``recordId`` among the source's corroborated
+    records becomes its subject; nothing is published about the number.
+    """
     if not statements or not ref:
         return {}
     from ..subject_profile import subject_statements  # lazy: avoids a cycle
@@ -309,6 +326,23 @@ def network_subjects(statements: list[dict[str, Any]], ref: str) -> dict[str, st
         rid = _record_id(stmt)
         if key and rid and key not in by_source:
             by_source[key] = rid
+    for key, hit_ids in (corroborated or {}).items():
+        if not isinstance(key, str) or not key or key in by_source:
+            continue
+        wanted = {canonical_identifier(h, min_len=0) for h in hit_ids or () if isinstance(h, str)}
+        wanted.discard(None)
+        if not wanted:
+            continue
+        candidates = sorted(
+            rid
+            for stmt in _entity_statements(statements)
+            if _source_key(stmt) == key
+            and _stampable(stmt, source_id=None)
+            and _identifier_values(stmt) & wanted
+            and (rid := _record_id(stmt))
+        )
+        if candidates:
+            by_source[key] = candidates[0]
     return by_source
 
 

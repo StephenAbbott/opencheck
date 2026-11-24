@@ -1111,6 +1111,17 @@ def _mark_name_only(hits: list[SourceHit]) -> None:
         h.raw[OPENALEPH_NAME_ONLY] = True
 
 
+def _corroborated_hit_ids(hits: list[SourceHit]) -> dict[str, list[str]]:
+    """Source id → the hit ids an adapter accepted on a shared identifier
+    (``raw["identifier_corroborated"]``, OpenAleph's FtM match), for
+    ``network_subjects``."""
+    out: dict[str, list[str]] = {}
+    for h in hits:
+        if (h.raw or {}).get("identifier_corroborated") and h.hit_id:
+            out.setdefault(h.source_id, []).append(h.hit_id)
+    return out
+
+
 def _name_screen_can_run() -> bool:
     """Whether the related-party name screen will actually query anything.
 
@@ -2360,7 +2371,13 @@ async def _lookup_pipeline(
     # The mapping rides on its own event so ``fold_lookup_events`` applies it
     # to the response's bundle too — the response is rebuilt from the
     # ``deepen_result`` payloads, which carry the first pass only.
-    declaration_subjects = network_subjects(bods_all, ctx.lei)
+    # A record the lookup accepted on a shared identifier is that source's
+    # subject even when its number carries no country and so joins no
+    # referent group (Bank Saderat PLC's sanctions-list records in
+    # OpenAleph, the BODS quality sweep of 23 Nov 2026).
+    declaration_subjects = network_subjects(
+        bods_all, ctx.lei, corroborated=_corroborated_hit_ids(hits)
+    )
     bods_all = apply_network_subjects(bods_all, declaration_subjects)
     yield ("declaration_subjects", {"subjects": declaration_subjects})
     # OpenSanctions' copy of GEM's ownership tracker is GEM's claim: when

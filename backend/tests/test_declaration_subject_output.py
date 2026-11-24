@@ -226,6 +226,79 @@ def test_apply_network_subjects_ignores_junk_and_copies_only_changes() -> None:
     assert bundle[2]["declarationSubject"] == bundle[2]["recordId"]  # never mutated
 
 
+SADERAT_LEI = "2138008KTNTDICZU8L25"
+
+
+def _saderat_merged() -> tuple[list[dict], list[dict], list[dict]]:
+    """Bank Saderat PLC on 23 Nov 2026: GLEIF's record, and two OpenAleph
+    sanctions-list records of the company (OFAC SDN, the US Consolidated
+    Screening List). Each files ``registrationNumber 01126618`` with two
+    countries (``ir``, ``gb``), so the number carries no country (bare
+    ``REG``) and the jurisdiction is the first country listed — neither joins
+    the subject's referent group. The lookup's FtM match accepted both on the
+    number (``identifier_corroborated``)."""
+    gleif = _entity("gleif", SADERAT_LEI, "BANK SADERAT PLC",
+                    [{"scheme": "XI-LEI", "id": SADERAT_LEI}, {"scheme": "GB-COH", "id": "01126618"}],
+                    jurisdiction=("United Kingdom", "GB"))
+    oa = [
+        _entity("openaleph", hid, "BANK SADERAT PLC",
+                [{"scheme": "OPENALEPH", "id": hid}, {"scheme": "REG", "id": "01126618"}],
+                jurisdiction=("Iran, Islamic Republic of", "IR"))
+        for hid in ("ofac-sdn-4642.21cfb54c", "trade-csl-4642.8d500a16")
+    ]
+    return [gleif], [oa[0]], [oa[1]]
+
+
+def test_records_accepted_on_the_number_name_one_subject() -> None:
+    gleif, oa1, oa2 = _saderat_merged()
+    first_pass = [*gleif, *oa1, *oa2]
+    assert any("different declarationSubject" in f.message
+               for f in check_declaration_subjects(first_pass))
+    # Without the lookup's corroboration nothing names OpenAleph's subject.
+    assert network_subjects(first_pass, SADERAT_LEI) == {"gleif": gleif[0]["recordId"]}
+
+    corroborated = {"openaleph": ["trade-csl-4642.8d500a16", "ofac-sdn-4642.21cfb54c"]}
+    subjects = network_subjects(first_pass, SADERAT_LEI, corroborated=corroborated)
+    chosen = min(oa1[0]["recordId"], oa2[0]["recordId"])
+    assert subjects == {"gleif": gleif[0]["recordId"], "openaleph": chosen}
+    out = apply_network_subjects(first_pass, subjects)
+    assert check_declaration_subjects(out) == []
+    # Nothing about the number is changed: the records are as mapped.
+    assert [s["recordDetails"] for s in out] == [s["recordDetails"] for s in first_pass]
+
+
+def test_corroboration_never_overrides_a_referent_group_member() -> None:
+    """A source with a member in the subject's group keeps it (the RDC case);
+    the corroborated hits are read only for a source that has none."""
+    gleif, oa1, oa2 = _rdc_merged()
+    subjects = network_subjects(
+        [*gleif, *oa1, *oa2], RDC_LEI,
+        corroborated={"openaleph": ["ocds-party-gb-fts-88512"]},
+    )
+    assert subjects["openaleph"] == oa1[0]["recordId"]
+
+
+def test_a_corroborated_hit_with_no_deepened_record_names_nothing() -> None:
+    gleif, oa1, _ = _saderat_merged()
+    subjects = network_subjects(
+        [*gleif, *oa1], SADERAT_LEI, corroborated={"openaleph": ["not-deepened"]},
+    )
+    assert "openaleph" not in subjects
+
+
+def test_the_pipeline_reads_corroboration_off_the_hits() -> None:
+    from opencheck.routers.lookup import _corroborated_hit_ids
+    from opencheck.sources.base import SourceHit
+
+    def hit(hid, corroborated):
+        return SourceHit(source_id="openaleph", hit_id=hid, kind="entity", name="X",
+                         summary="", raw={"identifier_corroborated": corroborated})
+
+    assert _corroborated_hit_ids([hit("a", True), hit("b", False), hit("c", True)]) == {
+        "openaleph": ["a", "c"]
+    }
+
+
 # ---------------------------------------------------------------------------
 # /deepen says what failed
 # ---------------------------------------------------------------------------
