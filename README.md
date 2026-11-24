@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 605** — The weekly findings regression now looks a failing subject up once more when one of its sources did not answer, and keeps both lookups in the report.
+**Latest: Phase 606** — OpenAleph records matched to the subject on its registration number now name one declarationSubject, even when the number carries no country.
 
 → [Full development history](docs/status.md)
 
