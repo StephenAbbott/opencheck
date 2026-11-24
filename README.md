@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 613** — The Cypher export now keeps one edge per source's statement, with its source, licence, dates, share and an ownership flag, and runs without APOC.
+**Latest: Phase 614** — The bulk dataset releases now carry a Relate graph file, a convenience copy of the Neo4j graph that opens with no server.
 
 → [Full development history](docs/status.md)
 
