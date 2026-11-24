@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 609** — OpenAleph and OpenSanctions records that file a registration number with several countries now join the company they describe in any of those countries.
+**Latest: Phase 610** — The weekly source-health check for Greek public contracts now probes a company whose ΑΦΜ is its own and whose every 180-day window answers.
 
 → [Full development history](docs/status.md)
 
