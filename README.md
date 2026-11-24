@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 602** — Prozorro adds the Ukrainian public contracts a company has signed, read daily from Prozorro's API and matched on the EDRPOU.
+**Latest: Phase 603** — OpenAleph's free-text name fallback now reports a timeout or gateway error as a partial answer instead of failing the whole source.
 
 → [Full development history](docs/status.md)
 
