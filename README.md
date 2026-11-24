@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 604** — The knowability table now covers Belize, Costa Rica, Ecuador, Nicaragua, Panama, Paraguay, Uruguay, Bolivia, Chile, El Salvador, Guatemala, Honduras and Mexico, from the CEFILAT and Financial Transparency Coalition report on Latin American beneficial ownership registers.
+**Latest: Phase 605** — The weekly findings regression now looks a failing subject up once more when one of its sources did not answer, and keeps both lookups in the report.
 
 → [Full development history](docs/status.md)
 
