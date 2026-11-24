@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 603** — OpenAleph's free-text name fallback now reports a timeout or gateway error as a partial answer instead of failing the whole source.
+**Latest: Phase 604** — The knowability table now covers Belize, Costa Rica, Ecuador, Nicaragua, Panama, Paraguay, Uruguay, Bolivia, Chile, El Salvador, Guatemala, Honduras and Mexico, from the CEFILAT and Financial Transparency Coalition report on Latin American beneficial ownership registers.
 
 → [Full development history](docs/status.md)
 
