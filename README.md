@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 610** — The weekly source-health check for Greek public contracts now probes a company whose ΑΦΜ is its own and whose every 180-day window answers.
+**Latest: Phase 611** — The jurisdictions table now links the 6AMLD transposition measures Austria, Greece, Italy and Spain notified to the European Commission.
 
 → [Full development history](docs/status.md)
 
