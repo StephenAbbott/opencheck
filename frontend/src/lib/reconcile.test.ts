@@ -145,6 +145,53 @@ describe("reconcileBods", () => {
     expect(remap["oa-orsted-2"]).toBe(remap["gleif-orsted"]);
   });
 
+  it("joins a bare FtM REG number in a country the record itself lists", () => {
+    // Bank Saderat PLC, 23 Nov 2026: OpenAleph's sanctions-list records file
+    // `01126618` with Iran and the UK, so the number stays bare `REG`. It
+    // joins the UK register's number because the record names the UK in an
+    // address; a Companies House bare REG is never read from an address.
+    const bundle: Stmt[] = [
+      {
+        statementId: "ch-saderat",
+        recordType: "entity",
+        recordDetails: {
+          name: "BANK SADERAT PLC",
+          jurisdiction: { code: "GB" },
+          identifiers: [{ scheme: "GB-COH", id: "01126618" }],
+        },
+        source: { description: "UK Companies House", opencheckSourceId: "companies_house" },
+      },
+      {
+        statementId: "oa-ofac",
+        recordType: "entity",
+        recordDetails: {
+          name: "BANK SADERAT PLC",
+          jurisdiction: { code: "IR" },
+          addresses: [
+            { type: "alternative", address: "Tehran", country: { code: "IR" } },
+            { type: "alternative", address: "5 Lothbury, London", country: { code: "GB" } },
+          ],
+          identifiers: [{ scheme: "REG", id: "01126618" }],
+        },
+        source: { description: "OpenAleph", opencheckSourceId: "openaleph" },
+      },
+      {
+        statementId: "ch-officer",
+        recordType: "entity",
+        recordDetails: {
+          name: "SOME HOLDINGS SA",
+          jurisdiction: { code: "GB" },
+          identifiers: [{ scheme: "REG", id: "01126618" }],
+        },
+        source: { description: "UK Companies House", opencheckSourceId: "companies_house" },
+      },
+    ];
+    const { remap } = reconcileBods(bundle.slice(0, 2));
+    expect(remap["oa-ofac"]).toBe(remap["ch-saderat"]);
+    const officerOnly = reconcileBods([bundle[0], bundle[2]]);
+    expect(officerOnly.remap["ch-officer"]).not.toBe(officerOnly.remap["ch-saderat"]);
+  });
+
   it("produces a graph where the merged node carries both sources", () => {
     const { statements } = reconcileBods(twoSourceBundle());
     const model = bodsToGraph(statements);
