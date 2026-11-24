@@ -29,6 +29,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from .. import entity_pages as ep
 from .. import identifiers
 from .. import knowability
+from .. import site_pages
 from ..config import get_settings
 
 router = APIRouter(tags=["entity-pages"])
@@ -374,8 +375,11 @@ _DISALLOWED_API_PREFIXES = [
     "/person-appointments",
     "/narrative",
     "/license-matrix",
-    "/share",
     "/mcp",
+    # /share is deliberately NOT listed (24 Nov 2026): LinkedIn and X read
+    # robots.txt before fetching a shared link's preview card, so disallowing
+    # it left every shared check without one. The share pages carry
+    # ``noindex`` themselves, so search engines still leave them out.
     # NOTE: /memstats is deliberately NOT listed — it's the public aggregate
     # stats endpoint, and the weekly Cowork monitoring routine reads it with a
     # robots.txt-respecting fetcher. Nothing crawlable of value lives there.
@@ -398,13 +402,41 @@ async def robots_txt() -> PlainTextResponse:
         "Allow: /browse",
         "Allow: /sitemaps/",
         "Allow: /blog",
+        "Allow: /share/",
         "",
+        f"Sitemap: {frontend}/sitemap.xml",
         f"Sitemap: {frontend}/sitemaps/sitemap-index.xml",
         f"Sitemap: {frontend}/blog/sitemap.xml",
         "",
     ]
     return PlainTextResponse(
         "\n".join(lines), headers={"Cache-Control": "public, max-age=86400"}
+    )
+
+
+# ---------------------------------------------------------------------------
+# The site's own pages: a sitemap and llms.txt (site_pages.py). Both MUST stay
+# above the IndexNow ``/{key}.txt`` route, which would swallow /llms.txt.
+# ---------------------------------------------------------------------------
+
+
+@router.api_route("/sitemap.xml", methods=["GET", "HEAD"])
+async def site_sitemap() -> Response:
+    """The homepage, the SPA's pages and the blog index."""
+    return Response(
+        content=site_pages.sitemap_xml(_frontend()),
+        media_type="application/xml",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@router.api_route("/llms.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse)
+async def llms_txt() -> PlainTextResponse:
+    """What OpenCheck is, for answer engines and agents (llmstxt.org)."""
+    return PlainTextResponse(
+        site_pages.llms_txt(_frontend(), _api_base()),
+        media_type="text/markdown",
+        headers={"Cache-Control": "public, max-age=86400"},
     )
 
 

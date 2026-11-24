@@ -170,6 +170,10 @@ _EXEMPT_PATHS = {
     "/browse",
     "/browse/{country}",
     "/robots.txt",
+    # The site sitemap and llms.txt (site_pages.py): static text built from
+    # a constant, crawler-facing like robots.txt.
+    "/sitemap.xml",
+    "/llms.txt",
     "/{key}.txt",  # Phase 91/149: static key echo for IndexNow verification
     # Aggregate memory/traffic counters (memwatch) — a single dict dump,
     # cheap by construction, probed by the weekly /og-share scheduled check.
