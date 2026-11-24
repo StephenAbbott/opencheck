@@ -290,7 +290,45 @@ def _identifier_keys(stmt: dict) -> set[str]:
             country = scheme[4:]
             if len(country) == 2 and country.isalpha() and (not jur or jur == country):
                 keys.add(f"JUR:{country}:{val}")
+        # A bare ``REG`` on a FollowTheMoney record is a register number the
+        # record files with several countries (``ftm_registration_country``
+        # names none of them). It is a register number in one of the
+        # countries the record itself lists, so it gets the jurisdiction key
+        # for each of them, never for a country the record does not name.
+        # Bank Saderat PLC's OFAC and Trade CSL records in OpenAleph file
+        # ``01126618`` with ``ir`` and ``gb`` (addresses in Tehran and
+        # London) and joined no referent group, so each named itself as
+        # the declaration subject (the BODS quality sweep, 23 Nov 2026).
+        # FtM sources only: Companies House writes a bare ``REG`` for a
+        # corporate officer whose country is read from a service address,
+        # which says where post goes, not which register holds the number.
+        if scheme == "REG" and "/" not in val and _source_id(stmt) in _FTM_SOURCES:
+            for country in _record_countries(rd, jur):
+                keys.add(f"JUR:{country}:{val}")
     return keys
+
+
+#: The sources mapped from FollowTheMoney records (``bods/mappers/ftm.py``),
+#: whose bare ``REG`` means "one of the countries this record lists".
+_FTM_SOURCES = frozenset({"openaleph", "opensanctions"})
+
+
+def _source_id(stmt: dict) -> str:
+    src = stmt.get("source") or {}
+    return str(src.get("opencheckSourceId") or "") if isinstance(src, dict) else ""
+
+
+def _record_countries(rd: dict, jur: str) -> set[str]:
+    """The ISO 3166-1 countries an entity statement names: its jurisdiction
+    and its addresses' countries."""
+    out: set[str] = {jur} if jur else set()
+    for addr in rd.get("addresses") or []:
+        country = addr.get("country") if isinstance(addr, dict) else None
+        code = country.get("code") if isinstance(country, dict) else None
+        code = str(code or "").strip().upper().split("-")[0]
+        if len(code) == 2 and code.isalpha():
+            out.add(code)
+    return out
 
 
 def _founding_year(stmt: dict) -> str | None:

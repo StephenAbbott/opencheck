@@ -211,8 +211,38 @@ function identKeys(s: Stmt): string[] {
         keys.push(`JUR:${country}:${val}`);
       }
     }
+    // A bare `REG` on a FollowTheMoney record (OpenAleph, OpenSanctions) is a
+    // register number the record files with several countries: it gets the
+    // jurisdiction key for each country the record itself names (its
+    // jurisdiction and its addresses), never another. Bank Saderat PLC's
+    // sanctions-list records file `01126618` with Iran and the UK. Mirror of
+    // the backend `_identifier_keys`.
+    if (scheme === "REG" && !val.includes("/") && FTM_SOURCES.has(sourceIdOf(s))) {
+      for (const country of recordCountries(d, jur)) keys.push(`JUR:${country}:${val}`);
+    }
   }
   return keys;
+}
+
+/** Sources mapped from FollowTheMoney records, whose bare `REG` means "one of
+ *  the countries this record lists". */
+const FTM_SOURCES = new Set(["openaleph", "opensanctions"]);
+
+function sourceIdOf(s: Stmt): string {
+  const src = s.source as Stmt | undefined;
+  return String((src?.opencheckSourceId as string | undefined) ?? "");
+}
+
+function recordCountries(d: Stmt, jur: string): Set<string> {
+  const out = new Set<string>(jur ? [jur] : []);
+  for (const a of ((d.addresses ?? []) as Stmt[])) {
+    const code = String(((a?.country as Stmt | undefined)?.code as string | undefined) ?? "")
+      .trim()
+      .toUpperCase()
+      .split("-")[0];
+    if (/^[A-Z]{2}$/.test(code)) out.add(code);
+  }
+  return out;
 }
 
 /** Titles a register prints in front of a name and which say nothing about who
