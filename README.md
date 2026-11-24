@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 607** — The Prozorro card now says a contract ended rather than terminated, fills in the procedure for older tenders and ignores impossible signing dates.
+**Latest: Phase 608** — OpenSanctions and OpenAleph records naming several countries no longer read an English bank as Iranian.
 
 → [Full development history](docs/status.md)
 
