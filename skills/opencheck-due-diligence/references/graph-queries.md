@@ -30,7 +30,14 @@ under "Cypher edge properties".
   fails on a Neo4j without it, and on Relate. Rebuild the graph from the
   release's `.bods.jsonl.gz` with `bods-neo4j to-cypher` instead: same graph,
   core Cypher only (`--dialect memgraph` for Memgraph). For a large graph on
-  Neo4j, `bods-neo4j to-neo4j` (the driver) is faster and lighter.
+  Neo4j, `bods-neo4j to-neo4j` (the driver) is faster and lighter. For Relate
+  the releases carry a ready-made `.rl.gz` (gunzip, then open); Estonia's
+  takes about 13 s to open, because Relate holds the whole graph in memory.
+- In the bulk graphs a GLEIF reporting exception ("Natural person(s)", "No
+  known controlling person") is a `:Person` or `:Entity` node, not
+  `:UnspecifiedParty`, and it is the widest hub in the Estonia graph. Leave
+  it out of "who are the people" queries by its `name`, and report it as a
+  filing.
 - **Relate** (Neo4j Labs' embedded engine) sends usage telemetry by default.
   Turn it off before you open anything a user would not want reported, and
   say that you did. It is a Labs project: fine for exploring a published

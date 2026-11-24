@@ -1,0 +1,82 @@
+name: Publish a Relate file beside a dataset release
+
+# Builds a Relate (.rl) graph file from a dataset release's BODS JSON Lines
+# file and adds it to that release, with a small JSON manifest naming the
+# Relate and bods-neo4j versions that wrote it. Run by hand, once per
+# release (Estonia, the Azerbaijani Laundromat).
+#
+# A convenience, never the record (Stephen, 24 Nov 2026, the ticket "Check
+# out relate from Neo4J"): the BODS JSON Lines file stays canonical, the
+# release's licence file covers the .rl unchanged, and the .rl format is
+# new. `backend/scripts/build_relate_file.py` refuses, and nothing is
+# uploaded, when Relate rejects a statement or a count differs from the
+# graph bods-neo4j announces.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. dataset-estonia-2026-10-25"
+        required: true
+        type: string
+      source:
+        description: "The release's BODS JSON Lines asset, e.g. estonia-2026-10-25.jsonl.gz"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-relate-file-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # required to upload the release assets
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      DO_NOT_TRACK: "1"
+      TAG: ${{ inputs.tag }}
+      SOURCE: ${{ inputs.source }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+
+      - name: Install Relate and bods-neo4j (pinned)
+        run: |
+          python -m pip install --quiet "relate-db==1.2.0" \
+            "bods-neo4j @ git+https://github.com/StephenAbbott/bods-neo4j.git@aeb8346c64999354df05478c3bcf107784144c29"
+
+      - name: Download the release's BODS file
+        run: |
+          case "$SOURCE" in
+            *.jsonl.gz) ;;
+            *) echo "::error::source must be a .jsonl.gz asset"; exit 2 ;;
+          esac
+          gh release download "$TAG" -p "$SOURCE" -D "$RUNNER_TEMP"
+
+      - name: Build the .rl file
+        run: |
+          base="${SOURCE%.gz}"; base="${base%.jsonl}"; base="${base%.bods}"
+          echo "BASE=$base" >> "$GITHUB_ENV"
+          python backend/scripts/build_relate_file.py \
+            "$RUNNER_TEMP/$SOURCE" "$RUNNER_TEMP/$base.rl.gz"
+          cat "$RUNNER_TEMP/$base.rl.json"
+
+      - name: Add the file and its manifest to the release
+        run: |
+          # The manifest goes up last, so a release never names an .rl it lacks.
+          bash backend/scripts/replace_release_asset.sh "$TAG" \
+            "$RUNNER_TEMP/$BASE.rl.gz" "$BASE.rl.gz"
+          bash backend/scripts/replace_release_asset.sh "$TAG" \
+            "$RUNNER_TEMP/$BASE.rl.json" "$BASE.rl.json"
