@@ -12,8 +12,8 @@ https://github.com/StephenAbbott/opencheck/releases
 
 | Release | What it is | Files |
 |---|---|---|
-| `dataset-azerbaijani-laundromat-2026-10-06` | The companies and banks named in the OCCRP *Azerbaijani Laundromat* wire transfers (curated in DerwenAI/azeri_laverie), each run through OpenCheck's full pipeline: LEI subjects by lookup plus their GLEIF subsidiary network, UK companies by a Companies House register walk | `.bods.jsonl.gz` (BODS v0.4) · `.nq.gz` (RDF, licence per statement) · `.ftm.jsonl.gz` (FollowTheMoney) · `.senzing.jsonl.gz` (Senzing records) · `.neo4j.zip` (CSV + Cypher) · `.signals.jsonl` (risk signals per subject) · `.subjects.csv` (one row per subject, incl. degraded and partial-network flags) · `manifest.json` · `LICENSES.md` |
-| `dataset-estonia-2026-10-25` | Every Estonian LEI holder's GLEIF record joined to the e-Business Register's own record — 348,794 statements, with shareholders, beneficial owners, officers and upward ownership chains | `.jsonl.gz` (BODS) · `.nq.gz` (RDF) · `-neo4j.zip` · `manifest.json` · `register-missing.csv` · `LICENCES.md` |
+| `dataset-azerbaijani-laundromat-2026-10-06` | The companies and banks named in the OCCRP *Azerbaijani Laundromat* wire transfers (curated in DerwenAI/azeri_laverie), each run through OpenCheck's full pipeline: LEI subjects by lookup plus their GLEIF subsidiary network, UK companies by a Companies House register walk | `.bods.jsonl.gz` (BODS v0.4) · `.nq.gz` (RDF, licence per statement) · `.ftm.jsonl.gz` (FollowTheMoney) · `.senzing.jsonl.gz` (Senzing records) · `.neo4j.zip` (CSV + Cypher) · `.rl.gz` (Relate) · `.signals.jsonl` (risk signals per subject) · `.subjects.csv` (one row per subject, incl. degraded and partial-network flags) · `manifest.json` · `LICENSES.md` |
+| `dataset-estonia-2026-10-25` | Every Estonian LEI holder's GLEIF record joined to the e-Business Register's own record — 348,794 statements, with shareholders, beneficial owners, officers and upward ownership chains | `.jsonl.gz` (BODS) · `.nq.gz` (RDF) · `-neo4j.zip` · `.rl.gz` (Relate) · `manifest.json` · `register-missing.csv` · `LICENCES.md` |
 | `meip-bods-2024` | The OECD-UNSD Multinational Enterprise Information Platform Global Register (31 Dec 2024) as the OECD's own BODS v0.4, packed as SQLite | `meip.sqlite.gz` |
 
 Older dated releases of the same datasets exist; use the newest.
@@ -67,6 +67,11 @@ EOF
   `demo_queries.cypher`. `import.cypher` needs APOC; on a Neo4j without it,
   or on Memgraph or Relate, rebuild from the `.bods.jsonl.gz` with
   `bods-neo4j to-cypher`. Before querying, read `references/graph-queries.md`.
+- Relate: gunzip the `.rl.gz` and open it (`relate.connect("….rl")` from
+  `pip install relate-db`). It is the same graph as the Neo4j zip, built by
+  `to-cypher`; the `.rl.json` beside it names the Relate version that wrote
+  it. A convenience copy: the BODS file is the record, and the release's
+  licence file covers the `.rl` unchanged.
 - Senzing: load the `.senzing.jsonl.gz` records directly; each carries
   `DATA_SOURCE` and its licence.
 - FollowTheMoney: `ftm` CLI / OpenAleph / followthemoney tooling.
