@@ -634,3 +634,60 @@ def test_match_corroborated_false_when_nothing_shared() -> None:
     subject = {"leiCode": ["549300MLH00Y3BN4HD49"]}
     hit = {"leiCode": ["213800LH1BZH3DI6G760"]}
     assert OpenAlephAdapter._match_corroborated(subject, hit) is False
+
+
+@pytest.mark.parametrize("status", [502, 503, 504])
+async def test_fetch_by_name_gateway_error_is_a_degradation(
+    httpx_mock: HTTPXMock, status: int
+) -> None:
+    """DARC.ZONE answered "777 PARTNERS LLC" with ``503 backend unavailable``
+    after ~30 s (23 Nov 2026). No results, but the screen must read as
+    incomplete: a ``source_read`` degradation, never a quiet clean answer."""
+    from urllib.parse import quote
+
+    from opencheck import degradation
+    from opencheck.sources.openaleph import NAME_SEARCH_UNANSWERED_DETAIL
+
+    httpx_mock.add_response(
+        url=f"{_API}/entities?q={quote('777 PARTNERS LLC')}&filter:schema=LegalEntity&limit=5",
+        status_code=status,
+        text="backend unavailable",
+    )
+    with degradation.recording() as recorded:
+        hits = await OpenAlephAdapter().fetch_by_name("777 PARTNERS LLC")
+    assert hits == []
+    assert [(d.source_id, d.check, d.reason, d.detail) for d in recorded] == [
+        (
+            "openaleph",
+            degradation.CHECK_SOURCE_READ,
+            degradation.REASON_UPSTREAM_ERROR,
+            NAME_SEARCH_UNANSWERED_DETAIL,
+        )
+    ]
+
+
+async def test_fetch_by_name_timeout_is_a_degradation_not_an_error(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """A read timeout on the name fallback used to escape and turn the whole
+    source into "did not answer", discarding the identifier steps."""
+    import httpx
+
+    from opencheck import degradation
+
+    httpx_mock.add_exception(httpx.ReadTimeout("slow"))
+    with degradation.recording() as recorded:
+        hits = await OpenAlephAdapter().fetch_by_name("777 PARTNERS LLC")
+    assert hits == []
+    assert [(d.check, d.reason) for d in recorded] == [
+        (degradation.CHECK_SOURCE_READ, degradation.REASON_TIMEOUT)
+    ]
+
+
+async def test_search_still_raises_on_timeout(httpx_mock: HTTPXMock) -> None:
+    """Only the lookup's name fallback absorbs a timeout; /search reports it."""
+    import httpx
+
+    httpx_mock.add_exception(httpx.ReadTimeout("slow"))
+    with pytest.raises(httpx.ReadTimeout):
+        await OpenAlephAdapter().search("acme", SearchKind.ENTITY)

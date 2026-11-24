@@ -71,7 +71,7 @@ from urllib.parse import quote
 
 import httpx
 
-from .. import names
+from .. import degradation, names
 from ..cache import Cache
 from ..config import get_settings
 from ..findings import finding_openaleph
@@ -107,6 +107,17 @@ _MENTION_FACET_SIZE = 10
 # dependency only for this string (nothing imported it) and pulled urllib3
 # 1.x into the runtime, so Phase 266 dropped it and pinned the value it read.
 _OA_VERSION = "1.1.3"
+
+# Gateway answers to a free-text search: the search backend did not answer,
+# which is not the query_string parser's 500 on an awkward name.
+_GATEWAY_STATUSES = frozenset({502, 503, 504})
+
+#: The ``source_read`` degradation when the free-text name fallback did not
+#: answer. Fixed text, so no entity name can reach it.
+NAME_SEARCH_UNANSWERED_DETAIL = (
+    "OpenAleph's free-text name search did not answer, so the name fallback "
+    "after its identifier and match steps was not completed"
+)
 _OA_USER_AGENT = f"openaleph/{_OA_VERSION}"
 
 # Collections that republish a dataset OpenCheck already queries at source,
@@ -335,6 +346,7 @@ class OpenAlephAdapter(SourceAdapter):
         payload = await self._get_tolerant(
             f"/entities?q={quote(q)}&filter:schema=LegalEntity&limit=5",
             cache_key=cache_key,
+            degrade_unanswered=True,
         )
         wanted = _normalise_name(legal_name)
         return [
@@ -759,18 +771,53 @@ class OpenAlephAdapter(SourceAdapter):
         self._cache.put(cache_key, payload)
         return payload
 
-    async def _get_tolerant(self, path: str, *, cache_key: str) -> dict[str, Any]:
+    async def _get_tolerant(
+        self, path: str, *, cache_key: str, degrade_unanswered: bool = False
+    ) -> dict[str, Any]:
         """Like ``_get`` but treats a 4xx/5xx from a *best-effort free-text
         search* as 'no results' instead of surfacing an error card. The Aleph
         query_string parser 500s on some legal names (unbalanced quotes etc.),
-        and a name fallback should degrade quietly rather than fail the source."""
+        and a name fallback should degrade quietly rather than fail the source.
+
+        ``degrade_unanswered`` (the lookup's name fallback): a search that
+        did not answer — a timeout, a network error, or a gateway 502/503/504
+        — also returns no results, but records a ``source_read`` degradation
+        so the screen reads as incomplete, never as clean. DARC.ZONE answers
+        some free-text queries ("777 PARTNERS LLC", 23 Nov 2026) with
+        ``503 backend unavailable`` after ~30 s; before this, the 15 s read
+        timeout fired first, the exception escaped, and the whole source read
+        "did not answer" although its identifier, match and percolation
+        steps had answered.
+        """
         try:
             return await self._get(path, cache_key=cache_key)
         except httpx.HTTPStatusError as exc:
             code = exc.response.status_code
+            if degrade_unanswered and code in _GATEWAY_STATUSES:
+                degradation.record(
+                    "openaleph",
+                    NAME_SEARCH_UNANSWERED_DETAIL,
+                    check=degradation.CHECK_SOURCE_READ,
+                    reason=degradation.REASON_UPSTREAM_ERROR,
+                )
+                return {"results": []}
             if code in (400, 422) or code >= 500:
                 return {"results": []}
             raise
+        except httpx.TransportError as exc:
+            if not degrade_unanswered:
+                raise
+            degradation.record(
+                "openaleph",
+                NAME_SEARCH_UNANSWERED_DETAIL,
+                check=degradation.CHECK_SOURCE_READ,
+                reason=(
+                    degradation.REASON_TIMEOUT
+                    if isinstance(exc, httpx.TimeoutException)
+                    else degradation.REASON_UPSTREAM_ERROR
+                ),
+            )
+            return {"results": []}
 
     # ------------------------------------------------------------------
     # Hit factory (live)
