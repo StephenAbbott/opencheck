@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 608** — OpenSanctions and OpenAleph records naming several countries no longer read an English bank as Iranian.
+**Latest: Phase 609** — OpenAleph and OpenSanctions records that file a registration number with several countries now join the company they describe in any of those countries.
 
 → [Full development history](docs/status.md)
 
