@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 606** — OpenAleph records matched to the subject on its registration number now name one declarationSubject, even when the number carries no country.
+**Latest: Phase 607** — The Prozorro card now says a contract ended rather than terminated, fills in the procedure for older tenders and ignores impossible signing dates.
 
 → [Full development history](docs/status.md)
 
