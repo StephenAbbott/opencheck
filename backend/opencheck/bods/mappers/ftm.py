@@ -829,6 +829,7 @@ def _ftm_entity_statement(
         source_url=source_url,
     )
     _annotate_address_registration_country(stmt, props, source_id)
+    _annotate_several_countries(stmt, props, source_id)
     # FtM ``dissolutionDate`` / ``status`` (Phase 151). Only a dissolution date
     # is a positive statement; FtM ``status`` is free text from whichever
     # upstream dataset produced the record, so it travels as the raw label
@@ -999,19 +1000,16 @@ def citizenship_annotation(
     )
 
 
-def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str | None] | None:
-    """Resolve a FtM jurisdiction/country property array to ``(name, alpha-2)``.
+def _ftm_resolve_jurisdiction(raw: str) -> tuple[str, str | None]:
+    """Resolve one FtM jurisdiction/country string to ``(name, code)``.
 
-    FtM stores jurisdiction as an array of strings that may be ISO 3166-1
-    alpha-2 codes (``"RU"``), lowercase codes (``"ru"``), or full country
-    names. We resolve all forms via pycountry so the BODS
-    ``jurisdiction.name`` is always a human-readable string.
+    FtM stores the value as an ISO 3166-1 alpha-2 code (``"RU"``), a
+    lowercase code (``"ru"``) or a country name. The name is pycountry's,
+    so ``jurisdiction.name`` is always readable.
     """
-    jur = (props.get("jurisdiction") or props.get("country") or [None])[0]
-    if not jur:
-        return None
+    text = raw.strip()
     try:
-        country = pycountry.countries.lookup(jur.strip())
+        country = pycountry.countries.lookup(text)
         return (country.name, country.alpha_2)
     except LookupError:
         # Unknown/custom jurisdiction — keep the name so it is not silently
@@ -1022,10 +1020,76 @@ def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str | None] | None:
         # A subdivision ("US-DE") is a valid ``jurisdiction.code`` in its own
         # right and is kept as it is, before the shared resolver reduces it
         # to its country.
-        if pycountry.subdivisions.get(code=jur.strip().upper()):
-            return (jur.strip(), jur.strip().upper())
-        code = _country_code(jur)
-        return (jur.strip(), code or None)
+        if pycountry.subdivisions.get(code=text.upper()):
+            return (text, text.upper())
+        code = _country_code(text)
+        return (text, code or None)
+
+
+def _ftm_jurisdiction_reading(
+    props: dict[str, Any],
+) -> tuple[tuple[str, str | None] | None, str, list[tuple[str, str | None]]]:
+    """Read a FtM record's jurisdiction, refusing to choose between countries.
+
+    Returns ``(jurisdiction, basis, several)``. The first property the record
+    fills decides — ``jurisdiction``, then ``country`` — the rule
+    ``ftm_registration_country`` follows. When its values name **exactly one**
+    country (a subdivision and its own country, ``US-DE`` beside ``US``, are
+    one), that is the jurisdiction. When they name several, there is none and
+    ``several`` lists them, in the source's order: FtM's ``country`` is the
+    record's associated countries, and OpenSanctions' record of Bank Saderat
+    PLC, an English company, says ``["ir", "gb"]`` (the jurisdiction ticket,
+    24 Nov 2026). Until then the first value won, and the FATF / EU high-risk
+    / non-EU checks read the subject as Iranian.
+    """
+    for key in ("jurisdiction", "country"):
+        values = [v for v in props.get(key) or [] if isinstance(v, str) and v.strip()]
+        if not values:
+            continue
+        readings: list[tuple[str, str | None]] = []
+        distinct: dict[str, tuple[str, str | None]] = {}
+        for raw in values:
+            name, code = _ftm_resolve_jurisdiction(raw)
+            # Compare on the country; a value with no code is compared on its
+            # own name, so two unreadable names are still two.
+            key_ = code.split("-", 1)[0] if code else f"name:{name.casefold()}"
+            if key_ not in distinct:
+                distinct[key_] = (name, code)
+                readings.append((name, code))
+        if len(distinct) == 1:
+            # The most specific spelling of the one country: a subdivision
+            # wins over its country, else the first value.
+            resolved = [_ftm_resolve_jurisdiction(raw) for raw in values]
+            best = next((r for r in resolved if r[1] and "-" in r[1]), resolved[0])
+            return best, key, []
+        return None, key, readings
+    return None, "", []
+
+
+def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str | None] | None:
+    """The one jurisdiction a FtM record names, or ``None`` (see above)."""
+    return _ftm_jurisdiction_reading(props)[0]
+
+
+def _annotate_several_countries(
+    stmt: dict[str, Any], props: dict[str, Any], source_id: str
+) -> None:
+    """Say which countries a record named when none could be its jurisdiction."""
+    _jur, basis, several = _ftm_jurisdiction_reading(props)
+    if not several:
+        return
+    source = SOURCE_NAMES.get(source_id, source_id)
+    listed = "; ".join(f"{name} ({code})" if code else name for name, code in several)
+    _annotations.annotate(
+        stmt,
+        _annotations.commenting(
+            _annotations.pointer("recordDetails"),
+            f"{source} names {len(several)} countries for this record in its "
+            f"{basis} property: {listed}. They do not say which one the entity "
+            "is registered in, so OpenCheck gives the record no jurisdiction "
+            "rather than take the first.",
+        ),
+    )
 
 
 def _ftm_country_set(values: Any) -> set[str] | None:
