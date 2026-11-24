@@ -37,8 +37,9 @@ datacentre, CC BY 4.0, 350 requests a minute. Measured 12–13 Nov 2026:
   contract is counted once, at its latest version read; summing every record
   would count a five-times-amended contract six times.
 * **The server drops connections** (``RemoteDisconnected``), retried once;
-  and **some windows never answer**: for ΑΚΤΩΡ's ΑΦΜ, 23 Sep – 6 Nov 2018
-  hangs every time while the days either side answer in a second. A timeout
+  and **some windows never answer**: for ΙΝΤΡΑΚΑΤ's ΑΦΜ (094207780) and
+  ΑΚΤΩΡ's (094149722), 23 Sep – 6 Nov 2018 hangs every time while the days
+  either side answer in a second. A timeout
   is not retried; that window becomes a stated gap (``gaps``, a
   ``source_read`` degradation) and the other windows are still read.
 
@@ -542,7 +543,8 @@ class KimdisGreeceAdapter(SourceAdapter):
         not answer (``gaps``, each a ``source_read`` degradation), or None
         when no window answered at all (a ``source_fetch`` degradation).
         One window can fail on every attempt: 23 Sep – 6 Nov 2018 hangs for
-        ΑΚΤΩΡ's ΑΦΜ (13 Nov 2026), so one bad window must not cost the rest.
+        ΙΝΤΡΑΚΑΤ's and ΑΚΤΩΡ's ΑΦΜs (13 and 24 Nov 2026), so one bad window
+        must not cost the rest.
         """
         today = today or date.today()
         spans = windows(today)
