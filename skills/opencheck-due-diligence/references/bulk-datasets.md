@@ -64,7 +64,9 @@ EOF
   (`entity.csv`, `person.csv`, `owns.csv`, `controls.csv`, `manages.csv`,
   `unspecified_party.csv`, …) with `import.sh` / `import.cypher` to load them
   (the `bods-neo4j` layout). The Estonia release also ships
-  `demo_queries.cypher`.
+  `demo_queries.cypher`. `import.cypher` needs APOC; on a Neo4j without it,
+  or on Memgraph or Relate, rebuild from the `.bods.jsonl.gz` with
+  `bods-neo4j to-cypher`. Before querying, read `references/graph-queries.md`.
 - Senzing: load the `.senzing.jsonl.gz` records directly; each carries
   `DATA_SOURCE` and its licence.
 - FollowTheMoney: `ftm` CLI / OpenAleph / followthemoney tooling.

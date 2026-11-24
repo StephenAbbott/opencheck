@@ -821,7 +821,36 @@ An empty `risk_signals` beside a non-empty `degraded_sources` is **not** a clean
 
 ## Exports
 
-`GET /export?format=` and the MCP `opencheck_export_bods` serve the same bundle in every format. `json`, `jsonl`, `xml` and `zip` are the BODS statements themselves (the zip adds a manifest and `LICENSES.md`); `rdf` is BODS as TriG under the [BODS RDF vocabulary](https://vocab.openownership.org/); `cypher` is a Neo4j script with one node per party and one relationship per interest. The tabular families below are documented column by column, and each zip carries this section as `DATA-DICTIONARY.md`.
+`GET /export?format=` and the MCP `opencheck_export_bods` serve the same bundle in every format. `json`, `jsonl`, `xml` and `zip` are the BODS statements themselves (the zip adds a manifest and `LICENSES.md`); `rdf` is BODS as TriG under the [BODS RDF vocabulary](https://vocab.openownership.org/); `cypher` is a script for Neo4j, Memgraph or Relate (no APOC) with one node per party statement and one `OWNS_OR_CONTROLS` edge per relationship statement, never merged across sources. The tabular families below are documented column by column, and each zip carries this section as `DATA-DICTIONARY.md`.
+
+### Cypher edge properties
+
+| Property | Meaning |
+|---|---|
+| `statementId` | The relationship statement's id. One edge per statement. |
+| `recordId` | The relationship record's id (stable across versions). |
+| `sourceId` | The OpenCheck source that published the statement. |
+| `source` | The source's display name. |
+| `license` | The source's licence (URL, else identifier). |
+| `category` | ownership \| control \| role \| unknown, as the canvas draws it. |
+| `interest` | The BODS interest types, joined with '; ' (kept for older queries). |
+| `interests` | The BODS interest types, as a list. |
+| `shareInterest` | The interest type the share figures below belong to. |
+| `shareExact` | Its exact percentage, where the source gives one. |
+| `shareMin` | Its lower bound (inclusive), where the source gives a band. |
+| `shareMax` | Its upper bound (inclusive). |
+| `shareExclusiveMin` | Its lower bound (exclusive). |
+| `shareExclusiveMax` | Its upper bound (exclusive). |
+| `beneficialOwnershipOrControl` | True when any interest is flagged as beneficial ownership or control by the source. |
+| `directOrIndirect` | direct \| indirect \| unknown, when every interest says the same. |
+| `officerPosition` | An officer appointment's position (secretary, agent…): a role, never control. |
+| `startDate` | The earliest interest start date. |
+| `ended` | True when the record is closed or every interest has ended. |
+| `endDate` | The latest interest end date, on an ended relationship. |
+| `endedAsOf` | The day 'ended' was judged on. |
+| `undated` | True for a current ownership or control relationship the source gives no date for. |
+| `notOwnership` | True for GLEIF consolidation and MEIP group membership edges. |
+| `basis` | What a notOwnership edge records instead of ownership. |
 
 ### CSV and Excel — `format=csv` (zip of three tables), `format=xlsx` (one workbook, a sheet per table) and `format=gql` (the same tables plus BigQuery DDL and GQL queries)
 

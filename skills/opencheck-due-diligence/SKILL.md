@@ -168,3 +168,6 @@ the evidence rarely supports it. Describe what the records show.
 - `references/bulk-datasets.md` — what is published, where, in which formats,
   and how to load it. Read it whenever the task involves more than ~20
   companies or offline analysis.
+- `references/graph-queries.md` — loading an OpenCheck graph into Neo4j,
+  Memgraph or Relate, and the `WHERE` clauses every ownership query needs.
+  Read it before writing any Cypher.

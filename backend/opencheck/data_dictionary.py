@@ -1691,11 +1691,21 @@ def render_markdown() -> str:
         "`GET /export?format=` and the MCP `opencheck_export_bods` serve the same bundle in "
         "every format. `json`, `jsonl`, `xml` and `zip` are the BODS statements themselves "
         "(the zip adds a manifest and `LICENSES.md`); `rdf` is BODS as TriG under the "
-        "[BODS RDF vocabulary](https://vocab.openownership.org/); `cypher` is a Neo4j "
-        "script with one node per party and one relationship per interest. The tabular "
-        "families below are documented column by column, and each zip carries this "
-        "section as `DATA-DICTIONARY.md`."
+        "[BODS RDF vocabulary](https://vocab.openownership.org/); `cypher` is a script "
+        "for Neo4j, Memgraph or Relate (no APOC) with one node per party statement and "
+        "one `OWNS_OR_CONTROLS` edge per relationship statement, never merged across "
+        "sources. The tabular families below are documented column by column, and each "
+        "zip carries this section as `DATA-DICTIONARY.md`."
     )
+    w("")
+    w("### Cypher edge properties")
+    w("")
+    w("| Property | Meaning |")
+    w("|---|---|")
+    from .bods.neo4j import EDGE_PROPERTIES
+
+    for prop, meaning in EDGE_PROPERTIES.items():
+        w(f"| `{prop}` | {meaning.replace('|', chr(92) + '|')} |")
     w("")
     for family, _label, _blurb in EXPORT_FAMILIES:
         w(render_export_notes(family, heading_level=3))
