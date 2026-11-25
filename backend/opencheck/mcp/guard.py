@@ -26,6 +26,10 @@ opencheck_batch_lookup         heavy       ``POST /batch``
 opencheck_save_report          heavy       ``POST /saved-reports``
 =============================  ==========  ===========================
 
+A body made only of task polls (``tasks/get``, ``tasks/cancel``,
+``tasks/update``) spends the poll tier (300 a minute) instead of the default
+unit: the task's tool call was charged when it started.
+
 A tool absent from the table (``opencheck_subsidiaries``,
 ``opencheck_knowability``, ``opencheck_list_sources``) spends the default
 unit only: no pipeline runs for it, so there is nothing more to charge.
@@ -60,6 +64,12 @@ MAX_BODY_BYTES = 1_000_000
 _REQUESTS = Quota("mcp:request", lambda: get_settings().rate_limit_default)
 _LOOKUP = Quota("mcp:lookup", lambda: get_settings().rate_limit_lookup)
 _HEAVY = Quota("mcp:heavy", lambda: get_settings().rate_limit_heavy)
+#: Task polls (``tasks/get``, ``tasks/cancel``, ``tasks/update``) run nothing:
+#: the work was charged once, when the tool call started. A client polls a
+#: task every five seconds, so a handful of tasks at once would spend the
+#: default tier on waiting. Polls have their own, wider tier instead.
+_POLLS = Quota("mcp:poll", lambda: "300/minute")
+_POLL_METHODS = frozenset({"tasks/get", "tasks/cancel", "tasks/update"})
 
 TOOL_TIERS: dict[str, Quota] = {
     "opencheck_lookup": _LOOKUP,
@@ -155,7 +165,8 @@ class McpRateGuard:
         messages = _messages(body)
         ids = [m.get("id") for m in messages if "id" in m]
 
-        charges: list[Quota] = [_REQUESTS] + [
+        only_polls = bool(messages) and all(m.get("method") in _POLL_METHODS for m in messages)
+        charges: list[Quota] = [_POLLS if only_polls else _REQUESTS] + [
             TOOL_TIERS[name] for name in _tool_calls(messages) if name in TOOL_TIERS
         ]
         worst: float | None = None

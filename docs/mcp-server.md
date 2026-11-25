@@ -108,6 +108,41 @@ frontmatter `name`, every `opencheck_*` a skill names is a real tool, and every
 link between skills resolves. `/.well-known/mcp.json` lists the skill URIs.
 To add a skill, add a directory; to change one, edit its `SKILL.md`.
 
+### Tasks for the slow tools (the "Update MCP approaches" ticket, step 3)
+
+A full lookup can outlast a request: Claude Code wants a first byte within 60
+seconds and drops a call after five idle minutes. The
+`io.modelcontextprotocol/tasks` extension (`mcp/tasks.py`) lets the server
+answer a slow call with a task and the client poll for the result.
+
+- **Only for a client that declared it**, on 2026-07-28, in the request's
+  `_meta` client capabilities. Any other client's call blocks as before.
+- **Only the tools that run a pipeline** (`TASK_TOOLS`): lookup,
+  register_lookup, export_bods, owners, ownership_map, batch_lookup,
+  save_report, discrepancy_note.
+- **Fast calls stay plain.** The call starts at once; one that finishes in
+  three seconds (a replayed lookup) is answered with its result. One still
+  running is answered `resultType: "task"` with `taskId` (32 random bytes),
+  `status: working`, `createdAt`, `lastUpdatedAt`, `ttlMs` (one hour),
+  `pollIntervalMs` (5,000) and a `statusMessage` read from the lookup run's
+  own events ("Checking sources: 9 of 13 answered", "Waiting for a free
+  slot: 2 checks ahead").
+- `tasks/get` returns the same fields, and once `completed` the tool's
+  ordinary `tools/call` result under `result`; a call that raised is
+  `failed` with `error.message`. `tasks/cancel` stops the task's wait — a
+  lookup run is detached and still completes into the replay cache for anyone
+  else following it. `tasks/update` is acknowledged (OpenCheck never asks for
+  input). An unknown id is `-32602`.
+- **The work is charged once**, when the call starts, to the caller's lookup
+  budget. A body made only of `tasks/*` polls spends its own MCP tier (300 a
+  minute per address) instead of the default one.
+- **In memory, on the one Render instance.** A deploy loses the tasks in
+  flight; Claude Code retries an unknown id for five minutes, then reports
+  the outcome unknown. A finished task is kept an hour after its last change,
+  at most 500 are held, and past that a call simply blocks.
+
+`tests/test_mcp_tasks.py` drives all of this over HTTP behind the rate guard.
+
 ### Tool annotations (the readOnlyHint ticket)
 
 Every tool declares MCP tool annotations, so a client can tell which calls
