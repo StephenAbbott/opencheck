@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 620** — The MCP section of the API page now explains the two protocol revisions, the three OpenCheck skills and how slow calls become tasks.
+**Latest: Phase 621** — The API page now links the interactive reference and OpenAPI file, offers a sample lookup answer to download, and states the rate limits and error codes.
 
 → [Full development history](docs/status.md)
 
