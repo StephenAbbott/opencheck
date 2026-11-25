@@ -189,18 +189,24 @@ _CANONICAL: dict[str, LicenseTerms] = {
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",
         summary="Commercial use permitted with attribution.",
     ),
-    # MTender (Moldovan procurement): no licence is named — not by the OCP
-    # Data Registry, not by mtender.gov.md, whose terms cover using the
-    # platform. MTender says it publishes "by default" as open data. Kept
-    # amber until the Ministry of Finance confirms (Stephen, 12 Nov 2026).
+    # MTender (Moldovan procurement): no specific licence. The Ministry of
+    # Finance's letter No. 13-09/820 of 13 Nov 2026 (received 25 Nov) says the
+    # OCDS data are open data, re-usable by anyone "including for commercial
+    # purposes", and are "not subject to a specific licence": re-use is
+    # governed by Moldova's national framework for open data and the re-use
+    # of public-sector information. It confirmed the attribution wording in
+    # sources/mtender_moldova.py. Green from that letter (Stephen, 25 Nov 2026).
     "mtender-open-data": _terms(
-        "MTender-Open-Data", "MTender open data (no licence named)",
-        commercial="conditional", attribution=True, share_alike=False,
-        redistribution="conditional",
+        "MTender-Open-Data",
+        "MTender open data (no specific licence; Moldova's national open-data framework)",
+        commercial="yes", attribution=True, share_alike=False,
+        redistribution="yes",
         url="https://mtender.gov.md/",
         summary=(
-            "Published as open data with no licence named; attribute the "
-            "Ministry of Finance and verify before commercial re-use."
+            "Open data under no specific licence: the Ministry of Finance "
+            "confirms re-use by anyone, including commercially, under "
+            "Moldova's national open-data framework. Attribute as the "
+            "Ministry agreed; personal-data law still applies."
         ),
     ),
     "odc-by": _terms(

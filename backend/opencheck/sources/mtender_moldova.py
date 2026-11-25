@@ -75,11 +75,15 @@ its stage records (``<ocid>-EV-…``), not on the procedure's own record;
 ``mtender_harvest.flatten`` puts them back into the one release this module
 reads, the shape the registry's file already has.
 
-Licence: none is named — not by the registry (which links
-``opendefinition.org/licenses/``) and not by mtender.gov.md, whose terms cover
-using the platform. MTender says it publishes "by default" as open data.
-Recorded as ``MTender-Open-Data`` (verify before commercial reuse) while the
-Ministry of Finance is asked to confirm (Stephen, 12 Nov 2026).
+Licence: none. The Ministry of Finance's letter No. 13-09/820 (13 Nov 2026,
+received 25 Nov) says the OCDS data are open data, re-usable by anyone
+including for commercial purposes, and "not subject to a specific licence":
+re-use is governed by Moldova's national open-data framework. Recorded as
+``MTender-Open-Data``, commercial use yes. The same letter confirmed the
+attribution below word for word, accepted the weekly API read at no more than
+four requests at a time (with a User-Agent, handling errors, not repeating
+requests), said there is no bulk download, and that older procedures are read
+by giving the period in the API's query parameters.
 """
 
 from __future__ import annotations
@@ -118,6 +122,11 @@ FULL_FILE_URL = "https://data.open-contracting.org/en/publication/34/download?na
 _HOMEPAGE = "https://mtender.gov.md/"
 TENDER_URL_TEMPLATE = "https://mtender.gov.md/tenders/{ocid}"
 LICENSE_ID = "MTender-Open-Data"
+#: Confirmed by the Ministry of Finance, letter No. 13-09/820 of 13 Nov 2026.
+ATTRIBUTION = (
+    "Source: MTender, Ministry of Finance of the Republic of Moldova "
+    "(public procurement data, in OCDS format)"
+)
 
 #: Bumped whenever the index tables change shape.
 INDEX_SCHEMA_VERSION = "1"
@@ -727,11 +736,9 @@ class MTenderMoldovaAdapter(SourceAdapter):
                 "Matched on the IDNO. Awards won, not ownership."
             ),
             license=LICENSE_ID,
-            attribution=(
-                "Contains MTender public procurement data published by the "
-                "Ministry of Finance of the Republic of Moldova, read from MTender's "
-                "API and via the Open Contracting Partnership's Data Registry."
-            ),
+            # The wording the Ministry of Finance confirmed as appropriate
+            # (letter No. 13-09/820, 13 Nov 2026). Keep it verbatim.
+            attribution=ATTRIBUTION,
             supports=[SearchKind.ENTITY],
             requires_api_key=False,
             live_available=index_available(),
