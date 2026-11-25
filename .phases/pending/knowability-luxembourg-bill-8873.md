@@ -1,0 +1,5 @@
+---
+title: Luxembourg's knowability row records bill 8873 (ALBA) as a pending change.
+readme: Luxembourg's beneficial-ownership row now records bill 8873, which creates ALBA and partially transposes the Sixth AML Directive for the trust register.
+---
+Bill 8873, filed with the Chambre des Députés on 25 Nov 2026, creates ALBA (Autorité luxembourgeoise de lutte contre le blanchiment d'argent et le financement du terrorisme). ALBA's conseil des registres takes over the trust register (RFT) from the AED. The bill transposes 6AMLD Arts 11, 12, 13 and 15 for the RFT only. It narrows the deemed legitimate-interest categories for journalists, CSOs and prospective transacting parties to those established in an EU Member State. The RBE is amended only to add ALBA to the authorities with access, and Art 10 is not transposed. Re-synced from the Notion table after Stephen asked for the Luxembourg row to be updated: pending_changes, two chd.lu sources and last_verified 2026-11-25. Access status (legitimate_interest) and 6AMLD LIA (No) are unchanged, because nothing in the bill is law yet. docs/knowability.md regenerated.
