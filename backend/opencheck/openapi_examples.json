@@ -1,0 +1,1093 @@
+{
+ "GET /lookup": {
+  "query": "213800E11LI1SCETU492",
+  "kind": "entity",
+  "hits": [
+   {
+    "source_id": "gleif",
+    "hit_id": "213800E11LI1SCETU492",
+    "kind": "entity",
+    "name": "TAQA BRATANI LIMITED",
+    "summary": "LEI 213800E11LI1SCETU492 · GB",
+    "finding": null,
+    "identifiers": {
+     "lei": "213800E11LI1SCETU492",
+     "gb_coh": "05975475"
+    },
+    "raw": {
+     "direct_children_total": 0,
+     "direct_children_fetched": 0
+    },
+    "is_stub": false,
+    "liveness": "snapshot",
+    "retrieved_at": "2026-11-25T10:20:17Z"
+   },
+   {
+    "source_id": "eiti",
+    "hit_id": "GB:05975475",
+    "kind": "entity",
+    "name": "TAQA",
+    "summary": "EITI GB · 6 reporting years (2018–2023) · $202.3M USD to governments",
+    "finding": null,
+    "identifiers": {
+     "gb_coh": "05975475"
+    },
+    "raw": {
+     "source_id": "eiti",
+     "country": "GB",
+     "identification": "05975475",
+     "entity_name": "TAQA",
+     "organisations": [
+      {
+       "id": "245707",
+       "year": "2023",
+       "label": "TAQA"
+      },
+      {
+       "id": "226157",
+       "year": "2022",
+       "label": "TAQA"
+      }
+     ],
+     "revenue_years": [
+      {
+       "year": "2023",
+       "organisation_id": "245707",
+       "total_usd": 0.0,
+       "rows": [],
+       "rows_available": 0,
+       "truncated": false
+      },
+      {
+       "year": "2022",
+       "organisation_id": "226157",
+       "total_usd": 240216153.94090003,
+       "rows": [
+        {
+         "label": "Ring Fence CT and Supplementary Charge (RFCT & SC)",
+         "revenue": 202434667.48769,
+         "currency": "USD",
+         "gfs_label": "Ordinary taxes on income, profits and capital gains",
+         "gfs_code": "1112E1"
+        },
+        {
+         "label": "Petroleum Revenue Tax (PRT)",
+         "revenue": -975421.18227,
+         "currency": "USD",
+         "gfs_label": "Extraordinary taxes on income, profits and capital gains",
+         "gfs_code": "1112E2"
+        }
+       ],
+       "rows_available": 7,
+       "truncated": false
+      }
+     ],
+     "streams": {
+      "Ordinary taxes on income, profits and capital gains": 301813039.02026,
+      "Other taxes payable by natural resource companies": 2582068.2201199997,
+      "Licence fees": 2555572.0115,
+      "Extraordinary taxes on income, profits and capital gains": -104680145.04352999
+     },
+     "total_usd": 202270534.20835003,
+     "years": [
+      "2023",
+      "2022"
+     ],
+     "truncated_years": [],
+     "is_stub": false,
+     "matched_via": "registered_as"
+    },
+    "is_stub": false,
+    "liveness": "snapshot",
+    "retrieved_at": "2026-10-09T19:36:32Z"
+   }
+  ],
+  "errors": {
+   "opensanctions": "HTTPStatusError: HTTP 429 Too Many Requests from api.opensanctions.org"
+  },
+  "cross_source_links": [
+   {
+    "key": "lei",
+    "key_value": "213800E11LI1SCETU492",
+    "confidence": "strong",
+    "independent_source_count": 3,
+    "hits": [
+     {
+      "source_id": "gleif",
+      "hit_id": "213800E11LI1SCETU492",
+      "name": "TAQA BRATANI LIMITED"
+     },
+     {
+      "source_id": "wikirate",
+      "hit_id": "10724719",
+      "name": "TAQA BRATANI LIMITED"
+     }
+    ]
+   },
+   {
+    "key": "gb_coh",
+    "key_value": "05975475",
+    "confidence": "strong",
+    "independent_source_count": 3,
+    "hits": [
+     {
+      "source_id": "gleif",
+      "hit_id": "213800E11LI1SCETU492",
+      "name": "TAQA BRATANI LIMITED"
+     },
+     {
+      "source_id": "eiti",
+      "hit_id": "GB:05975475",
+      "name": "TAQA"
+     }
+    ]
+   }
+  ],
+  "risk_signals": [
+   {
+    "code": "NON_EU_JURISDICTION",
+    "confidence": "low",
+    "summary": "Ownership chain reaches jurisdictions outside the EU/EEA: AE. Structural context, not a risk finding — being outside the EU/EEA is not a risk factor in itself. Jurisdiction risk comes only from the FATF lists, the EU high-risk list and the EU tax list, which have their own signals.",
+    "source_id": "gleif",
+    "hit_id": "213800E11LI1SCETU492",
+    "evidence": {
+     "jurisdictions": [
+      {
+       "statement_id": "7fdddb8d-08dd-5b31-b95a-8a9ceee2e15f",
+       "code": "AE",
+       "name": "United Arab Emirates"
+      },
+      {
+       "statement_id": "396db76a-c7bf-2ef4-65fa-9f368563db93",
+       "code": "AE",
+       "name": "United Arab Emirates"
+      }
+     ],
+     "reported_by": [
+      "gleif",
+      "companies_house"
+     ]
+    },
+    "kind": "context"
+   }
+  ],
+  "bods": [
+   {
+    "statementId": "5d22e636-3ad9-fef0-2161-879d52a997d2",
+    "recordId": "XI-LEI-213800E11LI1SCETU492",
+    "declarationSubject": "XI-LEI-213800E11LI1SCETU492",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2024-06-06",
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity",
+      "details": "Private Limited Company"
+     },
+     "name": "TAQA BRATANI LIMITED",
+     "foundingDate": "2006-10-23",
+     "identifiers": [
+      {
+       "id": "213800E11LI1SCETU492",
+       "scheme": "XI-LEI",
+       "schemeName": "Global Legal Entity Identifier Index",
+       "uri": "https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei"
+      },
+      {
+       "id": "05975475",
+       "scheme": "GB-COH",
+       "schemeName": "Companies House",
+       "uri": "http://www.companieshouse.gov.uk/"
+      }
+     ],
+     "addresses": [
+      {
+       "type": "registered",
+       "address": "CANNON PLACE, 78 CANNON STREET, LONDON, GB-LND",
+       "postCode": "EC4N 6AF",
+       "country": {
+        "name": "United Kingdom",
+        "code": "GB"
+       }
+      },
+      {
+       "type": "business",
+       "address": "BRIMMOND HOUSE, PRIME FOUR BUSINESS PARK, KINGSWELLS, GB-ABE",
+       "postCode": "AB15 8PU",
+       "country": {
+        "name": "United Kingdom",
+        "code": "GB"
+       }
+      }
+     ],
+     "jurisdiction": {
+      "name": "United Kingdom",
+      "code": "GB"
+     }
+    },
+    "publicationDetails": {
+     "publicationDate": "2025-02-28",
+     "bodsVersion": "0.4",
+     "license": "https://creativecommons.org/publicdomain/zero/1.0/",
+     "publisher": {
+      "name": "Open Ownership",
+      "url": "https://www.openownership.org"
+     }
+    },
+    "source": {
+     "type": [
+      "officialRegister",
+      "verified"
+     ],
+     "url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
+     "description": "GLEIF"
+    }
+   },
+   {
+    "statementId": "179f9caf-62a6-ee48-0d4e-5f8c57055538",
+    "recordId": "XI-LEI-213800FF7EXWECXGTO26",
+    "declarationSubject": "XI-LEI-213800FF7EXWECXGTO26",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2024-06-06",
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity",
+      "details": "Private Joint Stock Company"
+     },
+     "name": "EMIRATES SEMBCORP WATER AND POWER COMPANY PJSC",
+     "foundingDate": "2017-09-12",
+     "identifiers": [
+      {
+       "id": "213800FF7EXWECXGTO26",
+       "scheme": "XI-LEI",
+       "schemeName": "Global Legal Entity Identifier Index",
+       "uri": "https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei"
+      }
+     ],
+     "addresses": [
+      {
+       "type": "registered",
+       "address": "FUJAIRAH 1 INDEPENDENT WATER AND POWER PLANT, RAS AL QIDFA, FUJAIRAH, Al Fujayrah",
+       "postCode": "3020",
+       "country": {
+        "name": "United Arab Emirates",
+        "code": "AE"
+       }
+      },
+      {
+       "type": "business",
+       "address": "FUJAIRAH 1 INDEPENDENT WATER AND POWER PLANT, RAS AL QIDFA, FUJAIRAH, Al Fujayrah",
+       "postCode": "3020",
+       "country": {
+        "name": "United Arab Emirates",
+        "code": "AE"
+       }
+      }
+     ],
+     "jurisdiction": {
+      "name": "United Arab Emirates",
+      "code": "AE"
+     }
+    },
+    "publicationDetails": {
+     "publicationDate": "2025-02-28",
+     "bodsVersion": "0.4",
+     "license": "https://creativecommons.org/publicdomain/zero/1.0/",
+     "publisher": {
+      "name": "Open Ownership",
+      "url": "https://www.openownership.org"
+     }
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "url": "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy",
+     "description": "GLEIF"
+    }
+   }
+  ],
+  "bods_issues": [],
+  "license_notices": [],
+  "possibly_same_entities": [],
+  "degraded_sources": [
+   {
+    "source_id": "opensanctions",
+    "check": "source_fetch",
+    "affected_signals": [],
+    "detail": "did not answer, so its records were not consulted",
+    "reason": "rate_limited"
+   },
+   {
+    "source_id": "opencheck",
+    "check": "cross_source_names",
+    "affected_signals": [
+     "RELATED_SANCTIONED",
+     "RELATED_COUNTER_SANCTIONED"
+    ],
+    "detail": "Related-party sanctions and PEP screening covered the 25 highest-ranked of 94 related parties; 69 were not screened (69 current with no ownership or board role recorded).",
+    "reason": "truncated"
+   }
+  ],
+  "openaleph_screening": [],
+  "source_liveness": {
+   "climatetrace": {
+    "liveness": "snapshot",
+    "label": "Snapshot",
+    "retrieved_at": "2026-11-21T00:00:00Z",
+    "source_as_of": "2026-11-12T00:00:00Z",
+    "detail": "Global Energy Monitor ownership data (release of 2026-11-12)"
+   },
+   "companies_house": {
+    "liveness": "cached",
+    "label": "Cached",
+    "retrieved_at": "2026-11-25T16:56:50Z",
+    "source_as_of": null,
+    "detail": "OpenCheck response cache"
+   },
+   "eiti": {
+    "liveness": "snapshot",
+    "label": "Snapshot",
+    "retrieved_at": "2026-10-09T19:36:32Z",
+    "source_as_of": null,
+    "detail": "EITI organisation index (committed artefact)"
+   },
+   "gleif": {
+    "liveness": "snapshot",
+    "label": "Snapshot",
+    "retrieved_at": "2026-11-25T10:20:17Z",
+    "source_as_of": "2026-11-25T08:00:00Z",
+    "detail": "GLEIF Golden Copy mirror"
+   },
+   "meip": {
+    "liveness": "snapshot",
+    "label": "Snapshot",
+    "retrieved_at": "2026-09-15T09:54:55Z",
+    "source_as_of": "2024-12-31T00:00:00Z",
+    "detail": "OECD-UNSD MEIP Global Register, 2024-12-31 edition, BODS v0.4 release"
+   },
+   "openaleph": {
+    "liveness": "cached",
+    "label": "Cached",
+    "retrieved_at": "2026-11-25T16:56:50Z",
+    "source_as_of": null,
+    "detail": "OpenCheck response cache"
+   },
+   "opencorporates": {
+    "liveness": "cached",
+    "label": "Cached",
+    "retrieved_at": "2026-11-25T16:56:51Z",
+    "source_as_of": null,
+    "detail": "OpenCheck response cache"
+   },
+   "opensanctions": {
+    "liveness": "stub",
+    "label": "Stub",
+    "retrieved_at": null,
+    "source_as_of": null,
+    "detail": null
+   },
+   "ted_eu": {
+    "liveness": "cached",
+    "label": "Cached",
+    "retrieved_at": "2026-11-25T16:56:50Z",
+    "source_as_of": null,
+    "detail": "OpenCheck response cache"
+   },
+   "wikirate": {
+    "liveness": "cached",
+    "label": "Cached",
+    "retrieved_at": "2026-11-25T16:56:50Z",
+    "source_as_of": null,
+    "detail": "OpenCheck response cache"
+   }
+  },
+  "graph_shape": {
+   "companies": 93,
+   "people": 3,
+   "relationships": 99,
+   "depth": null,
+   "intermediate_layers": null
+  },
+  "verdict": "No risk signals surfaced, but 2 checks did not run — an empty result there is not a clean screen, and 2 checks answered only in part — not every related party was screened, and one source did not answer, so its records were not consulted.",
+  "subject_profile": {
+   "legal_form": {
+    "value": "Private Limited Company",
+    "sources": [
+     "companies_house",
+     "gleif"
+    ],
+    "independent_sources": 2,
+    "other_values": []
+   },
+   "register_status": null,
+   "founding_date": {
+    "value": "2006-10-23",
+    "sources": [
+     "companies_house",
+     "gleif"
+    ],
+    "independent_sources": 2,
+    "other_values": []
+   },
+   "registered_address": {
+    "value": "CANNON PLACE, 78, CANNON STREET, LONDON",
+    "sources": [
+     "companies_house"
+    ],
+    "independent_sources": 1,
+    "other_values": [
+     {
+      "source_id": "gleif",
+      "value": "CANNON PLACE, 78 CANNON STREET, LONDON, GB-LND"
+     }
+    ],
+    "country": "GB"
+   },
+   "jurisdiction": "GB",
+   "lei_registration": {
+    "status": "LAPSED",
+    "label": "Lapsed",
+    "flag": true,
+    "since": "2026-06-09",
+    "next_renewal_date": "2026-06-09",
+    "last_update_date": "2026-06-10",
+    "initial_registration_date": "2018-01-17",
+    "managing_lou": "213800WAVVOPS85N2205",
+    "source_id": "gleif",
+    "sentence": "GLEIF records this LEI as lapsed: its renewal was due on 9 Jun 2026 and has not been made, so no issuer has re-checked its reference data since then. GLEIF last updated the record on 10 Jun 2026. This is the status of the LEI record, not of the company."
+   },
+   "lei_successor": null,
+   "former_names": [],
+   "name_changed_on": null,
+   "statement_ids": [
+    "5d22e636-3ad9-fef0-2161-879d52a997d2",
+    "opencheck-6a1bdb89e294cd173e660ed1"
+   ]
+  },
+  "knowability": {
+   "code": "GB",
+   "name": "United Kingdom",
+   "sentence": "Register of People with Significant Control and Register of Overseas Entities is open to the public. OpenCheck reads beneficial owners from UK Companies House.",
+   "sentences": [
+    "Register of People with Significant Control and Register of Overseas Entities is open to the public.",
+    "OpenCheck reads beneficial owners from UK Companies House."
+   ],
+   "stated_absence": false,
+   "review_status": "verified",
+   "last_verified": "2026-09-18",
+   "access": "public",
+   "access_since": null,
+   "next_change_expected": null,
+   "fields": {
+    "register": "Register of People with Significant Control and Register of Overseas Entities",
+    "register_url": "https://find-and-update.company-information.service.gov.uk/",
+    "threshold_wording": null,
+    "fields_published": [],
+    "reporting_basis": null,
+    "covers": [],
+    "verification": null,
+    "verification_note": null,
+    "amld6_lia": "Not applicable",
+    "amld6_details": "PSC register public (bands 25/50/75%); Register of Overseas Entities also public. ECCTA identity verification mandatory rollout from 18 Nov 2025.",
+    "boris": "Not applicable",
+    "amlr_alignment_watch": false,
+    "pending_changes": null,
+    "company_register": {
+     "name": null,
+     "url": null,
+     "publishes": [],
+     "public": null,
+     "discrepancy_route": "https://www.gov.uk/contact-companies-house"
+    },
+    "fatf": {
+     "body": "FATF",
+     "onsite": "2027-06-01",
+     "plenary": "2028-02-01"
+    },
+    "eu_eea": false,
+    "groups": [
+     "OpenCheck source"
+    ],
+    "notes": null
+   },
+   "opencheck_reads": [
+    {
+     "source_id": "companies_house",
+     "name": "UK Companies House",
+     "requires_api_key": true,
+     "reads_beneficial_owners": true,
+     "reads_people": true
+    }
+   ],
+   "sources": [
+    {
+     "url": "https://www.gov.uk/guidance/people-with-significant-control-pscs",
+     "title": null
+    }
+   ],
+   "as_of": "2026-11-25"
+  },
+  "knowability_chain": {
+   "subject": "GB",
+   "codes": [
+    "GB",
+    "AE"
+   ],
+   "statements": [
+    {
+     "code": "GB",
+     "name": "United Kingdom",
+     "sentence": "Register of People with Significant Control and Register of Overseas Entities is open to the public. OpenCheck reads beneficial owners from UK Companies House.",
+     "sentences": [
+      "Register of People with Significant Control and Register of Overseas Entities is open to the public.",
+      "OpenCheck reads beneficial owners from UK Companies House."
+     ],
+     "stated_absence": false,
+     "review_status": "verified",
+     "last_verified": "2026-09-18",
+     "access": "public",
+     "access_since": null,
+     "next_change_expected": null,
+     "fields": {
+      "register": "Register of People with Significant Control and Register of Overseas Entities",
+      "register_url": "https://find-and-update.company-information.service.gov.uk/",
+      "threshold_wording": null,
+      "fields_published": [],
+      "reporting_basis": null,
+      "covers": [],
+      "verification": null,
+      "verification_note": null,
+      "amld6_lia": "Not applicable",
+      "amld6_details": "PSC register public (bands 25/50/75%); Register of Overseas Entities also public. ECCTA identity verification mandatory rollout from 18 Nov 2025.",
+      "boris": "Not applicable",
+      "amlr_alignment_watch": false,
+      "pending_changes": null,
+      "company_register": {
+       "name": null,
+       "url": null,
+       "publishes": [],
+       "public": null,
+       "discrepancy_route": "https://www.gov.uk/contact-companies-house"
+      },
+      "fatf": {
+       "body": "FATF",
+       "onsite": "2027-06-01",
+       "plenary": "2028-02-01"
+      },
+      "eu_eea": false,
+      "groups": [
+       "OpenCheck source"
+      ],
+      "notes": null
+     },
+     "opencheck_reads": [
+      {
+       "source_id": "companies_house",
+       "name": "UK Companies House",
+       "requires_api_key": true,
+       "reads_beneficial_owners": true,
+       "reads_people": true
+      }
+     ],
+     "sources": [
+      {
+       "url": "https://www.gov.uk/guidance/people-with-significant-control-pscs",
+       "title": null
+      }
+     ]
+    },
+    {
+     "code": "AE",
+     "name": "United Arab Emirates",
+     "sentence": "OpenCheck holds no register notes for United Arab Emirates.",
+     "sentences": [
+      "OpenCheck holds no register notes for United Arab Emirates."
+     ],
+     "stated_absence": true,
+     "review_status": "absent",
+     "last_verified": null,
+     "access": null,
+     "access_since": null,
+     "next_change_expected": null,
+     "fields": {},
+     "opencheck_reads": [],
+     "sources": []
+    }
+   ],
+   "as_of": "2026-11-25"
+  },
+  "integrated_ownership": {
+   "method": "integrated_ownership",
+   "as_of": "2026-11-25",
+   "description": "How much of the company each party holds, directly and through the companies it holds: shares are multiplied along each path and added across paths, and a company's own shares are given back to its other holders. Each source is computed on its own; figures from two sources are listed side by side, never added. Shareholdings only — voting rights, roles and control are not shares. For a person it is arithmetic on what was filed, not a determination of beneficial ownership. Context, not a finding.",
+   "credit": "Method: integrated ownership as published by T-Rank (https://docs.trank.no/white_papers).",
+   "holders": [],
+   "subject_ids": [
+    "5d22e636-3ad9-fef0-2161-879d52a997d2",
+    "opencheck-6a1bdb89e294cd173e660ed1"
+   ]
+  },
+  "disclosure_status": {
+   "sources": {
+    "gleif": {
+     "values": [
+      "declared"
+     ],
+     "entries": [
+      {
+       "value": "declared",
+       "covers": "parent",
+       "count": 1
+      }
+     ],
+     "ownership_source": true
+    },
+    "companies_house": {
+     "values": [
+      "declared"
+     ],
+     "entries": [
+      {
+       "value": "declared",
+       "covers": "beneficial_owners",
+       "count": 1
+      }
+     ],
+     "ownership_source": true
+    },
+    "opencorporates": {
+     "values": [
+      "not_covered"
+     ],
+     "entries": [
+      {
+       "value": "not_covered",
+       "covers": null
+      }
+     ],
+     "ownership_source": false
+    },
+    "opensanctions": {
+     "values": [
+      "not_covered"
+     ],
+     "entries": [
+      {
+       "value": "not_covered",
+       "covers": null
+      }
+     ],
+     "ownership_source": false
+    },
+    "openaleph": {
+     "values": [
+      "not_covered"
+     ],
+     "entries": [
+      {
+       "value": "not_covered",
+       "covers": null
+      }
+     ],
+     "ownership_source": false
+    },
+    "climatetrace": {
+     "values": [
+      "none_filed"
+     ],
+     "entries": [
+      {
+       "value": "none_filed",
+       "covers": "shareholders"
+      }
+     ],
+     "ownership_source": true
+    },
+    "wikirate": {
+     "values": [
+      "not_covered"
+     ],
+     "entries": [
+      {
+       "value": "not_covered",
+       "covers": null
+      }
+     ],
+     "ownership_source": false
+    },
+    "eiti": {
+     "values": [
+      "not_covered"
+     ],
+     "entries": [
+      {
+       "value": "not_covered",
+       "covers": null
+      }
+     ],
+     "ownership_source": false
+    },
+    "meip": {
+     "values": [
+      "not_covered"
+     ],
+     "entries": [
+      {
+       "value": "not_covered",
+       "covers": null
+      }
+     ],
+     "ownership_source": false
+    },
+    "ted_eu": {
+     "values": [
+      "not_covered"
+     ],
+     "entries": [
+      {
+       "value": "not_covered",
+       "covers": null
+      }
+     ],
+     "ownership_source": false
+    },
+    "everypolitician": {
+     "values": [
+      "not_covered"
+     ],
+     "entries": [
+      {
+       "value": "not_covered",
+       "covers": null
+      }
+     ],
+     "ownership_source": false
+    }
+   },
+   "not_covered": [
+    "opencorporates",
+    "opensanctions"
+   ],
+   "as_of": "2026-11-25",
+   "subject_ids": [
+    "12e4c060-5462-2ba2-c15d-e1f4bd82c904",
+    "5d22e636-3ad9-fef0-2161-879d52a997d2"
+   ]
+  },
+  "listing": {
+   "source_id": "permid",
+   "attribution": "LSEG PermID (CC-BY 4.0)",
+   "licence": "CC-BY-4.0",
+   "lei": "213800E11LI1SCETU492",
+   "status": "not_listed",
+   "as_of": "2026-11-25",
+   "organisation": {
+    "permid": "5035439500",
+    "url": "https://permid.org/1-5035439500"
+   },
+   "quote": null,
+   "exchange": null,
+   "link": null
+  },
+  "form13f": null,
+  "register_record": null,
+  "lei": "213800E11LI1SCETU492",
+  "legal_name": "TAQA BRATANI LIMITED",
+  "jurisdiction": "GB",
+  "derived_identifiers": {
+   "lei": "213800E11LI1SCETU492",
+   "gb_coh": "05975475",
+   "ocid": "gb/05975475"
+  },
+  "replayed": true,
+  "fetched_at": "2026-11-25T16:59:18+00:00",
+  "sources_applicable": [
+   "companies_house",
+   "opencorporates"
+  ],
+  "run_completed_at": "2026-11-25T16:59:18+00:00"
+ },
+ "GET /search": {
+  "query": "TAQA Bratani",
+  "kind": "entity",
+  "hits": [
+   {
+    "source_id": "gleif",
+    "hit_id": "213800E11LI1SCETU492",
+    "kind": "entity",
+    "name": "TAQA BRATANI LIMITED",
+    "summary": "LEI 213800E11LI1SCETU492 · GB · active",
+    "finding": null,
+    "identifiers": {
+     "lei": "213800E11LI1SCETU492",
+     "registered_as_gb": "05975475",
+     "gb_coh": "05975475"
+    },
+    "raw": {},
+    "is_stub": false,
+    "liveness": "stub",
+    "retrieved_at": null
+   },
+   {
+    "source_id": "climatetrace",
+    "hit_id": "E100001014306",
+    "kind": "entity",
+    "name": "TAQA Bratani Ltd",
+    "summary": "GEM/Climate TRACE entity · ID E100001014306",
+    "finding": null,
+    "identifiers": {
+     "gem_entity_id": "E100001014306"
+    },
+    "raw": {},
+    "is_stub": false,
+    "liveness": "stub",
+    "retrieved_at": null
+   },
+   {
+    "source_id": "companies_house",
+    "hit_id": "05975475",
+    "kind": "entity",
+    "name": "TAQA BRATANI LIMITED",
+    "summary": "Company 05975475 · active · Cannon Place, 78 Cannon Street, London, EC4N 6AF",
+    "finding": null,
+    "identifiers": {
+     "gb_coh": "05975475"
+    },
+    "raw": {},
+    "is_stub": false,
+    "liveness": "stub",
+    "retrieved_at": null
+   }
+  ],
+  "errors": {},
+  "cross_source_links": [
+   {
+    "key": "gb_coh",
+    "key_value": "05975475",
+    "confidence": "strong",
+    "independent_source_count": 2,
+    "hits": [
+     {
+      "source_id": "gleif",
+      "hit_id": "213800E11LI1SCETU492",
+      "name": "TAQA BRATANI LIMITED"
+     },
+     {
+      "source_id": "companies_house",
+      "hit_id": "05975475",
+      "name": "TAQA BRATANI LIMITED"
+     }
+    ]
+   }
+  ],
+  "risk_signals": [],
+  "filters": null
+ },
+ "GET /resolve-national-id": {
+  "number": "05975475",
+  "country": "GB",
+  "ra_code": "RA000585",
+  "matches": [
+   {
+    "lei": "213800E11LI1SCETU492",
+    "name": "TAQA BRATANI LIMITED",
+    "jurisdiction": "GB"
+   }
+  ],
+  "checksum_warning": null
+ },
+ "GET /knowability": {
+  "statements": [
+   {
+    "code": "GB",
+    "name": "United Kingdom",
+    "sentence": "Register of People with Significant Control and Register of Overseas Entities is open to the public. OpenCheck reads beneficial owners from UK Companies House.",
+    "sentences": [
+     "Register of People with Significant Control and Register of Overseas Entities is open to the public.",
+     "OpenCheck reads beneficial owners from UK Companies House."
+    ],
+    "stated_absence": false,
+    "review_status": "verified",
+    "last_verified": "2026-09-18",
+    "access": "public",
+    "access_since": null,
+    "next_change_expected": null,
+    "fields": {
+     "register": "Register of People with Significant Control and Register of Overseas Entities",
+     "register_url": "https://find-and-update.company-information.service.gov.uk/",
+     "threshold_wording": null,
+     "fields_published": [],
+     "reporting_basis": null,
+     "covers": [],
+     "verification": null,
+     "verification_note": null,
+     "amld6_lia": "Not applicable",
+     "amld6_details": "PSC register public (bands 25/50/75%); Register of Overseas Entities also public. ECCTA identity verification mandatory rollout from 18 Nov 2025.",
+     "boris": "Not applicable",
+     "amlr_alignment_watch": false,
+     "pending_changes": null,
+     "company_register": {
+      "name": null,
+      "url": null,
+      "publishes": [],
+      "public": null,
+      "discrepancy_route": "https://www.gov.uk/contact-companies-house"
+     },
+     "fatf": {
+      "body": "FATF",
+      "onsite": "2027-06-01",
+      "plenary": "2028-02-01"
+     },
+     "eu_eea": false,
+     "groups": [
+      "OpenCheck source"
+     ],
+     "notes": null
+    },
+    "opencheck_reads": [
+     {
+      "source_id": "companies_house",
+      "name": "UK Companies House",
+      "requires_api_key": true,
+      "reads_beneficial_owners": true,
+      "reads_people": true
+     }
+    ],
+    "sources": [
+     {
+      "url": "https://www.gov.uk/guidance/people-with-significant-control-pscs",
+      "title": null
+     }
+    ]
+   }
+  ],
+  "known_codes": [
+   "AI",
+   "AR",
+   "AT",
+   "AU",
+   "BE",
+   "BG",
+   "BM",
+   "BO",
+   "BR",
+   "BW",
+   "BZ",
+   "CA",
+   "CH",
+   "CL",
+   "CO",
+   "CR",
+   "CY",
+   "CZ",
+   "DE",
+   "DK",
+   "EC",
+   "EE",
+   "ES",
+   "FI",
+   "FR",
+   "GB",
+   "GG",
+   "GI",
+   "GR",
+   "GT",
+   "HK",
+   "HN",
+   "HR",
+   "HU",
+   "IE",
+   "IL",
+   "IM",
+   "IN",
+   "IS",
+   "IT",
+   "JE",
+   "JP",
+   "KR",
+   "KY",
+   "LI",
+   "LT",
+   "LU",
+   "LV",
+   "MD",
+   "MT",
+   "MX",
+   "NG",
+   "NI",
+   "NL",
+   "NO",
+   "NZ",
+   "PA",
+   "PE",
+   "PL",
+   "PT",
+   "PY",
+   "RO",
+   "RS",
+   "SE",
+   "SG",
+   "SH",
+   "SI",
+   "SK",
+   "SV",
+   "TC",
+   "TW",
+   "UA",
+   "US",
+   "UY",
+   "VG"
+  ],
+  "generated_at": "2026-11-25T09:03:42+00:00",
+  "as_of": "2026-11-25"
+ },
+ "GET /health": {
+  "status": "ok",
+  "version": "0.1.0",
+  "allow_live": true
+ },
+ "GET /sources": {
+  "sources": [
+   {
+    "id": "abr_australia",
+    "name": "Australian Business Register (ABN Lookup)",
+    "homepage": "https://abr.business.gov.au/",
+    "description": "Australian company and business data — ABN, ACN, entity name and type, ABN/GST status, registered state and postcode, and business (trading) names — from the Australian Business Register's free ABN Lookup web services. Entity-level only; no officer or ownership data.",
+    "license": "CC-BY-3.0-AU",
+    "attribution": "Contains data sourced from the Australian Business Register (ABR), used under CC BY 3.0 AU. The Australian Taxation Office does not endorse this use.",
+    "supports": [
+     "entity"
+    ],
+    "requires_api_key": true,
+    "live_available": true,
+    "category": "cdd",
+    "is_national_register": true,
+    "country": "AU",
+    "bo_access": null,
+    "derived_from": []
+   },
+   {
+    "id": "acra_singapore",
+    "name": "Singapore ACRA — Accounting and Corporate Regulatory Authority",
+    "homepage": "https://data.gov.sg/collections/2/view",
+    "description": "Singapore company data from ACRA's registers on data.gov.sg, looked up by Unique Entity Number: name and former names, entity and company type, status, incorporation date and registered address.",
+    "license": "Singapore-OGL-1.0",
+    "attribution": "Contains information from ACRA Information on Corporate Entities and Entities Registered with ACRA accessed from data.gov.sg, which is made available under the terms of the Singapore Open Data Licence version 1.0 https://data.gov.sg/open-data-licence (the date of access is each record's retrieval date).",
+    "supports": [
+     "entity"
+    ],
+    "requires_api_key": false,
+    "live_available": true,
+    "category": "cdd",
+    "is_national_register": true,
+    "country": "SG",
+    "bo_access": null,
+    "derived_from": []
+   }
+  ]
+ }
+}

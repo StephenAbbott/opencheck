@@ -40,6 +40,7 @@ from slowapi.errors import RateLimitExceeded
 from . import __version__, memwatch
 from .config import get_settings
 from .lookup_budget import ClientScopeMiddleware
+from .openapi_docs import build_openapi
 from .static_cache import DownloadNoStoreMiddleware, spa_cache_control
 from .ratelimit import limiter, rate_limit_exceeded_handler
 from .secret_scrub import safe_message
@@ -786,6 +787,11 @@ app.include_router(knowability.router)
 app.include_router(leads.router)
 app.include_router(daily_changes_router.router)
 app.include_router(blog_router.router)
+
+# The public OpenAPI document (/docs, /redoc, /openapi.json) is rewritten for
+# callers: tags, summaries, examples, the website's own pages left out. Built
+# lazily on the first request, so routes registered below are included too.
+app.openapi = lambda: build_openapi(app)  # type: ignore[method-assign]
 
 
 # ---------------------------------------------------------------------------

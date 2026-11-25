@@ -175,3 +175,34 @@ def test_stripping_drops_a_relationship_to_a_removed_party() -> None:
     assert out["subject_profile"]["register_status"] is None
     assert out["subject_profile"]["legal_form"]["sources"] == ["gleif"]
     assert builder.leaked(out, builder.restricted_sources()) == []
+
+
+# --- The quickstart (frontend/src/lib/apiQuickstart.ts) --------------------
+
+_QUICKSTART = _ROOT / "frontend" / "src" / "lib" / "apiQuickstart.ts"
+
+
+def test_the_quickstart_reads_fields_the_answers_carry() -> None:
+    from opencheck.app import app
+    from opencheck.routers.search import SearchResponse
+    from opencheck.sources.base import SourceHit
+
+    src = _QUICKSTART.read_text(encoding="utf-8")
+    for route in re.findall(r'route: "(/[a-z-]+)"', src):
+        assert route in {getattr(r, "path", None) for r in app.routes}, route
+    for key in ("verdict", "degraded_sources", "risk_signals"):
+        assert key in src and key in LookupResponse.model_fields, key
+    assert "hits" in SearchResponse.model_fields
+    for key in ("identifiers", "source_id", "name"):
+        assert key in SourceHit.model_fields, key
+    assert re.search(r'QUICKSTART_LEI = "213800E11LI1SCETU492"', src)
+    assert 'format: "json"' in src and 'format="json"' in src and "format=json" in src
+
+
+def test_the_quickstart_streams_the_route_scripts_may_read() -> None:
+    """The snippet reads /stream; the check streams refuse scripts."""
+    routers = _ROOT / "backend" / "opencheck" / "routers"
+    assert "bot_gate" not in (routers / "search.py").read_text(encoding="utf-8")
+    assert "refuses" in (routers / "lookup.py").read_text(encoding="utf-8")
+    src = _QUICKSTART.read_text(encoding="utf-8")
+    assert "/stream?q=" in src and "/lookup-stream?" not in src

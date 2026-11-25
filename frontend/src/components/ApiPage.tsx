@@ -30,8 +30,17 @@ import {
   MCP_TASK_POLL_S,
   type McpTool,
 } from "../lib/mcpTools";
+import {
+  QUICKSTART_LANGUAGES,
+  QUICKSTART_NOTES,
+  QUICKSTART_STEPS,
+  STREAM_INTRO,
+  quickstartSnippet,
+  streamSnippet,
+  type QuickstartLanguage,
+} from "../lib/apiQuickstart";
 import { BtsCard } from "./BtsCard";
-import { Chip, SectionLabel } from "./ui";
+import { Button, Chip, SectionLabel } from "./ui";
 
 // ---------------------------------------------------------------------
 // API page — documents the read-only REST surface (api.opencheck.world).
@@ -121,10 +130,9 @@ export function ApiPage() {
         >
           Beneficial Ownership Data Standard (BODS) v0.4
         </a>
-        , keyed on the Legal Entity Identifier (LEI). Every endpoint is a{" "}
-        <code className={mono}>GET</code> that returns JSON, except{" "}
-        <code className={mono}>/export</code> (a downloadable bundle) and the
-        streaming endpoints (Server-Sent Events). AI agents can call the same
+        , keyed on the Legal Entity Identifier (LEI). Most endpoints are a{" "}
+        <code className={mono}>GET</code> that returns JSON; the exports return
+        files and the streaming endpoints send Server-Sent Events. AI agents can call the same
         checks as tools through the{" "}
         <strong className="text-oo-ink font-semibold">Model Context Protocol (MCP)</strong>{" "}
         server.
@@ -133,6 +141,9 @@ export function ApiPage() {
       <nav aria-label="On this page" className="mb-6 flex flex-wrap gap-x-5 gap-y-1 text-oo-small">
         <a href="#reference" className="underline text-oo-blue hover:text-oo-burst">
           Reference
+        </a>
+        <a href="#quickstart" className="underline text-oo-blue hover:text-oo-burst">
+          Quickstart
         </a>
         <a href="#rest" className="underline text-oo-blue hover:text-oo-burst">
           REST endpoints
@@ -156,6 +167,7 @@ export function ApiPage() {
       </div>
 
       <ReferenceLinks base={base} />
+      <Quickstart base={base} mono={mono} />
 
       <div
         id="rest"
@@ -390,25 +402,6 @@ export function ApiPage() {
           </ApiEndpoint>
           <ApiEndpoint path="/health">Liveness probe.</ApiEndpoint>
         </BtsCard>
-
-        <BtsCard title="Quick start">
-          <p className="text-oo-small leading-[1.7] text-oo-muted mb-3">
-            Search for a company by its LEI and get the unified BODS view:
-          </p>
-          <CopyField value={`curl "${base}/lookup?lei=HWUPKR0MPOU8FGXBT394"`} />
-          <p className="text-oo-small leading-[1.7] text-oo-muted mt-4">
-            Full request/response detail is in{" "}
-            <a
-              href="https://github.com/StephenAbbott/opencheck/blob/main/docs/how-it-works.md#api-surface"
-              target="_blank"
-              rel="noreferrer"
-              className="underline text-oo-blue hover:text-oo-burst"
-            >
-              docs/how-it-works.md
-            </a>
-            .
-          </p>
-        </BtsCard>
       </div>
 
       <SampleData base={base} mono={mono} />
@@ -447,6 +440,75 @@ function ReferenceLinks({ base }: { base: string }) {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+function CodeBlock({ code, label }: { code: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="relative bg-oo-bg border border-oo-rule rounded-oo">
+      <pre
+        tabIndex={0}
+        aria-label={label}
+        className="font-mono text-oo-meta leading-[1.6] text-oo-ink p-3 pr-20 overflow-x-auto whitespace-pre"
+      >
+        <code>{code}</code>
+      </pre>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="absolute top-1 right-1"
+        aria-label={`Copy ${label}`}
+        onClick={() => {
+          navigator.clipboard?.writeText(code);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1200);
+        }}
+      >
+        {copied ? "Copied" : "Copy"}
+      </Button>
+      <span role="status" className="sr-only">
+        {copied ? "Copied to clipboard" : ""}
+      </span>
+    </div>
+  );
+}
+
+function Quickstart({ base, mono }: { base: string; mono: string }) {
+  const [lang, setLang] = useState<QuickstartLanguage>("curl");
+  const label = QUICKSTART_LANGUAGES.find((l) => l.id === lang)?.label ?? lang;
+  return (
+    <section id="quickstart" aria-labelledby="quickstart-heading" className="mb-10 max-w-4xl scroll-mt-6">
+      <SectionLabel as="h3" id="quickstart-heading" className="mb-3">
+        Quickstart
+      </SectionLabel>
+      <ol className="list-decimal pl-5 text-oo-small leading-[1.7] text-oo-muted mb-4 max-w-2xl">
+        {QUICKSTART_STEPS.map((step) => (
+          <li key={step.route}>
+            <code className={mono}>{step.route}</code>: {step.text}
+          </li>
+        ))}
+      </ol>
+      <div role="group" aria-label="Language" className="flex flex-wrap gap-2 mb-3">
+        {QUICKSTART_LANGUAGES.map((l) => (
+          <Button
+            key={l.id}
+            size="sm"
+            variant={l.id === lang ? "primary" : "secondary"}
+            aria-pressed={l.id === lang}
+            onClick={() => setLang(l.id)}
+          >
+            {l.label}
+          </Button>
+        ))}
+      </div>
+      <CodeBlock code={quickstartSnippet(lang, base)} label={`${label} quickstart`} />
+      <p className="text-oo-small leading-[1.7] text-oo-muted mt-2 max-w-2xl">{QUICKSTART_NOTES[lang]}</p>
+
+      <h4 className="font-semibold text-oo-small text-oo-ink mt-6 mb-2">Reading a stream</h4>
+      <p className="text-oo-small leading-[1.7] text-oo-muted mb-3 max-w-2xl">{STREAM_INTRO}</p>
+      <CodeBlock code={streamSnippet(lang, base)} label={`${label} stream example`} />
     </section>
   );
 }
