@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 615** — The knowability notes for Austria, Czechia, the Netherlands and Poland now say they were last verified on 25 November 2026.
+**Latest: Phase 616** — MTender's Moldovan procurement data now carries the attribution the Ministry of Finance confirmed, and its licence reads as the Ministry described it — no specific licence, commercial re-use under Moldova's open-data law.
 
 → [Full development history](docs/status.md)
 
