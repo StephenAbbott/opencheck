@@ -29,6 +29,7 @@ from mcp.types import ToolAnnotations
 
 from .. import __version__
 from . import shaping
+from .skills import Skills
 
 # The handshake text every client receives at ``initialize``. It says the
 # order of calls and how to read the answers, because a model left to itself
@@ -86,6 +87,10 @@ opencheck_save_report and opencheck_discrepancy_note each spend the shared \
 per-address lookup budget (ten fresh checks a minute; a repeat within 15 \
 minutes is free). The other tools do not. A 429 with retry_after_s means wait \
 that long and then retry, never at once.
+
+Skills. A client that reads MCP skills can load opencheck-due-diligence, \
+reading-opencheck-results and opencheck-ownership-questions for the longer \
+rules on reading and reporting a result.
 """
 
 #: ``test_mcp.py`` fails the build when the handshake grows past this.
@@ -107,12 +112,19 @@ _TRANSPORT_SECURITY = TransportSecuritySettings(enable_dns_rebinding_protection=
 # (SEP-2549) lets a 2026-07-28 client keep ``tools/list`` for an hour and share
 # it across users: the inventory only changes on deploy, and an hour keeps a
 # new tool from staying invisible for a day.
+_SKILLS_EXTENSION = Skills()
+#: The skills served over MCP, read once at import.
+SKILLS = _SKILLS_EXTENSION.skills
+
 mcp = MCPServer(
     "opencheck",
     instructions=_INSTRUCTIONS,
     version=__version__,
     website_url="https://opencheck.world",
     cache_hints={"tools/list": CacheHint(ttl_ms=60 * 60 * 1000, scope="public")},
+    # The skills extension (SEP-2640, ``mcp/skills``): ``skills/list`` and
+    # ``skills/get`` on 2026-07-28, every file a ``skill://`` resource.
+    extensions=[_SKILLS_EXTENSION],
 )
 
 

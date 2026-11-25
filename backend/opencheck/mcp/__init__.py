@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from .. import __version__
-from .server import _TRANSPORT_SECURITY, TOOL_NAMES, mcp
+from .server import _TRANSPORT_SECURITY, SKILLS, TOOL_NAMES, mcp
 
 _PUBLIC_BASE = "https://api.opencheck.world"
 
@@ -47,6 +47,8 @@ def descriptor() -> dict[str, Any]:
         "protocolVersions": ["2026-07-28", "2025-11-25"],
         "endpoint": f"{_PUBLIC_BASE}/mcp",
         "tools": TOOL_NAMES,
+        # The skills a 2026-07-28 client can fetch with skills/get.
+        "skills": [s.uri for s in SKILLS],
         "documentation": "https://opencheck.world",
     }
 
