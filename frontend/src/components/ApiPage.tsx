@@ -10,6 +10,19 @@ import { useState } from "react";
 
 import { BASE_URL, EXPORT_FORMATS } from "../lib/api";
 import {
+  DATA_DICTIONARY_URL,
+  DATASETS_URL,
+  ERROR_CODES,
+  ERROR_SHAPE,
+  LOOKUP_BUDGET_PER_MINUTE,
+  RATE_LIMIT_HEADERS,
+  RATE_TIERS,
+  REFERENCE_LINKS,
+  REPLAY_WINDOW_MINUTES,
+  RESPONSE_KEYS,
+  SAMPLE_LOOKUP,
+} from "../lib/apiReference";
+import {
   MCP_PROTOCOL_VERSIONS,
   MCP_SKILLS,
   MCP_STEPS,
@@ -118,8 +131,17 @@ export function ApiPage() {
       </p>
 
       <nav aria-label="On this page" className="mb-6 flex flex-wrap gap-x-5 gap-y-1 text-oo-small">
+        <a href="#reference" className="underline text-oo-blue hover:text-oo-burst">
+          Reference
+        </a>
         <a href="#rest" className="underline text-oo-blue hover:text-oo-burst">
           REST endpoints
+        </a>
+        <a href="#sample-data" className="underline text-oo-blue hover:text-oo-burst">
+          Sample data
+        </a>
+        <a href="#limits" className="underline text-oo-blue hover:text-oo-burst">
+          Limits and errors
         </a>
         <a href="#mcp" className="underline text-oo-blue hover:text-oo-burst">
           MCP server for AI agents
@@ -132,6 +154,8 @@ export function ApiPage() {
         </div>
         <CopyField value={base} />
       </div>
+
+      <ReferenceLinks base={base} />
 
       <div
         id="rest"
@@ -387,7 +411,199 @@ export function ApiPage() {
         </BtsCard>
       </div>
 
+      <SampleData base={base} mono={mono} />
+      <LimitsAndErrors mono={mono} />
+
       <McpSection endpoint={`${base}/mcp`} mono={mono} />
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Reference, sample data, limits and errors. The facts are in
+// `lib/apiReference.ts`, pinned to the backend by
+// `backend/tests/test_api_reference.py`.
+// ---------------------------------------------------------------------
+
+const LINK = "underline text-oo-blue hover:text-oo-burst";
+
+function ReferenceLinks({ base }: { base: string }) {
+  return (
+    <section id="reference" aria-labelledby="reference-heading" className="mb-8 max-w-4xl scroll-mt-6">
+      <SectionLabel as="h3" id="reference-heading" className="mb-3">
+        Reference
+      </SectionLabel>
+      <p className="text-oo-small leading-[1.7] text-oo-muted mb-3 max-w-2xl">
+        This page explains the endpoints most people need. The full reference, every
+        endpoint and parameter, is generated from the code and is always current:
+      </p>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {REFERENCE_LINKS.map((link) => (
+          <li key={link.path} className="bg-white border border-oo-rule rounded-oo p-4">
+            <a href={`${base}${link.path}`} className={`${LINK} font-semibold text-oo-small`}>
+              {link.label}
+            </a>
+            <p className="text-oo-small leading-[1.6] text-oo-muted mt-1">{link.description}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function SampleData({ base, mono }: { base: string; mono: string }) {
+  return (
+    <section id="sample-data" aria-labelledby="sample-data-heading" className="mt-12 scroll-mt-6 max-w-4xl">
+      <h3 id="sample-data-heading" className="font-head font-bold text-oo-title text-oo-ink leading-tight mb-2">
+        Sample data
+      </h3>
+      <p className="text-oo-body leading-[1.75] text-oo-muted mb-4 max-w-2xl">
+        To see what an answer looks like before you write any code, download a recorded{" "}
+        <code className={mono}>/lookup</code> answer for {SAMPLE_LOOKUP.name} (LEI{" "}
+        <code className={mono}>{SAMPLE_LOOKUP.lei}</code>), recorded on {SAMPLE_LOOKUP.recorded}.
+        It is kept as returned, except that records from sources whose licence does not allow
+        free redistribution were taken out; its <code className={mono}>_sample</code> block
+        says which. It shows the shape of an answer, not a current check.
+      </p>
+      <div className="flex flex-wrap gap-x-5 gap-y-2 mb-6 text-oo-small">
+        <a href={SAMPLE_LOOKUP.path} download className={`${LINK} font-semibold`}>
+          Download the sample answer (JSON)
+        </a>
+        <a href={`${base}/lookup?lei=${SAMPLE_LOOKUP.lei}`} className={LINK}>
+          Run the same request live
+        </a>
+      </div>
+
+      <div className="bg-white border border-oo-rule rounded-oo p-6 mb-6">
+        <SectionLabel as="h4" id="response-keys-heading" className="mb-3">
+          What is in an answer
+        </SectionLabel>
+        <dl aria-labelledby="response-keys-heading" className="grid gap-x-4 gap-y-2 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
+          {RESPONSE_KEYS.map(([key, meaning]) => (
+            <div key={key} className="contents">
+              <dt>
+                <code className={mono}>{key}</code>
+              </dt>
+              <dd className="text-oo-small leading-[1.6] text-oo-muted mb-1 sm:mb-0">{meaning}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-oo-small leading-[1.7] text-oo-muted mt-4">
+          Every field, of every response and export, is described in the{" "}
+          <a href={DATA_DICTIONARY_URL} target="_blank" rel="noreferrer" className={LINK}>
+            data dictionary
+          </a>
+          .
+        </p>
+      </div>
+
+      <p className="text-oo-small leading-[1.7] text-oo-muted max-w-2xl">
+        For data in bulk, without calling the API at all, OpenCheck publishes{" "}
+        <a href={DATASETS_URL} target="_blank" rel="noreferrer" className={LINK}>
+          whole datasets
+        </a>{" "}
+        as BODS, RDF and Neo4j files: every Estonian LEI holder joined to the e-Business
+        Register, and the companies named in the Azerbaijani Laundromat.
+      </p>
+    </section>
+  );
+}
+
+function LimitsAndErrors({ mono }: { mono: string }) {
+  return (
+    <section id="limits" aria-labelledby="limits-heading" className="mt-12 scroll-mt-6 max-w-4xl">
+      <h3 id="limits-heading" className="font-head font-bold text-oo-title text-oo-ink leading-tight mb-2">
+        Limits and errors
+      </h3>
+      <p className="text-oo-body leading-[1.75] text-oo-muted mb-4 max-w-2xl">
+        OpenCheck is a free, shared service with no key, so limits are per network address.
+        Everyone behind one address (an office, a conference room) shares them.
+      </p>
+
+      <div className="bg-white border border-oo-rule rounded-oo p-6 mb-6 overflow-x-auto">
+        <table className="w-full text-oo-small">
+          <caption className="text-left mb-3">
+            <SectionLabel as="p">Requests per minute, per address</SectionLabel>
+          </caption>
+          <thead>
+            <tr className="text-left text-oo-muted">
+              <th scope="col" className="font-semibold pb-2 pr-4">Tier</th>
+              <th scope="col" className="font-semibold pb-2 pr-4">Limit</th>
+              <th scope="col" className="font-semibold pb-2">Covers</th>
+            </tr>
+          </thead>
+          <tbody>
+            {RATE_TIERS.map((t) => (
+              <tr key={t.tier} className="border-t border-oo-rule align-top">
+                <th scope="row" className="font-semibold text-oo-ink py-2 pr-4">{t.tier}</th>
+                <td className="py-2 pr-4 whitespace-nowrap text-oo-ink">{t.perMinute} a minute</td>
+                <td className="py-2 text-oo-muted leading-[1.6]">{t.covers}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="text-oo-small leading-[1.7] text-oo-muted mt-4">
+          On top of those, every fresh check you start counts against one budget of{" "}
+          {LOOKUP_BUDGET_PER_MINUTE} a minute, whichever route or MCP tool starts it: a lookup,
+          an export, each company in a batch, each layer of FullCheck. Asking for the same
+          check again within {REPLAY_WINDOW_MINUTES} minutes is answered from memory and costs
+          nothing; add <code className={mono}>refresh=true</code> only when you need a new run.
+          Limited responses carry{" "}
+          {RATE_LIMIT_HEADERS.map((h, i) => (
+            <span key={h}>
+              <code className={mono}>{h}</code>
+              {i < RATE_LIMIT_HEADERS.length - 2 ? ", " : i === RATE_LIMIT_HEADERS.length - 2 ? " and " : ""}
+            </span>
+          ))}{" "}
+          headers.
+        </p>
+      </div>
+
+      <div className="bg-white border border-oo-rule rounded-oo p-6 mb-6 overflow-x-auto">
+        <SectionLabel as="h4" id="errors-heading" className="mb-3">
+          Errors
+        </SectionLabel>
+        <p className="text-oo-small leading-[1.7] text-oo-muted mb-3">
+          An error is an HTTP status with a JSON body whose <code className={mono}>detail</code>{" "}
+          says what went wrong in a sentence:
+        </p>
+        <pre className="font-mono text-oo-meta bg-oo-bg border border-oo-rule rounded p-3 mb-4 whitespace-pre-wrap break-words">
+          {ERROR_SHAPE}
+        </pre>
+        <table aria-labelledby="errors-heading" className="w-full text-oo-small">
+          <thead>
+            <tr className="text-left text-oo-muted">
+              <th scope="col" className="font-semibold pb-2 pr-4">Status</th>
+              <th scope="col" className="font-semibold pb-2">Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ERROR_CODES.map((e) => (
+              <tr key={e.status} className="border-t border-oo-rule align-top">
+                <th scope="row" className="font-mono font-semibold text-oo-ink py-2 pr-4">{e.status}</th>
+                <td className="py-2 text-oo-muted leading-[1.6]">{e.meaning}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <aside
+        aria-labelledby="incomplete-heading"
+        className="bg-oo-soft border border-oo-softBorder rounded-oo p-6"
+      >
+        <SectionLabel as="h4" id="incomplete-heading" tone="accent" className="mb-2">
+          A 200 can still be incomplete
+        </SectionLabel>
+        <p className="text-oo-small leading-[1.7] text-oo-ink">
+          A source that does not answer does not fail the request. It is named in{" "}
+          <code className={mono}>degraded_sources</code> (and in{" "}
+          <code className={mono}>errors</code> when the source failed outright), and the{" "}
+          <code className={mono}>verdict</code> says the check is incomplete. Read an answer with
+          any entry there as not yet clean, and retry that source with{" "}
+          <code className={mono}>/lookup-source</code>.
+        </p>
+      </aside>
     </section>
   );
 }

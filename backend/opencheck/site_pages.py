@@ -167,6 +167,9 @@ def llms_txt(frontend: str, api: str) -> str:
         "",
         f"- [MCP server]({api}/mcp): streamable HTTP; descriptor at {api}/.well-known/mcp.json",
         f"- [API reference]({api}/docs): OpenAPI at {api}/openapi.json",
+        f"- [Sample /lookup answer]({base}/api-samples/lookup-taqa-bratani.json): "
+        "a recorded response, restricted sources' records removed; limits and errors at "
+        f"{base}/api#limits",
         f"- [Company reference pages]({base}/browse): one page per LEI, from the GLEIF Golden Copy",
         "- [Source code](https://github.com/StephenAbbott/opencheck)",
         "",

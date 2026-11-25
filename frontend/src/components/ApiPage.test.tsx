@@ -17,6 +17,7 @@ import {
   MCP_STEPS,
   MCP_TOOLS,
 } from "../lib/mcpTools";
+import { ERROR_CODES, RATE_TIERS, REFERENCE_LINKS, RESPONSE_KEYS, SAMPLE_LOOKUP } from "../lib/apiReference";
 
 function mcpSection() {
   render(<ApiPage />);
@@ -67,5 +68,39 @@ describe("ApiPage MCP section", () => {
     render(<ApiPage />);
     const nav = screen.getByRole("navigation", { name: "On this page" });
     expect(within(nav).getByRole("link", { name: "MCP server for AI agents" }).getAttribute("href")).toBe("#mcp");
+  });
+});
+
+describe("ApiPage reference, sample data, limits and errors", () => {
+  it("links the generated reference and llms.txt", () => {
+    render(<ApiPage />);
+    const ref = screen.getByRole("region", { name: "Reference" });
+    for (const link of REFERENCE_LINKS) {
+      const a = within(ref).getByRole("link", { name: link.label });
+      expect(a.getAttribute("href")?.endsWith(link.path)).toBe(true);
+    }
+  });
+
+  it("offers the sample answer and describes its keys", () => {
+    render(<ApiPage />);
+    const sample = screen.getByRole("region", { name: "Sample data" });
+    expect(within(sample).getByRole("link", { name: /Download the sample answer/ }).getAttribute("href")).toBe(
+      SAMPLE_LOOKUP.path,
+    );
+    for (const [key] of RESPONSE_KEYS) {
+      expect(within(sample).getAllByText(key).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("states every rate tier and every error status", () => {
+    render(<ApiPage />);
+    const limits = screen.getByRole("region", { name: "Limits and errors" });
+    for (const t of RATE_TIERS) {
+      expect(within(limits).getByRole("rowheader", { name: t.tier })).toBeTruthy();
+    }
+    for (const e of ERROR_CODES) {
+      expect(within(limits).getByRole("rowheader", { name: String(e.status) })).toBeTruthy();
+    }
+    expect(within(limits).getByText("degraded_sources")).toBeTruthy();
   });
 });
