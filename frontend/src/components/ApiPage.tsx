@@ -9,7 +9,14 @@
 import { useState } from "react";
 
 import { BASE_URL, EXPORT_FORMATS } from "../lib/api";
-import { MCP_STEPS, type McpTool } from "../lib/mcpTools";
+import {
+  MCP_PROTOCOL_VERSIONS,
+  MCP_SKILLS,
+  MCP_STEPS,
+  MCP_TASK_FAST_PATH_S,
+  MCP_TASK_POLL_S,
+  type McpTool,
+} from "../lib/mcpTools";
 import { BtsCard } from "./BtsCard";
 import { Chip, SectionLabel } from "./ui";
 
@@ -468,7 +475,8 @@ function McpSection({ endpoint, mono }: { endpoint: string; mono: string }) {
             <li>
               When it connects, the server gives your agent a short guide to the order of calls
               and how to read the answers. The guide is reproduced below, so you can see what
-              your agent is told.
+              your agent is told; it also names the three skills described under "What newer
+              clients get".
             </li>
             <li>
               Agents can also find the server through{" "}
@@ -505,6 +513,49 @@ function McpSection({ endpoint, mono }: { endpoint: string; mono: string }) {
           </p>
         </aside>
       </div>
+
+      <section
+        aria-labelledby="mcp-newer-heading"
+        className="bg-white border border-oo-rule rounded-oo p-6 mb-10 max-w-4xl"
+      >
+        <SectionLabel as="h4" id="mcp-newer-heading" className="mb-2">
+          What newer clients get
+        </SectionLabel>
+        <p className="text-oo-small leading-[1.7] text-oo-muted">
+          The server speaks protocol revisions{" "}
+          {MCP_PROTOCOL_VERSIONS.map((v, i) => (
+            <span key={v}>
+              {i > 0 ? " and " : ""}
+              <code className={mono}>{v}</code>
+            </span>
+          ))}
+          . Every client gets the tools and the guide; a client on the newer revision can also
+          use the two extensions below. Anything else sees no change.
+        </p>
+        <h5 className="mt-4 font-head font-bold text-oo-body text-oo-ink">Skills</h5>
+        <p className="mt-1 text-oo-small leading-[1.7] text-oo-muted">
+          Three skills carry the longer rules on reading and reporting a result. A client loads
+          one only when the task needs it, and each file comes with a SHA-256 so the client can
+          check what it read.
+        </p>
+        <ul className="mt-2 border-t border-oo-rule divide-y divide-oo-rule">
+          {MCP_SKILLS.map((skill) => (
+            <li key={skill.name} className="py-2.5 text-oo-small leading-[1.65]">
+              <code className={`${mono} font-semibold text-oo-ink`}>{skill.name}</code>{" "}
+              <span className="text-oo-muted">{skill.summary}</span>
+            </li>
+          ))}
+        </ul>
+        <h5 className="mt-4 font-head font-bold text-oo-body text-oo-ink">Tasks</h5>
+        <p className="mt-1 text-oo-small leading-[1.7] text-oo-muted">
+          A tool marked <Chip>Lookup budget</Chip> can take longer than a client will hold a
+          request open. For a client that declares MCP tasks, a call still running after{" "}
+          {MCP_TASK_FAST_PATH_S} seconds is answered at once with a task; the client polls it
+          every {MCP_TASK_POLL_S} seconds and sees the run's progress ("Checking sources: 9 of 13
+          answered"). Polling runs nothing again and spends no budget. A task is held for an hour
+          after it finishes, and a deploy loses any still running.
+        </p>
+      </section>
 
       <h4 id="mcp-order" className="font-head font-bold text-oo-head text-oo-ink mb-4">
         Call the tools in this order

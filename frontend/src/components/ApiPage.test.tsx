@@ -10,7 +10,13 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ApiPage } from "./ApiPage";
-import { MCP_BUDGET_TOOLS, MCP_STEPS, MCP_TOOLS } from "../lib/mcpTools";
+import {
+  MCP_BUDGET_TOOLS,
+  MCP_PROTOCOL_VERSIONS,
+  MCP_SKILLS,
+  MCP_STEPS,
+  MCP_TOOLS,
+} from "../lib/mcpTools";
 
 function mcpSection() {
   render(<ApiPage />);
@@ -47,6 +53,14 @@ describe("ApiPage MCP section", () => {
     expect(within(section).getByText("degraded_sources")).toBeTruthy();
     expect(within(section).getByText(/never clean/)).toBeTruthy();
     expect(within(section).getAllByText("retry_after_s").length).toBeGreaterThan(0);
+  });
+
+  it("names the protocol revisions, the skills and tasks", () => {
+    const section = mcpSection();
+    const newer = within(section).getByRole("region", { name: "What newer clients get" });
+    for (const v of MCP_PROTOCOL_VERSIONS) expect(within(newer).getByText(v)).toBeTruthy();
+    for (const skill of MCP_SKILLS) expect(within(newer).getByText(skill.name)).toBeTruthy();
+    expect(within(newer).getByRole("heading", { name: "Tasks" })).toBeTruthy();
   });
 
   it("is linked from the top of the page", () => {

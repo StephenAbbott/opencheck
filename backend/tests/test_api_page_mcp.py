@@ -56,3 +56,32 @@ def test_the_page_follows_the_handshake_steps_in_order() -> None:
     for step in ("1. Find", "2. Set expectations", "3. Check", "4. Read it honestly",
                  "5. Keep", "6. Many"):
         assert step in text
+
+
+def test_the_page_names_the_skills_the_server_serves() -> None:
+    from opencheck.mcp.skills import load_skills
+
+    src = _TS.read_text(encoding="utf-8")
+    block = src[src.index("MCP_SKILLS: McpSkill[]") :]
+    named = re.findall(r'name:\s*"([a-z-]+)"', block)
+    assert sorted(named) == sorted(s.name for s in load_skills())
+
+
+def test_the_page_states_the_protocol_versions_and_task_timings() -> None:
+    from opencheck.mcp import descriptor, tasks
+
+    src = _TS.read_text(encoding="utf-8")
+    versions = re.search(r"MCP_PROTOCOL_VERSIONS: string\[\] = \[([^\]]*)\]", src)
+    assert versions is not None
+    assert re.findall(r'"([^"]+)"', versions.group(1)) == descriptor()["protocolVersions"]
+    fast = re.search(r"MCP_TASK_FAST_PATH_S = (\d+)", src)
+    poll = re.search(r"MCP_TASK_POLL_S = (\d+)", src)
+    assert fast and float(fast.group(1)) == tasks.FAST_PATH_S
+    assert poll and int(poll.group(1)) * 1000 == tasks.POLL_INTERVAL_MS
+
+
+def test_the_tools_that_can_become_tasks_are_the_budget_tools() -> None:
+    """The page says a Lookup-budget tool can become a task: keep that true."""
+    from opencheck.mcp import tasks
+
+    assert {name for name, spends in _tools() if spends} == tasks.TASK_TOOLS

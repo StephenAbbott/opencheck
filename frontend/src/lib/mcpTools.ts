@@ -214,3 +214,43 @@ export const MCP_STEPS: McpStep[] = [
 export const MCP_TOOLS: McpTool[] = MCP_STEPS.flatMap((s) => s.tools);
 
 export const MCP_BUDGET_TOOLS: string[] = MCP_TOOLS.filter((t) => t.spendsBudget).map((t) => t.name);
+
+/**
+ * The protocol revisions the server speaks, newest first. Pinned to
+ * `descriptor()["protocolVersions"]` by `test_api_page_mcp.py`.
+ */
+export const MCP_PROTOCOL_VERSIONS: string[] = ["2026-07-28", "2025-11-25"];
+
+export interface McpSkill {
+  /** The skill's name, as its SKILL.md frontmatter names it. */
+  name: string;
+  summary: string;
+}
+
+/**
+ * The skills the server serves over `io.modelcontextprotocol/skills`. Pinned
+ * to `opencheck.mcp.skills.load_skills()` by `test_api_page_mcp.py`.
+ */
+export const MCP_SKILLS: McpSkill[] = [
+  {
+    name: "opencheck-due-diligence",
+    summary: "From a name or a number to a saved report: which tool to call, in which order.",
+  },
+  {
+    name: "reading-opencheck-results",
+    summary:
+      "How to report a result honestly: sources that did not answer, risk versus context, name matches, per-source figures, licences.",
+  },
+  {
+    name: "opencheck-ownership-questions",
+    summary:
+      "Which ownership tool answers which question (owners, map, subsidiaries, BODS), and the words to use.",
+  },
+];
+
+/**
+ * Seconds a slow tool runs before it is handed back as a task, and how often
+ * a client should poll it. Pinned to `opencheck.mcp.tasks`.
+ */
+export const MCP_TASK_FAST_PATH_S = 3;
+export const MCP_TASK_POLL_S = 5;
