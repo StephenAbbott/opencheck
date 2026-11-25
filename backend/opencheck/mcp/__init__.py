@@ -1,6 +1,6 @@
 """OpenCheck MCP server package.
 
-``mcp`` is the FastMCP instance (tools defined in ``server``); ``asgi_app()``
+``mcp`` is the ``MCPServer`` instance (tools defined in ``server``); ``asgi_app()``
 returns the streamable-HTTP ASGI app to mount on the FastAPI server; and
 ``descriptor()`` returns the ``/.well-known/mcp.json`` document that the ARD /
 ai-catalog ``application/mcp-server+json`` entry points at.
@@ -11,14 +11,24 @@ from __future__ import annotations
 from typing import Any
 
 from .. import __version__
-from .server import TOOL_NAMES, mcp
+from .server import _TRANSPORT_SECURITY, TOOL_NAMES, mcp
 
 _PUBLIC_BASE = "https://api.opencheck.world"
 
 
 def asgi_app():
-    """Build the streamable-HTTP ASGI app (also creates ``mcp.session_manager``)."""
-    return mcp.streamable_http_app()
+    """Build the streamable-HTTP ASGI app (also creates ``mcp.session_manager``).
+
+    SDK v2 takes the transport settings here rather than on the constructor.
+    ``host`` is the public hostname so the SDK does not switch on its localhost
+    DNS-rebinding allowlist; the explicit settings turn it off anyway.
+    """
+    return mcp.streamable_http_app(
+        streamable_http_path="/mcp",
+        stateless_http=True,
+        transport_security=_TRANSPORT_SECURITY,
+        host="api.opencheck.world",
+    )
 
 
 def descriptor() -> dict[str, Any]:
@@ -34,6 +44,7 @@ def descriptor() -> dict[str, Any]:
         ),
         "version": __version__,
         "transport": "streamable-http",
+        "protocolVersions": ["2026-07-28", "2025-11-25"],
         "endpoint": f"{_PUBLIC_BASE}/mcp",
         "tools": TOOL_NAMES,
         "documentation": "https://opencheck.world",

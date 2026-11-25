@@ -236,7 +236,7 @@ def test_the_map_tool_answers_unilever_in_words(unilever_lookup):
     from opencheck.mcp.server import mcp
 
     out = asyncio.run(mcp.call_tool("opencheck_ownership_map", {"lei": LEI}))
-    blocks = out if isinstance(out, list) else out[0]
+    blocks = out.content
     assert [b.type for b in blocks] == ["text"]
     data = json.loads(blocks[0].text)
     assert data["edges"] == []

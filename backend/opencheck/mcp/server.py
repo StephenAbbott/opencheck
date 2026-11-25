@@ -10,8 +10,10 @@ shares the 15-minute replay cache and the startup cache warm-up, and can never
 diverge from the REST path. Responses are flattened by ``shaping`` into compact,
 agent-readable structures; licence notices are preserved end to end.
 
-Transport is streamable HTTP (``stateless_http=True``) so the server mounts onto
-the existing FastAPI app and is reachable remotely at ``/mcp``.
+Transport is streamable HTTP (``stateless_http=True``, set on the ASGI factory
+in ``__init__``) so the server mounts onto the existing FastAPI app and is
+reachable remotely at ``/mcp``. SDK v2 speaks spec 2026-07-28 to clients that
+ask for it and still serves 2025-11-25 clients through the old handshake.
 """
 
 from __future__ import annotations
@@ -20,10 +22,12 @@ import json
 from typing import Any
 
 from fastapi import HTTPException
-from mcp.server.fastmcp import FastMCP
+from mcp.server.caching import CacheHint
+from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
+from .. import __version__
 from . import shaping
 
 # The handshake text every client receives at ``initialize``. It says the
@@ -97,12 +101,18 @@ _TRANSPORT_SECURITY = TransportSecuritySettings(enable_dns_rebinding_protection=
 # (see app.py) rather than mounted under a prefix — a ``Mount`` at ``/mcp`` would
 # 307-redirect a bare ``POST /mcp`` to ``/mcp/``, and many MCP clients don't
 # replay the POST across that redirect, so the connector silently fails.
-mcp = FastMCP(
+#
+# SDK v2 moved the transport settings off the constructor onto
+# ``streamable_http_app()`` (see ``asgi_app()`` in ``__init__``). The cache hint
+# (SEP-2549) lets a 2026-07-28 client keep ``tools/list`` for an hour and share
+# it across users: the inventory only changes on deploy, and an hour keeps a
+# new tool from staying invisible for a day.
+mcp = MCPServer(
     "opencheck",
     instructions=_INSTRUCTIONS,
-    stateless_http=True,
-    streamable_http_path="/mcp",
-    transport_security=_TRANSPORT_SECURITY,
+    version=__version__,
+    website_url="https://opencheck.world",
+    cache_hints={"tools/list": CacheHint(ttl_ms=60 * 60 * 1000, scope="public")},
 )
 
 
@@ -115,10 +125,10 @@ mcp = FastMCP(
 # on each call — additive, never destructive, not idempotent (each call mints
 # a new report id and manage token). openWorldHint is False only for the two
 # tools that read OpenCheck's own tables and call no source.
-_READS = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
-_READS_LOCAL = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+_READS = ToolAnnotations(read_only_hint=True, open_world_hint=True)
+_READS_LOCAL = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 _SAVES = ToolAnnotations(
-    readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True
+    read_only_hint=False, destructive_hint=False, idempotent_hint=False, open_world_hint=True
 )
 
 
@@ -569,7 +579,7 @@ async def opencheck_owners(
 
 
 # Phase 341: ``structured_output=False``. With a ``list[...]`` return type
-# FastMCP builds an output schema and serialises the result as structured
+# the SDK builds an output schema and serialises the result as structured
 # content, which cannot hold an ``Image`` — every call failed in production
 # with "Unable to serialize unknown type". Unstructured, the list is returned
 # as the content blocks themselves: the JSON text and the SVG image.
@@ -599,7 +609,7 @@ async def opencheck_ownership_map(
             corporate owner at or above the company's national threshold.
         deepen_top: How many top sources to deepen (0-10, default 5).
     """
-    from mcp.server.fastmcp import Image
+    from mcp.server.mcpserver import Image
     from mcp.types import TextContent
 
     from .. import identifiers

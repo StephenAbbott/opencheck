@@ -68,7 +68,7 @@ async def test_registered_tools_match_declared_names() -> None:
     tools = await mcp_server.mcp.list_tools()
     assert sorted(t.name for t in tools) == sorted(TOOL_NAMES)
     # Every tool exposes an input schema for agents.
-    assert all(t.inputSchema for t in tools)
+    assert all(t.input_schema for t in tools)
 
 
 # The readOnlyHint ticket: every tool declares its annotations, and only
@@ -83,16 +83,16 @@ async def test_every_tool_declares_its_annotations() -> None:
     for name, tool in tools.items():
         ann = tool.annotations
         assert ann is not None, f"{name} declares no annotations"
-        assert ann.readOnlyHint is (name not in _WRITES), name
-        assert ann.openWorldHint is (name not in _CLOSED_WORLD), name
+        assert ann.read_only_hint is (name not in _WRITES), name
+        assert ann.open_world_hint is (name not in _CLOSED_WORLD), name
 
 
 async def test_save_report_is_additive_and_not_idempotent() -> None:
     tools = {t.name: t for t in await mcp_server.mcp.list_tools()}
     ann = tools["opencheck_save_report"].annotations
     # Stores a new report on each call: never destroys, never repeats itself.
-    assert ann.destructiveHint is False
-    assert ann.idempotentHint is False
+    assert ann.destructive_hint is False
+    assert ann.idempotent_hint is False
 
 
 async def test_annotations_serialise_as_tools_list_sends_them() -> None:
@@ -484,6 +484,11 @@ def _tool_json(result: object) -> dict:
     returns it in (structured content, or a single text part)."""
     import json
 
+    structured = getattr(result, "structured_content", None)
+    if isinstance(structured, dict):
+        return structured.get("result", structured)
+    if hasattr(result, "content"):
+        return json.loads(result.content[0].text)
     if isinstance(result, tuple):
         parts, structured = result
         if isinstance(structured, dict):
@@ -587,5 +592,5 @@ def test_instructions_name_every_tool_and_stay_short() -> None:
 
 
 def test_instructions_reach_the_client_at_initialize() -> None:
-    assert mcp_server.mcp._mcp_server.instructions == mcp_server._INSTRUCTIONS
+    assert mcp_server.mcp.instructions == mcp_server._INSTRUCTIONS
 

@@ -52,26 +52,20 @@ USER_AGENT = "OpenCheck-findings-regression/1.0 (+https://github.com/StephenAbbo
 
 def _mcp_caller(mcp_url: str) -> fr.McpCall:
     async def call(lei: str) -> dict[str, Any]:
-        from mcp import ClientSession
-        from mcp.client.streamable_http import streamablehttp_client
+        import httpx2
+        from mcp import Client
+        from mcp.client.streamable_http import streamable_http_client
 
-        async with (
-            streamablehttp_client(mcp_url, headers={"User-Agent": USER_AGENT}, timeout=60) as (
-                read,
-                write,
-                _,
-            ),
-            ClientSession(read, write) as session,
-        ):
-            await session.initialize()
-            res = await session.call_tool("opencheck_lookup", {"lei": lei})
-            if res.isError:
+        http = httpx2.AsyncClient(headers={"User-Agent": USER_AGENT}, timeout=60)
+        async with http, Client(streamable_http_client(mcp_url, http_client=http)) as client:
+            res = await client.call_tool("opencheck_lookup", {"lei": lei})
+            if res.is_error:
                 text = res.content[0].text if res.content else "error"  # type: ignore[union-attr]
                 return {"error": str(text)[:200]}
-            data: Any = res.structuredContent
+            data: Any = res.structured_content
             if data is None and res.content:
                 data = json.loads(res.content[0].text)  # type: ignore[union-attr]
-            # FastMCP wraps a non-object return as {"result": …}.
+            # The SDK wraps a non-object return as {"result": …}.
             if (
                 isinstance(data, dict)
                 and set(data) == {"result"}

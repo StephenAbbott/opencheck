@@ -345,7 +345,7 @@ def test_opencheck_owners_tool(fake_lookup):
 
 
 def test_opencheck_ownership_map_tool_returns_json_and_an_svg_image(fake_lookup):
-    from mcp.server.fastmcp import Image
+    from mcp.server.mcpserver import Image
 
     from opencheck.mcp import server
 
@@ -396,9 +396,9 @@ def test_the_map_tool_serialises_through_the_protocol(fake_lookup):
     from opencheck.mcp.server import mcp
 
     out = asyncio.run(mcp.call_tool("opencheck_ownership_map", {"lei": "TTTTTTTTTTTTTTTTTT00"}))
-    blocks = out if isinstance(out, list) else out[0]
+    blocks = out.content
     assert [b.type for b in blocks] == ["text", "image"]
-    assert blocks[1].mimeType == "image/svg+xml"
+    assert blocks[1].mime_type == "image/svg+xml"
     assert json.loads(blocks[0].text)["edges"][0]["owner"] == "Pat Doe"
 
 
@@ -406,7 +406,7 @@ def test_the_owners_tool_serialises_through_the_protocol(fake_lookup):
     from opencheck.mcp.server import mcp
 
     out = asyncio.run(mcp.call_tool("opencheck_owners", {"lei": "TTTTTTTTTTTTTTTTTT00"}))
-    blocks = out if isinstance(out, list) else out[0]
+    blocks = out.content
     assert json.loads(blocks[0].text)["calculated_owners"][0]["name"] == "Pat Doe"
 
 
@@ -415,7 +415,7 @@ def test_the_map_tool_declares_no_output_schema():
     from opencheck.mcp.server import mcp
 
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
-    assert tools["opencheck_ownership_map"].outputSchema is None
+    assert tools["opencheck_ownership_map"].output_schema is None
 
 
 # --- the undated flag (12 Nov 2026) -------------------------------------------
