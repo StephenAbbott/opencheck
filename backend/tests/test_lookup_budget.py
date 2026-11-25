@@ -343,8 +343,10 @@ def mcp_client(monkeypatch):
 
     for name in ("opencheck_lookup", "opencheck_list_sources"):
         monkeypatch.setattr(server.mcp._tool_manager._tools[name], "fn", _fake)
-    monkeypatch.setattr(server.mcp, "_session_manager", None)
-    mcp_app = server.mcp.streamable_http_app()
+    monkeypatch.setattr(server.mcp._lowlevel_server, "_session_manager", None)
+    from opencheck.mcp import asgi_app
+
+    mcp_app = asgi_app()
     manager = server.mcp.session_manager
 
     @asynccontextmanager

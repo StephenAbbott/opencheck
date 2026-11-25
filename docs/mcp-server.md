@@ -14,6 +14,7 @@ via an `application/mcp-server+json` entry in
 | Endpoint (streamable HTTP) | `https://api.opencheck.world/mcp` |
 | Descriptor | `https://api.opencheck.world/.well-known/mcp.json` |
 | Transport | streamable HTTP, stateless |
+| Protocol revisions | 2026-07-28, and 2025-11-25 for clients that use the old `initialize` handshake |
 
 The MCP app is **mounted in-process** on the existing FastAPI service
 (`app.mount("/mcp", …)`). It calls the same pipeline functions the REST routes
@@ -297,7 +298,24 @@ npx @modelcontextprotocol/inspector
 #   transport: streamable-http   url: http://localhost:8000/mcp
 ```
 
-## Dependency
+## Dependency and protocol revisions
 
-`mcp>=1.2` (added to `backend/pyproject.toml`). The MCP package is imported at
-app startup; the dependency must be installed for `/mcp` to mount.
+`mcp>=2.3,<3` in `backend/pyproject.toml` — the official Python SDK v2, whose
+server class is `MCPServer` (it was `FastMCP` in 1.x). The package is imported
+at app startup and must be installed for `/mcp` to mount;
+`tests/test_mcp_mount_guard.py` fails if the mount is skipped.
+
+SDK v2 speaks spec **2026-07-28** (stateless: no `initialize`, `server/discover`,
+capabilities in each request's `_meta`) to a client that asks for it, and still
+answers the **2025-11-25** `initialize` handshake for older clients, so no client
+has to change. Under 2026-07-28 the `tools/list` answer carries a cache hint
+(`ttlMs` one hour, `cacheScope: public`): the inventory changes only on deploy.
+
+What moved in the v2 port: transport settings (`stateless_http`, the path, the
+transport security, `host`) are arguments of `streamable_http_app()` in
+`mcp/__init__.py`, not of the constructor; `mcp.call_tool` returns a
+`CallToolResult` (`content`, `structured_content`, `is_error`) rather than a
+tuple; model fields are snake_case (`input_schema`, `read_only_hint`,
+`mime_type`); the session manager lives on `mcp._lowlevel_server`. The 307
+workaround (the route registered directly, not a `Mount`) and the lifespan
+entry in `app.py` are unchanged.
