@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 619** — A slow MCP lookup now answers at once with a task that the client polls for the result, so a long check no longer times out in Claude.
+**Latest: Phase 620** — The MCP section of the API page now explains the two protocol revisions, the three OpenCheck skills and how slow calls become tasks.
 
 → [Full development history](docs/status.md)
 
