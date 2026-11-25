@@ -107,11 +107,23 @@ def test_tender_url() -> None:
     assert tender_url("ocds-b3wdp1-MD-1") == "https://mtender.gov.md/tenders/ocds-b3wdp1-MD-1"
 
 
-def test_the_licence_is_amber_until_confirmed() -> None:
+def test_the_licence_is_the_ministrys_answer() -> None:
+    """Letter No. 13-09/820 (13 Nov 2026): no specific licence, re-use
+    including commercial under the national framework, attribution as agreed."""
     terms = classify(REGISTRY["mtender_moldova"].info.license)
     assert terms.license == "MTender-Open-Data"
-    assert terms.commercial_use == "conditional"
+    assert terms.commercial_use == "yes"
+    assert terms.redistribution == "yes"
     assert terms.attribution_required is True
+    assert terms.color == "green"
+    assert "no specific licence" in terms.name
+
+
+def test_the_attribution_is_the_wording_the_ministry_confirmed() -> None:
+    assert REGISTRY["mtender_moldova"].info.attribution == (
+        "Source: MTender, Ministry of Finance of the Republic of Moldova "
+        "(public procurement data, in OCDS format)"
+    )
 
 
 # ---------------------------------------------------------------------------
