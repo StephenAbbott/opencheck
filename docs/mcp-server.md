@@ -77,6 +77,37 @@ appears in it and that it stays under `_INSTRUCTIONS_MAX_WORDS` (450), so a
 new tool cannot be left out and the text cannot grow into something clients
 drop. Detail belongs in each tool's docstring, not here.
 
+### Skills over MCP (the "Update MCP approaches" ticket, step 2)
+
+The handshake instructions say which tool to call, in which order. Three
+**skills** say how to read and report what comes back, at the length that
+takes, and a client loads one only when the task needs it:
+
+| Skill | For |
+|---|---|
+| `opencheck-due-diligence` | from a name or a number to a saved report; when to batch |
+| `reading-opencheck-results` | degraded sources, risk versus context, name matches, per-source figures, licences |
+| `opencheck-ownership-questions` | which of owners, map, subsidiaries and export answers the question, and the words to use |
+
+They are served by the `io.modelcontextprotocol/skills` extension (SEP-2640,
+`mcp/skills/__init__.py`), advertised in `server/discover` as
+`{"directoryRead": false}`. On 2026-07-28, `skills/list` returns every skill on
+one page and `skills/get` one skill by its `skill://<name>/SKILL.md` URI; each
+entry carries the frontmatter and a manifest of every file with its
+`sha256:` digest and size. Answers carry `ttlMs` (five minutes) and
+`cacheScope: public`. The files themselves are `skill://` resources read with
+`resources/read` (`text/markdown`), so a 2025-11-25 client still sees them as
+resources and still gets the handshake instructions, which end with one line
+naming the skills. An unknown skill or cursor is `-32602`.
+
+The files live in `backend/opencheck/mcp/skills/<name>/SKILL.md` and are read
+once, at import, so every instance serves the same bytes and digests.
+`tests/test_mcp_skills.py` checks, through the protocol, that each digest
+matches what `resources/read` serves, and that the directory name is the
+frontmatter `name`, every `opencheck_*` a skill names is a real tool, and every
+link between skills resolves. `/.well-known/mcp.json` lists the skill URIs.
+To add a skill, add a directory; to change one, edit its `SKILL.md`.
+
 ### Tool annotations (the readOnlyHint ticket)
 
 Every tool declares MCP tool annotations, so a client can tell which calls
