@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 621** — The API page now links the interactive reference and OpenAPI file, offers a sample lookup answer to download, and states the rate limits and error codes.
+**Latest: Phase 622** — The API page now has a quickstart in curl, Python and JavaScript, and the interactive reference describes every endpoint with tags, examples and its rate limit.
 
 → [Full development history](docs/status.md)
 
