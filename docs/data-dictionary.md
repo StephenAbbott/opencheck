@@ -91,7 +91,7 @@ A single search result from a source.
 | `finding` | `str \| None` | `None` | One plain-English SENTENCE saying what this source actually said about the subject — 'Active since 12 March 1998, 6 officers on file.' Deliberately distinct from `summary`, which is an identifier fragment ('GB · registered entity', 'SG-UEN 12345 · live') consumed by search-result rows, the share card and `og_image.py`; `summary` must not be repurposed, a dozen call sites depend on its current shape. Optional: a source with no template leaves this None and its `summary` renders as before. Templates live in `opencheck.findings`, which carries the rules they follow. |
 | `identifiers` | `dict[str, str]` | `dict()` | Cross-source identifiers (e.g. {'lei': '...', 'gb_coh': '...', 'wikidata_qid': '...'}). |
 | `raw` | `dict[str, Any]` | `dict()` | Raw payload (stub-shaped in Phase 0). |
-| `is_stub` | `bool` | `True` | True when this hit was produced by the Phase 0 stub path. |
+| `is_stub` | `bool` | `True` | True when this hit is a placeholder: no live source was contacted. |
 | `liveness` | `str` | `'stub'` | How current this payload is: 'live' (fetched now), 'cached' (OpenCheck response cache), 'snapshot' (bulk dataset), 'curated' (committed fixture) or 'stub' (placeholder). Defaults to 'stub' so a source that declares nothing under-claims rather than over-claims. |
 | `retrieved_at` | `datetime \| None` | `None` | When OpenCheck actually obtained this payload from the source, or None when nothing was fetched (stub and curated data). Feeds BODS `source.retrievedAt`, which the dates guidance requires a republisher to state. |
 

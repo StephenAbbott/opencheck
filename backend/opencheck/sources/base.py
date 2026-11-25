@@ -176,7 +176,7 @@ class SourceHit(BaseModel):
     )
     is_stub: bool = Field(
         default=True,
-        description="True when this hit was produced by the Phase 0 stub path.",
+        description="True when this hit is a placeholder: no live source was contacted.",
     )
     liveness: str = Field(
         default="stub",

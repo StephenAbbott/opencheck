@@ -6,7 +6,7 @@
  * page shows it: every tool once, in the handshake's six steps, the
  * budget-spending ones marked, and the reading rules present.
  */
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ApiPage } from "./ApiPage";
@@ -104,3 +104,19 @@ describe("ApiPage reference, sample data, limits and errors", () => {
     expect(within(limits).getByText("degraded_sources")).toBeTruthy();
   });
 });
+
+describe("ApiPage quickstart", () => {
+  it("switches the snippets between languages", () => {
+    render(<ApiPage />);
+    const section = screen.getByRole("region", { name: "Quickstart" });
+    const curl = within(section).getByRole("button", { name: "curl" });
+    expect(curl).toHaveAttribute("aria-pressed", "true");
+    expect(within(section).getByLabelText("curl quickstart").textContent).toContain("curl -s");
+    fireEvent.click(within(section).getByRole("button", { name: "Python" }));
+    expect(within(section).getByRole("button", { name: "Python" })).toHaveAttribute("aria-pressed", "true");
+    expect(curl).toHaveAttribute("aria-pressed", "false");
+    expect(within(section).getByLabelText("Python quickstart").textContent).toContain("import requests");
+    expect(within(section).getByLabelText("Python stream example").textContent).toContain("/stream");
+  });
+});
+
