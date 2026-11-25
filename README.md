@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 616** — MTender's Moldovan procurement data now carries the attribution the Ministry of Finance confirmed, and its licence reads as the Ministry described it — no specific licence, commercial re-use under Moldova's open-data law.
+**Latest: Phase 617** — The MCP server moved to the official Python SDK v2, so it speaks the stateless 2026-07-28 protocol and still serves older clients.
 
 → [Full development history](docs/status.md)
 
