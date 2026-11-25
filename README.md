@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 618** — The MCP server now serves three skills, on running a check, reading a result honestly and answering ownership questions, to clients that read MCP skills.
+**Latest: Phase 619** — A slow MCP lookup now answers at once with a task that the client polls for the result, so a long check no longer times out in Claude.
 
 → [Full development history](docs/status.md)
 
