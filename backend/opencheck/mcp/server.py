@@ -30,6 +30,7 @@ from mcp.types import ToolAnnotations
 from .. import __version__
 from . import shaping
 from .skills import Skills
+from .tasks import Tasks
 
 # The handshake text every client receives at ``initialize``. It says the
 # order of calls and how to read the answers, because a model left to itself
@@ -124,7 +125,7 @@ mcp = MCPServer(
     cache_hints={"tools/list": CacheHint(ttl_ms=60 * 60 * 1000, scope="public")},
     # The skills extension (SEP-2640, ``mcp/skills``): ``skills/list`` and
     # ``skills/get`` on 2026-07-28, every file a ``skill://`` resource.
-    extensions=[_SKILLS_EXTENSION],
+    extensions=[_SKILLS_EXTENSION, Tasks()],
 )
 
 
