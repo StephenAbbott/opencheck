@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 617** — The MCP server moved to the official Python SDK v2, so it speaks the stateless 2026-07-28 protocol and still serves older clients.
+**Latest: Phase 618** — The MCP server now serves three skills, on running a check, reading a result honestly and answering ownership questions, to clients that read MCP skills.
 
 → [Full development history](docs/status.md)
 
