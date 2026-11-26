@@ -181,3 +181,73 @@ def test_a_link_to_a_replaced_run_is_409(client) -> None:
 def test_run_needs_an_lei(client) -> None:
     r = client.get("/export", params={"q": "Test", "format": "json", "run": RUN})
     assert r.status_code == 400
+    # Plain prose: the detail is read as a JSON error, where reStructuredText
+    # backticks reach the reader as literal characters (26 Nov 2026).
+    assert r.json()["detail"] == (
+        "The run parameter names a held run of an LEI check. "
+        "Give an lei and no saved_report_id."
+    )
+    assert "`" not in r.json()["detail"]
+
+
+def test_run_beside_a_saved_report_is_refused_in_the_same_words(client) -> None:
+    from opencheck.routers.export import RUN_NEEDS_LEI
+
+    r = client.get(
+        "/export",
+        params={"lei": LEI, "saved_report_id": "A" * 22, "format": "json", "run": RUN},
+    )
+    assert r.status_code == 400
+    assert r.json()["detail"] == RUN_NEEDS_LEI
+
+
+# The subject's GLEIF record twice, as the Shell run of 26 Nov 2026 had it:
+# once from the lookup (with its listing) and again, re-stated, from the
+# subsidiaries merge. Same recordId, different statementId.
+_REPEATED_SUBJECT = {
+    **_BODS[0],
+    "statementId": "e1-again",
+    "recordDetails": {**_BODS[0]["recordDetails"], "name": "TEST HOLDINGS LTD"},
+}
+_RESPONSE_WITH_REPEAT = _RESPONSE.model_copy(
+    update={"bods": [*_BODS, _REPEATED_SUBJECT]}
+)
+
+
+@pytest.fixture
+def mcp_lookup_with_repeat(monkeypatch):
+    monkeypatch.setattr(
+        "opencheck.routers.lookup._lookup_impl",
+        AsyncMock(return_value=_RESPONSE_WITH_REPEAT),
+    )
+
+
+@pytest.mark.parametrize("format", ["json", "jsonl"])
+async def test_inline_and_link_give_one_statement_per_record(
+    mcp_lookup_with_repeat, format
+) -> None:
+    _hold_run()
+    link = await mcp_server.opencheck_export_bods(lei=LEI, format=format)
+    inline = await mcp_server.opencheck_export_bods(
+        lei=LEI, format=format, delivery="inline"
+    )
+    assert link["statement_count"] == inline["statement_count"] == 3
+    assert inline["total"] == 3 and inline["truncated"] is False
+    statements = inline["statements"]
+    if format == "jsonl":
+        import json
+
+        statements = [json.loads(line) for line in statements.splitlines()]
+    # The first reading is kept, as GET /export keeps it.
+    assert [s["statementId"] for s in statements] == ["e1", "p1", "r1"]
+
+
+async def test_inline_senzing_counts_the_same_records_as_the_link(
+    mcp_lookup_with_repeat,
+) -> None:
+    _hold_run()
+    link = await mcp_server.opencheck_export_bods(lei=LEI, format="senzing")
+    inline = await mcp_server.opencheck_export_bods(
+        lei=LEI, format="senzing", delivery="inline"
+    )
+    assert link["record_count"] == inline["record_count"] == inline["total"]
