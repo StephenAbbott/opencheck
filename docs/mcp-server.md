@@ -43,7 +43,7 @@ tool bodies.
 | `opencheck_lookup(lei, deepen_top=5)` | Identity, identifiers, risk signals, source coverage |
 | `opencheck_register_lookup(scheme, id, deepen_top=5, name="")` | The same for a company with **no LEI**, anchored on its register number — `GET /lookup-register` (Phase 290): the register that owns the scheme (`GB-COH` → Companies House, `NL-KVK` → KvK, …; every scheme `GET /expand-schemes` lists, `REG-<country>` aliases included) is the one source read, then the same screens, risk engine, verdict, profile and knowability. `lei` is null, there is no listing line, and the company's own name is screened by name (signals carry `evidence.subject`). A search candidate's `identifiers[]` gives the `scheme` and `id` to pass; `name` (the candidate's) is handed to registers that search by name behind the number — KvK's open data publishes no names, so without one its record is answered as a `source_read` degradation, never a clean screen |
 | `opencheck_batch_lookup(leis, deepen_top=5)` | Up to 20 LEIs → one compact row each (name, jurisdiction, register status, verdict sentence, risk/context counts, coverage, `degraded`), plus `failed` rows and `rejected` tokens — see below |
-| `opencheck_export_bods(lei, format="json", deepen_top=5, include_subsidiaries=False)` | Full ownership graph — BODS v0.4 (`json`/`jsonl`), Senzing JSON entity records (`senzing`), or FollowTheMoney entities (`ftm`). `include_subsidiaries` folds in the GLEIF subsidiary network, deduplicated by `statementId` — the same merge as `GET /export?subsidiaries=true`; `subsidiary_statement_count` says how many it added (Phase 255) |
+| `opencheck_export_bods(lei, format="json", deepen_top=5, include_subsidiaries=False, delivery="link", record_types=None, max_statements=200)` | Full ownership graph — BODS v0.4 (`json`/`jsonl`), Senzing JSON entity records (`senzing`), or FollowTheMoney entities (`ftm`). `include_subsidiaries` folds in the GLEIF subsidiary network, deduplicated by `statementId` — the same merge as `GET /export?subsidiaries=true`; `subsidiary_statement_count` says how many it added (Phase 255). **By default the answer is a link, not the graph** (see "Export by link" below): `statement_count`, `statement_counts` by record type, the integrated-ownership and disclosure blocks, `license_notices` and a `download_url`. `delivery="inline"` returns the statements (or records), filtered by `record_types` and cut at `max_statements` (default 200, at most 5,000) with `total` and `truncated` |
 | `opencheck_subsidiaries(lei, format="summary", include_declared=False)` | What a company consolidates: `GET /subsidiaries` — GLEIF Level 2 direct and ultimate children, counts, `jurisdictions` and `countries`, one row per child; `format="bods"` adds the network as BODS v0.4. `include_declared` adds the OECD-UNSD MEIP, EITI and Global Energy Monitor lists under `declared`, kept apart per source and not BODS. Carries `measures` and `license_notices` (Phase 255) |
 | `opencheck_owners(lei, threshold=None, rule=None, depth=1, deepen_top=5)` | Who owns the company above a threshold (Phase 340). Three lists: `calculated_owners` (integrated ownership from shareholdings — multiplied along each path, added across paths — one figure per source, never added across sources; `position` "above" or "may_be_above" when a band straddles the threshold or a share on the path is not stated), `declared_beneficial_owners` (what the registers flag, with the nature of the interest and whether it is current) and `in_both` (same record, reconciled entity or shared register identifier — never a name alone). `rule` says what was applied: the subject's national rule from `bods/bo_regimes.py` (Estonia "more than 25%", Ukraine "25% or more"), else 25% or more (the AMLR reading); `threshold` and `rule="national"/"amlr"` override. `depth` 2 or 3 also looks up each corporate owner at or above the threshold (FullCheck's `/expand-layer` hop), at most 10 extra lookups per call; `chain_stops` says where and why a chain ends. Calculated figures are arithmetic on filings, never a determination; nothing is stored and nothing feeds a risk signal. Since Phase 342 the answer also carries `sanctions_ownership_test` (null when none applies): the lookup's own computed sanctions 50% rule — OFAC, EU and UK side by side, each source's result, holding and holders, the designated parties read and how each was matched — carried over from its `SANCTIONS_OWNERSHIP_TEST` / `_POSSIBLE` signal, ownership only, never a statement that the company is sanctioned |
 | `opencheck_ownership_map(lei, source=None, depth=1, deepen_top=5)` | The ownership structure (Phase 340): a JSON part with every ownership and control edge from every source as a row (owner, interest, owned, source, current/ended; officers and board roles left out, company secretaries included), a one-sentence `summary`, GLEIF reporting exceptions under `reporting_exceptions` (a filing that names no parent, so it is said in words, never drawn as an owner — an undisclosed `NON_PUBLIC` parent is still drawn, once however many levels GLEIF files it at, and listed under `undisclosed_parents`), each holder's integrated figures and the FullCheck link, plus an **SVG image** (`image/svg+xml`) drawing the current edges, at most 16, one column per layer up from the company, each edge labelled with its source. `source` draws one source only |
@@ -222,6 +222,33 @@ statements, de-duplicated by `statementId`), `rows.csv`, `manifest.json` and a
 source in one row makes the whole bundle non-commercial and the notes say so.
 An agent wanting the merged graph can call `opencheck_export_bods` per LEI, or
 fetch `/batch-export` directly.
+
+### Export by link
+
+Anthropic's [Code execution with MCP](https://www.anthropic.com/research/code-execution-with-mcp)
+names the cost of a large tool result: it passes through the model's context
+whole, sometimes twice. A large group's BODS graph is thousands of
+statements, so `opencheck_export_bods` answers with a link by default:
+
+- `download_url` is `GET /export?lei=…&format=…&deepen_top=…&run=<run_completed_at>`.
+  `run` names the held run the tool read. `/export` serves that run while the
+  server holds it (the 15-minute replay window, `link_expires_at`) and answers
+  **409** once it has aged out or been replaced — it never starts a fresh
+  check, so the link spends no lookup budget and never serves a different run
+  from the one the counts describe. An agent that runs code fetches the file
+  there and filters it, and only what it keeps reaches the model.
+- With no held run (rare: the lookup did not complete into the cache),
+  `download_url` is null and `download_unavailable` says to call again with
+  `delivery="inline"`.
+- With `include_subsidiaries`, the URL carries `subsidiaries=true` and the
+  subsidiary network is merged again when the file is served.
+- `delivery="inline"` keeps the old answer for a client that cannot fetch or
+  run code, narrowed by `record_types` and `max_statements`; the cut is
+  stated (`total`, `truncated`), never silent.
+
+The tool definitions themselves were measured at the same time (26 Nov 2026):
+all fifteen come to about 6,700 tokens, so progressive tool loading or a
+`search_tools` tool would save little and was not built.
 
 ### What `opencheck_lookup` returns (Phase 153)
 

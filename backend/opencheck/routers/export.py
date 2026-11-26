@@ -114,6 +114,23 @@ LEI_EXPORT_DEEPEN_TOP = 5
 QUERY_EXPORT_DEEPEN_TOP = 3
 
 
+HELD_RUN_GONE = (
+    "That export link named a run OpenCheck no longer holds (runs are held for "
+    "15 minutes). Run the check again for a new link."
+)
+
+
+def _require_held_run(lei: str, deepen_top: int, run: str) -> None:
+    """A ``run`` export answers only from the held run it names (the MCP
+    export-by-link). Anything else is a 409: a link must never start a check
+    the reader did not see, nor spend anyone's lookup budget."""
+    from ..lookup_replay import replay_entry
+
+    entry = replay_entry(lei, deepen_top)
+    if entry is None or entry.fetched_at != run:
+        raise HTTPException(status_code=409, detail=HELD_RUN_GONE)
+
+
 @router.get("/export")
 @limiter.limit(lookup_tier)
 async def export(
@@ -187,6 +204,17 @@ async def export(
             "can add hundreds of statements. LEI exports only; requires live mode."
         ),
     ),
+    run: str | None = Query(
+        None,
+        max_length=40,
+        description=(
+            "Export exactly this run: the ``run_completed_at`` of a check the "
+            "server still holds (the 15-minute replay window). The MCP "
+            "``opencheck_export_bods`` tool hands back links carrying it. A run "
+            "that has aged out, or was replaced, answers 409 and is never "
+            "silently run again, so the link never costs a lookup. LEI exports only."
+        ),
+    ),
 ) -> Response:
     """Download a BODS v0.4 bundle for a subject."""
     if format not in _EXPORT_FORMATS:
@@ -195,6 +223,16 @@ async def export(
         raise HTTPException(
             status_code=400,
             detail="Provide either ?lei=<LEI> or ?q=<free-text query>.",
+        )
+
+    if run is not None:
+        if lei is None or saved_report_id is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="``run`` names a held run of an LEI check: give ``lei`` and no ``saved_report_id``.",
+            )
+        _require_held_run(
+            lei, LEI_EXPORT_DEEPEN_TOP if deepen_top is None else deepen_top, run
         )
 
     sub_count = 0

@@ -61,6 +61,13 @@ JSON Lines, with statements from every source and their licences. Use it
 when the user wants to load the graph somewhere else, not to answer a
 question in prose.
 
+The answer is a link, not the graph: counts by record type, the licence
+notices and a `download_url` that serves this run for about 15 minutes
+(`link_expires_at`) without spending a lookup. If you can run code, fetch the
+file there and filter it, so only the rows you need reach the conversation.
+If you cannot, call again with `delivery="inline"`, narrowed with
+`record_types` and `max_statements`; `truncated` says when rows were left out.
+
 ## Words to use
 
 - "holds", "is recorded as holding", "consolidated by". Use "owns" only for a

@@ -113,9 +113,9 @@ export const MCP_STEPS: McpStep[] = [
       },
       {
         name: "opencheck_export_bods",
-        args: "lei, format?",
+        args: "lei, format?, delivery?",
         summary:
-          "The full ownership-and-control graph as BODS v0.4 statements; include_subsidiaries folds in the GLEIF subsidiary network.",
+          "The full ownership-and-control graph as BODS v0.4 statements, by default as counts and a download link to fetch and filter in code; delivery=\"inline\" returns the statements instead. include_subsidiaries folds in the GLEIF subsidiary network.",
         spendsBudget: true,
       },
       {

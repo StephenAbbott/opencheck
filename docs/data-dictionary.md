@@ -1154,9 +1154,9 @@ Keys: `cap`, `accepted`, `rejected`, `overflow`, `rows`, `failed`, `counts`, `hi
 
 Export an entity's beneficial-ownership graph as BODS v0.4 statements.
 
-Arguments: `lei`, `format`, `deepen_top`, `include_subsidiaries`.
+Arguments: `lei`, `format`, `deepen_top`, `include_subsidiaries`, `delivery`, `record_types`, `max_statements`.
 
-Keys: `lei`, `format`, `record_count`, `records`, `bods_issues`, `license_notices`, `statement_count`, `subsidiary_statement_count`, `statements`, `integrated_ownership`, `disclosure_status`.
+Keys: `…`, `statement_count`, `statement_counts`, `subsidiary_statement_count`, `record_count`, `integrated_ownership`, `disclosure_status`, `download_url`, `download_unavailable`, `run_completed_at`, `link_expires_at`, `download_note`, `bods_issues`, `license_notices`, `records`, `total`, `truncated`, `statements`.
 
 On a refused call: `error`, `status`.
 
