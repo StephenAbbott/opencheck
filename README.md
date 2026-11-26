@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 622** — The API page now has a quickstart in curl, Python and JavaScript, and the interactive reference describes every endpoint with tags, examples and its rate limit.
+**Latest: Phase 623** — Luxembourg's beneficial-ownership row now records bill 8873, which creates ALBA and partially transposes the Sixth AML Directive for the trust register.
 
 → [Full development history](docs/status.md)
 
