@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 623** — Luxembourg's beneficial-ownership row now records bill 8873, which creates ALBA and partially transposes the Sixth AML Directive for the trust register.
+**Latest: Phase 624** — The MCP server's BODS export now returns counts and a short-lived download link, so an agent can filter a large ownership graph in code instead of reading it whole.
 
 → [Full development history](docs/status.md)
 
