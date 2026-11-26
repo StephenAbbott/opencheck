@@ -146,7 +146,7 @@ async def test_export_bods_tool_senzing_format(monkeypatch) -> None:
 
     monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake_lookup)
     out = await mcp_server.opencheck_export_bods(
-        lei="213800LH1BZH3DI6G760", format="senzing"
+        lei="213800LH1BZH3DI6G760", format="senzing", delivery="inline"
     )
     assert out["format"] == "senzing"
     assert out["record_count"] == 2  # one ORGANIZATION + one PERSON record
@@ -170,7 +170,7 @@ async def test_export_bods_tool_ftm_format(monkeypatch) -> None:
 
     monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake_lookup)
     out = await mcp_server.opencheck_export_bods(
-        lei="213800LH1BZH3DI6G760", format="ftm"
+        lei="213800LH1BZH3DI6G760", format="ftm", delivery="inline"
     )
     assert out["format"] == "ftm"
     assert out["record_count"] == 3  # Company + Person + Ownership

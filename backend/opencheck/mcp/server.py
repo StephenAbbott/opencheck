@@ -375,11 +375,35 @@ async def opencheck_batch_lookup(leis: list[str], deepen_top: int = 5) -> dict[s
     }
 
 
+_EXPORT_FORMATS = ("json", "jsonl", "senzing", "ftm")
+_EXPORT_DELIVERIES = ("link", "inline")
+_RECORD_TYPES = ("entity", "person", "relationship")
+#: The most statements (or records) an inline answer carries unless the
+#: caller asks for more. A large group's graph runs to thousands of
+#: statements — tens of thousands of tokens — and an agent asking one
+#: question of it should filter a downloaded file, not read it whole.
+INLINE_DEFAULT_MAX = 200
+INLINE_HARD_MAX = 5000
+
+
 @mcp.tool(annotations=_READS)
 async def opencheck_export_bods(
-    lei: str, format: str = "json", deepen_top: int = 5, include_subsidiaries: bool = False
+    lei: str,
+    format: str = "json",
+    deepen_top: int = 5,
+    include_subsidiaries: bool = False,
+    delivery: str = "link",
+    record_types: list[str] | None = None,
+    max_statements: int = INLINE_DEFAULT_MAX,
 ) -> dict[str, Any]:
     """Export an entity's beneficial-ownership graph as BODS v0.4 statements.
+
+    By default (``delivery="link"``) the answer is small: counts by record
+    type, the integrated-ownership and disclosure-status blocks, the licence
+    notices and a ``download_url`` to the file itself. Fetch and filter that
+    file in code when you can run code; it serves exactly the run this call
+    made, for as long as the server holds it (``link_expires_at``, about 15
+    minutes), costs no lookup, and answers 409 once the run has aged out.
 
     Args:
         lei: ISO 17442 Legal Entity Identifier (20 chars).
@@ -393,22 +417,39 @@ async def opencheck_export_bods(
             and ultimate children, accounting consolidation) — the same merge as
             ``GET /export?subsidiaries=true``. Off by default: a large group adds
             hundreds of statements.
+        delivery: "link" (default: counts plus ``download_url``) or "inline"
+            (the statements or records in the answer itself).
+        record_types: Inline only — keep these BODS record types ("entity",
+            "person", "relationship"). Default: all.
+        max_statements: Inline only — the most statements (or records) to
+            return, default 200, at most 5000. ``total`` and ``truncated`` say
+            what was left out; the cut is never silent.
 
-    For ``json`` / ``jsonl`` the result also carries ``integrated_ownership``:
+    The result also carries ``integrated_ownership`` for ``json`` / ``jsonl``:
     each party above the subject with how much of it that party holds,
     directly and through companies it holds, one figure per source and never
     added across sources (T-Rank's integrated-ownership method). Context, not
     a risk finding — no threshold is applied.
     """
-    from ..bods import map_to_ftm, map_to_senzing
+    from ..bods import map_to_ftm, map_to_senzing, unique_statements
     from ..gleif_throttle import discretionary as gleif_discretionary
     from ..routers.export import _merge_subsidiaries
     from ..routers.lookup import _lookup_impl as _lookup
 
-    if format not in ("json", "jsonl", "senzing", "ftm"):
+    if format not in _EXPORT_FORMATS:
         return {
             "error": f"format must be 'json', 'jsonl', 'senzing' or 'ftm', got {format!r}"
         }
+    if delivery not in _EXPORT_DELIVERIES:
+        return {"error": f"delivery must be 'link' or 'inline', got {delivery!r}"}
+    if record_types is not None:
+        unknown = [t for t in record_types if t not in _RECORD_TYPES]
+        if unknown:
+            return {
+                "error": f"record_types must be drawn from {list(_RECORD_TYPES)}, got {unknown!r}"
+            }
+    if not isinstance(max_statements, int) or not 1 <= max_statements <= INLINE_HARD_MAX:
+        return {"error": f"max_statements must be 1-{INLINE_HARD_MAX}", "status": 400}
     try:
         resp = await _lookup(lei=lei, deepen_top=deepen_top)
     except HTTPException as exc:
@@ -420,26 +461,59 @@ async def opencheck_export_bods(
         with gleif_discretionary():
             resp, subsidiary_statements = await _merge_subsidiaries(resp)
 
+    bods = list(resp.bods or [])
+    base: dict[str, Any] = {"lei": resp.lei, "format": format, "delivery": delivery}
+
+    if delivery == "link":
+        # The file is what GET /export serves: one statement per id.
+        unique = unique_statements(bods)
+        counts: dict[str, int] = {t: 0 for t in _RECORD_TYPES}
+        for st in unique:
+            rt = st.get("recordType")
+            if rt in counts:
+                counts[rt] += 1
+        out: dict[str, Any] = {
+            **base,
+            "statement_count": len(unique),
+            "statement_counts": counts,
+            "subsidiary_statement_count": subsidiary_statements,
+        }
+        if format in ("senzing", "ftm"):
+            out["record_count"] = len(
+                (map_to_senzing if format == "senzing" else map_to_ftm)(unique)
+            )
+        else:
+            out["integrated_ownership"] = _integrated_ownership_block(resp)
+            out["disclosure_status"] = _disclosure_status_block(resp)
+        out.update(_export_link(resp.lei or lei, format, deepen_top, include_subsidiaries))
+        out["bods_issues"] = resp.bods_issues
+        out["license_notices"] = resp.license_notices
+        return out
+
     if format in ("senzing", "ftm"):
-        records = (map_to_senzing if format == "senzing" else map_to_ftm)(resp.bods)
+        records = (map_to_senzing if format == "senzing" else map_to_ftm)(bods)
         return {
-            "lei": resp.lei,
-            "format": format,
+            **base,
             "record_count": len(records),
-            "records": records,
+            "records": records[:max_statements],
+            "total": len(records),
+            "truncated": len(records) > max_statements,
             "bods_issues": resp.bods_issues,
             "license_notices": resp.license_notices,
         }
 
-    statements: Any = resp.bods
+    kept = [s for s in bods if record_types is None or s.get("recordType") in record_types]
+    shown = kept[:max_statements]
+    statements: Any = shown
     if format == "jsonl":
-        statements = "\n".join(json.dumps(s) for s in resp.bods)
+        statements = "\n".join(json.dumps(s) for s in shown)
     return {
-        "lei": resp.lei,
-        "format": format,
-        "statement_count": len(resp.bods),
+        **base,
+        "statement_count": len(bods),
         "subsidiary_statement_count": subsidiary_statements,
         "statements": statements,
+        "total": len(kept),
+        "truncated": len(kept) > len(shown),
         # Phase 339: each party above the subject with its integrated
         # ownership, per source — context, never a signal. The same figures
         # ride in the statements as a ``commenting`` annotation on the subject.
@@ -450,6 +524,51 @@ async def opencheck_export_bods(
         "disclosure_status": _disclosure_status_block(resp),
         "bods_issues": resp.bods_issues,
         "license_notices": resp.license_notices,
+    }
+
+
+def _export_link(
+    lei: str, format: str, deepen_top: int, include_subsidiaries: bool
+) -> dict[str, Any]:
+    """The ``download_url`` for the held run this export read, or the reason
+    there is none. The URL names the run (``run=``), so ``GET /export`` serves
+    that run or answers 409 — never a different check, never a fresh charge."""
+    import time
+    from datetime import UTC, datetime, timedelta
+    from urllib.parse import urlencode
+
+    from ..lookup_replay import _REPLAY_TTL_SECONDS, clamp_deepen_top, replay_entry
+    from ..routers.saved_reports import _api_base
+
+    dt = clamp_deepen_top(deepen_top)
+    entry = replay_entry(lei, dt)
+    if entry is None:
+        return {
+            "download_url": None,
+            "download_unavailable": (
+                "The server holds no completed run to link to. Call again with "
+                "delivery='inline' for the statements in the answer."
+            ),
+        }
+    params = {"lei": lei, "format": format, "deepen_top": dt, "run": entry.fetched_at}
+    if include_subsidiaries:
+        params["subsidiaries"] = "true"
+    remaining = max(0.0, _REPLAY_TTL_SECONDS - (time.monotonic() - entry.stored))
+    expires = datetime.now(UTC) + timedelta(seconds=remaining)
+    return {
+        "download_url": f"{_api_base()}/export?{urlencode(params)}",
+        "run_completed_at": entry.fetched_at,
+        "link_expires_at": expires.isoformat(timespec="seconds"),
+        "download_note": (
+            "GET this URL from code and filter the file there rather than "
+            "reading it whole. It serves this run until link_expires_at and "
+            "answers 409 after; it spends no lookup budget."
+            + (
+                " The subsidiary network is merged again when the file is served."
+                if include_subsidiaries
+                else ""
+            )
+        ),
     }
 
 
