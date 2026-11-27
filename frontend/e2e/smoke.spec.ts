@@ -402,3 +402,57 @@ test.describe("the Subsidiaries tab's rows at phone width (Phase 261)", () => {
     await expectNoHorizontalOverflow(page);
   });
 });
+
+test.describe("the daily changes page at phone width", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  // The e2e backend holds no daily changes, so the empty page passed the
+  // route sweep above while a real day scrolled sideways by 111px: the curl
+  // lines in the download box widened the grid's implicit column. A day with
+  // rows, parent LEIs and a file is what the page is like in production.
+  const DAY = "2026-11-26";
+  const index = {
+    available: true,
+    days: [{ day: DAY, bands: { headline: 1, record: 1, new: 3 }, sources: {} }],
+    files: [{
+      day: DAY, bods: `/changes/${DAY}.jsonl.gz`, csv: `/changes/${DAY}.csv`,
+      json: `/daily-changes/${DAY}.json`, bytes: 123456, statements: 582, leis: 200,
+    }],
+  };
+  const dayBody = {
+    day: DAY, complete: true, counts: { headline: 1, record: 1, new: 3 }, sources: {},
+    opensanctions_notice: "",
+    rows: [
+      {
+        lei: "5493001KJTIIGC8Y1R12", name: "A COMPANY WITH A LONG REGISTERED NAME LIMITED",
+        jurisdiction: "GB", source: "gleif", band: "headline", reasons: ["parent_changed"],
+        changes: [
+          { field: "direct_parent_lei", old: "213800LH1BZH3DI6G760", new: "253400JT3MQWNDKMJE44" },
+          { field: "ultimate_parent_lei", old: "213800LH1BZH3DI6G760", new: "253400JT3MQWNDKMJE44" },
+        ],
+        as_of: "2026-11-26T16:00:00Z",
+      },
+      {
+        lei: "529900T8BM49AURSDO55", name: "ANOTHER COMPANY GMBH", jurisdiction: "DE",
+        source: "gleif", band: "record", reasons: ["legal_name"],
+        changes: [{ field: "legal_name", old: "OLD NAME GMBH", new: "ANOTHER COMPANY GMBH" }],
+        as_of: "2026-11-26T16:00:00Z",
+      },
+    ],
+  };
+
+  test("a day with rows fits the screen", async ({ page }) => {
+    await page.route(
+      (url) => url.pathname === "/daily-changes",
+      (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(index) }),
+    );
+    await page.route(
+      (url) => url.pathname === `/daily-changes/${DAY}.json`,
+      (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(dayBody) }),
+    );
+    await page.goto(`/changes?day=${DAY}`);
+    await expect(page.getByText("A COMPANY WITH A LONG REGISTERED NAME LIMITED")).toBeVisible();
+    await expect(page.getByText(/curl -OJL/)).toBeAttached();
+    await expectNoHorizontalOverflow(page);
+  });
+});

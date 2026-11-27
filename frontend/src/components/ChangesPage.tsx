@@ -177,7 +177,7 @@ function DownloadAside({ day, file }: { day: string; file?: { bytes: number | nu
   const urls = fileUrls(day, typeof window === "undefined" ? "" : window.location.origin);
   const size = formatBytes(file?.bytes);
   return (
-    <aside aria-labelledby="changes-download" className="bg-white border border-oo-rule rounded-oo p-5 space-y-4">
+    <aside aria-labelledby="changes-download" className="min-w-0 bg-white border border-oo-rule rounded-oo p-5 space-y-4">
       <div>
         <h3 id="changes-download" className="font-head font-bold text-oo-lead text-oo-ink mb-1">
           Download this day
@@ -353,7 +353,11 @@ export default function ChangesPage({
           )}
 
           {data && (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="grid gap-6 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_20rem]">
+              {/* An explicit single column below lg: an implicit grid track
+                  is `auto`, which takes the min-content width of its widest
+                  item (the curl lines in the download box) and pushed every
+                  row 111px past a phone's edge. */}
               <div className="min-w-0">
                 <dl className="flex flex-wrap gap-x-6 gap-y-2 mb-6">
                   {STRIP.map(({ band: b, label }) => (
