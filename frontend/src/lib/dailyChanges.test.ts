@@ -49,9 +49,24 @@ describe("dailyChanges", () => {
     expect(changeLines(row())).toEqual([{ what: "Direct parent", before: "AAA", now: "BBB" }]);
     expect(changeLines(row({ changes: [{ field: "direct_parent_lei", old: null, new: "BBB" }] }))[0].before).toBe("none");
     const os = row({ source: "opensanctions", changes: [{ topics_added: ["sanction"] }] });
-    expect(changeLines(os)).toEqual([{ what: "OpenSanctions topics added: sanction" }]);
+    expect(changeLines(os)).toEqual([{ what: "OpenSanctions topics added: sanctions listing" }]);
     const ev = row({ changes: [{ field: "corporate_events", new: [{ type: "CHANGE_LEGAL_FORM", status: "COMPLETED" }] }] });
     expect(changeLines(ev)[0].what).toBe("Legal entity event recorded: change legal form (completed)");
+  });
+
+  it("names an added dataset by its OpenSanctions title, else by its code", () => {
+    const os = row({
+      source: "opensanctions",
+      changes: [{ datasets_added: ["ca_dfatd_sema_sanctions"], topics_added: ["reg.warn"] }],
+    });
+    const titles = { ca_dfatd_sema_sanctions: "Canadian Consolidated Autonomous Sanctions List" };
+    expect(changeLines(os, titles)).toEqual([
+      { what: "OpenSanctions topics added: regulatory warning" },
+      { what: "Added to: Canadian Consolidated Autonomous Sanctions List" },
+    ]);
+    expect(changeLines(os)[1]).toEqual({ what: "Added to: ca_dfatd_sema_sanctions" });
+    const two = row({ source: "opensanctions", changes: [{ datasets_added: ["a", "b"] }] });
+    expect(changeLines(two, { a: "List A" })).toEqual([{ what: "Added to these lists: List A; b" }]);
   });
 
   it("links a row to the record its change is on", () => {

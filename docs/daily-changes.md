@@ -107,7 +107,11 @@ Each row: `lei`, `name` and `jurisdiction` (GLEIF's), `source`, `band`,
 `reasons` (a closed vocabulary), `changes` (for GLEIF, each field's old and new
 value; for OpenSanctions, topic codes and dataset names added or removed),
 `as_of` (the GLEIF publish or the OpenSanctions version), and for an
-OpenSanctions row a `ref` with the OpenSanctions entity id and link.
+OpenSanctions row a `ref` with the OpenSanctions entity id and link. The day
+also carries `dataset_titles`: OpenSanctions' own title for each dataset its
+rows name (from the catalogue, `index.json`), which the page shows in place of
+the code. A dataset the catalogue gives no title is left out and shown by its
+code.
 
 ## OpenSanctions rows are references
 

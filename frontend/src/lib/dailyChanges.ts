@@ -14,6 +14,7 @@
  */
 
 import { BASE_URL } from "./api";
+import { topicList } from "./vocab";
 
 export type Band = "headline" | "ceased" | "ceased_lapsed" | "record" | "note" | "new";
 export type ChangeSource = "gleif" | "opensanctions";
@@ -69,6 +70,9 @@ export interface DailyDay {
   sources: Partial<Record<ChangeSource, Record<string, number>>>;
   rows: DailyRow[];
   opensanctions_notice: string;
+  /** OpenSanctions' title for each dataset the rows name, from its
+   *  catalogue; a dataset missing here is shown by its code. */
+  dataset_titles?: Record<string, string>;
 }
 
 export const BAND_LABELS: Record<Band, string> = {
@@ -180,7 +184,7 @@ export interface ChangeLine {
 }
 
 /** Each change on a row as a line the page can print: what, before, now. */
-export function changeLines(row: DailyRow): ChangeLine[] {
+export function changeLines(row: DailyRow, datasetTitles: Record<string, string> = {}): ChangeLine[] {
   const out: ChangeLine[] = [];
   for (const c of row.changes) {
     if (c.field === "corporate_events") {
@@ -200,9 +204,14 @@ export function changeLines(row: DailyRow): ChangeLine[] {
       });
       continue;
     }
-    if (c.topics_added?.length) out.push({ what: `OpenSanctions topics added: ${c.topics_added.join(", ")}` });
-    if (c.topics_removed?.length) out.push({ what: `OpenSanctions topics removed: ${c.topics_removed.join(", ")}` });
-    if (c.datasets_added?.length) out.push({ what: `OpenSanctions datasets added: ${c.datasets_added.join(", ")}` });
+    if (c.topics_added?.length) out.push({ what: `OpenSanctions topics added: ${topicList(c.topics_added)}` });
+    if (c.topics_removed?.length) out.push({ what: `OpenSanctions topics removed: ${topicList(c.topics_removed)}` });
+    if (c.datasets_added?.length) {
+      // The list's own name, as OpenSanctions titles it; its code only when
+      // the catalogue gave no title (Steve, 27 Nov 2026).
+      const names = c.datasets_added.map((d) => datasetTitles[d] ?? d);
+      out.push({ what: `${names.length === 1 ? "Added to" : "Added to these lists"}: ${names.join("; ")}` });
+    }
   }
   return out;
 }

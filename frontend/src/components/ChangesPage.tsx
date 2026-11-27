@@ -18,7 +18,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 import { fetchDailyChangesDay, fetchDailyChangesIndex } from "../lib/api";
 import {
@@ -54,9 +54,13 @@ function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** The day's OpenSanctions dataset titles, so a row names a list rather
+ *  than its code. */
+const DatasetTitles = createContext<Record<string, string>>({});
+
 function ChangeRow({ row, onOpen }: { row: DailyRow; onOpen: (lei: string) => void }) {
   const chip = rowChip(row);
-  const lines = changeLines(row);
+  const lines = changeLines(row, useContext(DatasetTitles));
   const link = recordLink(row);
   return (
     <li className="py-4 border-t border-oo-rule first:border-t-0">
@@ -292,6 +296,7 @@ export default function ChangesPage({
   const headline = data ? rowsIn(data, "headline") : [];
 
   return (
+    <DatasetTitles.Provider value={data?.dataset_titles ?? {}}>
     <section aria-labelledby="changes-heading">
       <SectionLabel as="p" className="mb-2">Daily changes</SectionLabel>
       <h2
@@ -433,5 +438,6 @@ export default function ChangesPage({
         </>
       )}
     </section>
+    </DatasetTitles.Provider>
   );
 }
