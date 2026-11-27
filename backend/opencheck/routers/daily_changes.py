@@ -29,6 +29,11 @@ _DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 #: A complete day does not change; today's list grows with each delta.
 _CACHE_COMPLETE = "public, max-age=3600"
 _CACHE_OPEN = "no-store"
+#: A refusal from ``/changes/{name}`` must not be kept either: the path ends
+#: in a static extension, so Render's edge holds an answer that names no
+#: ``Cache-Control`` (on 27 Nov 2026 the 404 for ``latest.jsonl.gz`` came
+#: back from the edge cache).
+_NO_STORE = {"Cache-Control": _CACHE_OPEN}
 _OFF = "The daily changes list is not enabled on this server."
 
 
@@ -100,14 +105,16 @@ async def daily_changes_file_route(
     redirects to the newest day held."""
     m = _FILE.match(name)
     if not m:
-        raise HTTPException(status_code=404, detail="not a changes file")
+        raise HTTPException(status_code=404, detail="not a changes file", headers=_NO_STORE)
     if daily_changes_file.files_dir() is None:
-        raise HTTPException(status_code=503, detail=_OFF)
+        raise HTTPException(status_code=503, detail=_OFF, headers=_NO_STORE)
     day, ext = m.group("day"), m.group("ext")
     if day == "latest":
         held = await asyncio.to_thread(daily_changes_file.held_days)
         if not held:
-            raise HTTPException(status_code=404, detail="no changes file is held yet")
+            raise HTTPException(
+                status_code=404, detail="no changes file is held yet", headers=_NO_STORE
+            )
         return RedirectResponse(
             f"/changes/{held[0]}.{ext}", status_code=302, headers={"Cache-Control": _CACHE_OPEN}
         )
@@ -129,7 +136,9 @@ async def daily_changes_file_route(
         )
     path = daily_changes_file.day_path(day)
     if path is None or not path.exists():
-        raise HTTPException(status_code=404, detail="no BODS file for that day")
+        raise HTTPException(
+            status_code=404, detail="no BODS file for that day", headers=_NO_STORE
+        )
     return FileResponse(
         path,
         media_type="application/gzip",
