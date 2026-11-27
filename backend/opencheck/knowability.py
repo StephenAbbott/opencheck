@@ -443,6 +443,32 @@ def _access_sentences(j: Jurisdiction, today: date) -> list[str]:
     return []
 
 
+_PERSON_ARTICLES = ("a ", "an ", "any ", "the ")
+
+
+def threshold_clause(wording: str) -> str:
+    """The register's threshold, set into "it records …".
+
+    The *Threshold wording* column is copied from statutes and assessments
+    and is written to stand alone, so it often opens with a capital ("More
+    than 25%…") or names the person rather than the holding ("A natural
+    person who holds…"). Mid-sentence the first letter is lower-cased, after
+    any opening quotation mark, unless the first word is an acronym or a
+    figure ("UBO", "25%"); a wording that names the person reads "it records
+    a natural person who…", never "holders of a natural person".
+    """
+    text = wording.strip()
+    lead = len(text) - len(text.lstrip("\"'\u201c\u2018("))
+    head, body = text[:lead], text[lead:]
+    first = body.split(" ", 1)[0]
+    is_acronym = len(first) > 1 and first.isupper()
+    if body[:1].isupper() and not is_acronym:
+        body = body[0].lower() + body[1:]
+    if not head and body.startswith(_PERSON_ARTICLES):
+        return f"it records {body}"
+    return f"it records holders of {head}{body}"
+
+
 def _recorded_sentences(j: Jurisdiction) -> list[str]:
     """Sentence 2 (and 3): what a reader with access actually sees, then how
     it is checked. Two sentences, not one, so the 140-character cap that
@@ -454,7 +480,7 @@ def _recorded_sentences(j: Jurisdiction) -> list[str]:
     out: list[str] = []
     parts: list[str | None] = []
     if r.threshold_wording:
-        parts.append(f"it records holders of {r.threshold_wording}")
+        parts.append(threshold_clause(r.threshold_wording))
     if "exact_holdings" in r.fields_published:
         parts.append("as exact holdings")
     elif "percentage_bands" in r.fields_published:
