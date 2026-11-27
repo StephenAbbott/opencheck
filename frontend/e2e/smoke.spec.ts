@@ -456,3 +456,24 @@ test.describe("the daily changes page at phone width", () => {
     await expectNoHorizontalOverflow(page);
   });
 });
+
+test.describe("the blog at phone width", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  // The blog is server-rendered by the backend, so it is read there directly.
+  // "What changed today" was 541px wide on an iPhone (27 Nov 2026):
+  // its curl line, in a <pre>, widened the one-column grid the post folds
+  // into below 860px, and the title, date box and image went with it.
+  const BACKEND = "http://127.0.0.1:8000";
+
+  test("every post fits the screen", async ({ page, request }) => {
+    const feed = await (await request.get(`${BACKEND}/blog/sitemap.xml`)).text();
+    const posts = [...feed.matchAll(/<loc>[^<]*?(\/blog\/[^<]+)<\/loc>/g)].map((m) => m[1]);
+    expect(posts.length).toBeGreaterThan(0);
+    for (const path of ["/blog", ...posts]) {
+      await page.goto(`${BACKEND}${path}`);
+      const width = await page.evaluate(() => document.documentElement.scrollWidth);
+      expect(width, `${path} scrolls sideways`).toBeLessThanOrEqual(391);
+    }
+  });
+});
