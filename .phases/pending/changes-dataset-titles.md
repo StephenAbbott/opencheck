@@ -1,6 +1,0 @@
----
-title: The daily changes page names an OpenSanctions list by its title, not its code.
-readme: The daily changes page now names each sanctions or regulatory list a company was added to by its OpenSanctions title instead of its code.
-tests: backend +1, vitest +1
----
-An OpenSanctions row on /changes read "OpenSanctions datasets added: ca_dfatd_sema_sanctions" where the list's name belongs (Steve, 27 Nov 2026). The daily-changes tick already reads OpenSanctions' catalogue (`index.json`) to decide which new datasets are listings; it now also keeps each dataset's `title` in the store's meta (`opensanctions_dataset_titles`), read once even on a tick with nothing to grade so a store from before this change fills at once. `/daily-changes/{day}.json` carries `dataset_titles` for the datasets its rows name, and only those. The page writes "Added to: Canadian Consolidated Autonomous Sanctions List" and falls back to the code when the catalogue gives no title. Topic codes use `topicList` (lib/vocab.ts), so `reg.warn` reads "regulatory warning". Nothing is inferred: a title is OpenSanctions' own word. The CSV and the JSON rows keep the codes. After deploy: the next OpenSanctions tick (within three hours) stores the titles; /changes?day=2026-11-24 shows Bank Melli Iran "Added to: Canadian Consolidated Autonomous Sanctions List".

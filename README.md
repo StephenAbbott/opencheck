@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 633** — The blog's post pages no longer scroll sideways on a phone when a post carries a code block.
+**Latest: Phase 634** — The daily changes page now names each sanctions or regulatory list a company was added to by its OpenSanctions title instead of its code.
 
 → [Full development history](docs/status.md)
 
