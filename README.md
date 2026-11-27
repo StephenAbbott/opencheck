@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 626** — The beneficial ownership access table now covers 184 jurisdictions, adding Africa, Asia and Oceania from FATF, regional-body and OECD assessment reports.
+**Latest: Phase 627** — The daily changes list gained a /changes page and a daily BODS file of every LEI GLEIF changed that day.
 
 → [Full development history](docs/status.md)
 
