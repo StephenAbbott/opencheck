@@ -1515,7 +1515,7 @@ Data generated 2026-11-26T20:18:05+00:00; sentences rendered as of 2026-11-26. *
 
 ### Indonesia (ID) — **unverified draft**
 
-> AHU Pemilik Manfaat (Ministry of Law and Human Rights) is open to the public. It records holders of More than 25% of shares, voting rights or profits, or control by other listed means (Perpres 13/2018 art. 4(1), limited liability companies; similar tests for other entity types). OpenCheck reads no Indonesia register, so an owner absent from this report says nothing about what Indonesia holds.
+> AHU Pemilik Manfaat (Ministry of Law and Human Rights) is open to the public. It records holders of more than 25% of shares, voting rights or profits, or control by other listed means (Perpres 13/2018 art. 4(1), limited liability companies; similar tests for other entity types). OpenCheck reads no Indonesia register, so an owner absent from this report says nothing about what Indonesia holds.
 
 | Field | Value |
 |---|---|

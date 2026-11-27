@@ -526,3 +526,44 @@ def test_report_statements_reads_only_the_frozen_fields(monkeypatch) -> None:
     assert out["chain"] == [ky]  # subject not repeated, duplicates dropped
     assert out["as_of"] == "2026-01-01"
     assert know.report_statements({}) == {"subject": None, "chain": [], "as_of": None}
+
+
+# --- The threshold sits mid-sentence (the Indonesia capital-letter ticket) --
+
+from opencheck import knowability as _kn  # noqa: E402
+
+
+def test_a_capitalised_threshold_is_lower_cased_mid_sentence():
+    assert _kn.threshold_clause("More than 25% of shares") == (
+        "it records holders of more than 25% of shares"
+    )
+    assert _kn.threshold_clause('"At least 10% of the capital"') == (
+        'it records holders of "at least 10% of the capital"'
+    )
+
+
+def test_an_acronym_or_a_figure_keeps_its_case():
+    assert _kn.threshold_clause("UBO holdings over 25%") == (
+        "it records holders of UBO holdings over 25%"
+    )
+    assert _kn.threshold_clause("25% or more") == "it records holders of 25% or more"
+
+
+def test_a_wording_that_names_the_person_is_not_holders_of_a_person():
+    assert _kn.threshold_clause("A natural person who holds 25%") == (
+        "it records a natural person who holds 25%"
+    )
+
+
+def test_no_row_puts_a_capital_or_a_person_after_holders_of():
+    """Every row of the synced table, whatever its access status today."""
+    import re
+
+    rows = [j for j in _kn.JURISDICTIONS.values() if j.bo_register.threshold_wording]
+    assert rows
+    for j in rows:
+        clause = _kn.threshold_clause(j.bo_register.threshold_wording)
+        rest = clause.removeprefix("it records holders of ").lstrip("\"'“‘(")
+        first = rest.split(" ", 1)[0]
+        assert not (first[:1].isupper() and not first.isupper()), (j.code, clause)
+        assert not re.match(r"it records holders of (a|an|any|the) ", clause), (j.code, clause)
