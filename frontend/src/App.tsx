@@ -56,6 +56,7 @@ import { clearPanelError, mergePanelError, type PanelError } from "./lib/panelEr
 import {
   PAGE_TITLES,
   VIEW_DOCUMENT_TITLES,
+  lookupBaseUrl,
   pathToView,
   viewToPath,
   type View,
@@ -485,11 +486,10 @@ export default function App() {
     trackEvent("lookup_run"); // feature event only — the LEI is never recorded
     // Shareable URLs: reflect the lookup in ?lei= so refresh and copy/paste
     // re-run it (the backend replay cache makes repeats near-instant).
-    const url = new URL(window.location.href);
-    if (reportIdFromPath(url.pathname)) {
-      url.pathname = "/";
-      url.search = "";
-    }
+    const url = lookupBaseUrl(
+      new URL(window.location.href),
+      Boolean(reportIdFromPath(window.location.pathname)),
+    );
     url.searchParams.set("lei", lei);
     // A curated example's view tile asks for a mode, and the address must
     // say it (the tile's own href does), or a refresh would fall back to

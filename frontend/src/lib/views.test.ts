@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { PAGE_TITLES, VIEW_DOCUMENT_TITLES, pathToView, viewToPath, type View } from "./views";
+import {
+  PAGE_TITLES,
+  VIEW_DOCUMENT_TITLES,
+  lookupBaseUrl,
+  pathToView,
+  viewToPath,
+  type View,
+} from "./views";
 
 const VIEWS: View[] = [
   "main",
@@ -32,5 +39,26 @@ describe("views", () => {
       expect(VIEW_DOCUMENT_TITLES[v as Exclude<View, "main">]).toMatch(/— OpenCheck$/);
     }
     for (const v of Object.keys(PAGE_TITLES)) expect(VIEWS).toContain(v);
+  });
+});
+
+describe("lookupBaseUrl", () => {
+  const lei = (u: URL) => {
+    u.searchParams.set("lei", "097900BHML0000100392");
+    return u.pathname + u.search;
+  };
+  it("drops another view's path and parameters", () => {
+    const u = lookupBaseUrl(new URL("https://opencheck.world/changes?day=2026-11-26"));
+    expect(lei(u)).toBe("/?lei=097900BHML0000100392");
+    const w = lookupBaseUrl(new URL("https://opencheck.world/watchlist?token=x"));
+    expect(lei(w)).toBe("/?lei=097900BHML0000100392");
+  });
+  it("keeps the main view's parameters", () => {
+    const u = lookupBaseUrl(new URL("https://opencheck.world/?mode=full&lei=OLD"));
+    expect(lei(u)).toBe("/?mode=full&lei=097900BHML0000100392");
+  });
+  it("clears a saved report's path", () => {
+    const u = lookupBaseUrl(new URL("https://opencheck.world/report/abc?x=1"), true);
+    expect(lei(u)).toBe("/?lei=097900BHML0000100392");
   });
 });
