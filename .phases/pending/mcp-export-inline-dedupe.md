@@ -1,0 +1,6 @@
+---
+title: An inline BODS export from MCP holds one statement per record, as the link does, and a misused run parameter is refused in plain words.
+readme: The MCP BODS export now gives the same statements and counts whether it answers inline or by link.
+tests: backend +5
+---
+Two bugs from the post-deploy test of the export-by-link change (26 Nov 2026). First, `opencheck_export_bods` deduplicated only on the link path: for SHELL PLC with subsidiaries, the link reported 529 statements and the inline answer 530, the extra being a second statement of SHELL PLC's GLEIF record (same recordId, re-stated by the subsidiaries merge without its listing). Both deliveries now run the statements through `unique_statements` once, before the record-type filter, the cap, `total`, `statement_count` and the Senzing / FtM mapping, so the inline answer keeps the first reading, exactly as `GET /export` serves it. Second, the 400 for `run` without `lei`, or beside `saved_report_id`, carried reStructuredText double backticks into a JSON error; it is now plain prose (`RUN_NEEDS_LEI` in `routers/export.py`), pinned word for word by the test. Check after deploy: inline and link `statement_count` agree for SHELL PLC (`21380068P1DRHMJ8KU70`, `include_subsidiaries=true`), and `GET /export?q=Shell&run=x` answers the new sentence.

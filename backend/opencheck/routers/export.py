@@ -114,6 +114,13 @@ LEI_EXPORT_DEEPEN_TOP = 5
 QUERY_EXPORT_DEEPEN_TOP = 3
 
 
+#: The 400 for ``run`` without ``lei``, or beside ``saved_report_id``. Plain
+#: prose: it reaches the reader as a JSON error, where markup shows as itself.
+RUN_NEEDS_LEI = (
+    "The run parameter names a held run of an LEI check. "
+    "Give an lei and no saved_report_id."
+)
+
 HELD_RUN_GONE = (
     "That export link named a run OpenCheck no longer holds (runs are held for "
     "15 minutes). Run the check again for a new link."
@@ -229,7 +236,7 @@ async def export(
         if lei is None or saved_report_id is not None:
             raise HTTPException(
                 status_code=400,
-                detail="``run`` names a held run of an LEI check: give ``lei`` and no ``saved_report_id``.",
+                detail=RUN_NEEDS_LEI,
             )
         _require_held_run(
             lei, LEI_EXPORT_DEEPEN_TOP if deepen_top is None else deepen_top, run

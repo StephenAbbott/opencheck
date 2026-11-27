@@ -461,12 +461,15 @@ async def opencheck_export_bods(
         with gleif_discretionary():
             resp, subsidiary_statements = await _merge_subsidiaries(resp)
 
-    bods = list(resp.bods or [])
+    # One statement per record, in both deliveries: the file GET /export
+    # serves is deduplicated this way, so the inline answer must be too, or the
+    # two report different counts and inline hands over two readings of one
+    # record (SHELL PLC's GLEIF statement, from the lookup and again from the
+    # subsidiaries merge).
+    unique = unique_statements(list(resp.bods or []))
     base: dict[str, Any] = {"lei": resp.lei, "format": format, "delivery": delivery}
 
     if delivery == "link":
-        # The file is what GET /export serves: one statement per id.
-        unique = unique_statements(bods)
         counts: dict[str, int] = {t: 0 for t in _RECORD_TYPES}
         for st in unique:
             rt = st.get("recordType")
@@ -491,7 +494,7 @@ async def opencheck_export_bods(
         return out
 
     if format in ("senzing", "ftm"):
-        records = (map_to_senzing if format == "senzing" else map_to_ftm)(bods)
+        records = (map_to_senzing if format == "senzing" else map_to_ftm)(unique)
         return {
             **base,
             "record_count": len(records),
@@ -502,14 +505,14 @@ async def opencheck_export_bods(
             "license_notices": resp.license_notices,
         }
 
-    kept = [s for s in bods if record_types is None or s.get("recordType") in record_types]
+    kept = [s for s in unique if record_types is None or s.get("recordType") in record_types]
     shown = kept[:max_statements]
     statements: Any = shown
     if format == "jsonl":
         statements = "\n".join(json.dumps(s) for s in shown)
     return {
         **base,
-        "statement_count": len(bods),
+        "statement_count": len(unique),
         "subsidiary_statement_count": subsidiary_statements,
         "statements": statements,
         "total": len(kept),
