@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 625** — The MCP BODS export now gives the same statements and counts whether it answers inline or by link.
+**Latest: Phase 626** — The beneficial ownership access table now covers 184 jurisdictions, adding Africa, Asia and Oceania from FATF, regional-body and OECD assessment reports.
 
 → [Full development history](docs/status.md)
 
