@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 631** — The daily changes page no longer scrolls sideways on a phone or cuts off the end of its rows.
+**Latest: Phase 632** — The "What can be known" sentence lower-cases a register's threshold where it sits mid-sentence, so Indonesia no longer reads "holders of More than 25%".
 
 → [Full development history](docs/status.md)
 
