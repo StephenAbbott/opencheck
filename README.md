@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 628** — The daily changes file addresses answer a missing file with no-store, so the edge cannot keep a 404 after the file exists.
+**Latest: Phase 629** — Running a check from the daily changes page or the watchlist now opens the ordinary `/?lei=` address instead of keeping the page's own parameters.
 
 → [Full development history](docs/status.md)
 
