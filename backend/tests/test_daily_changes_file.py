@@ -90,8 +90,11 @@ def test_the_file_and_csv_routes(env: Path, tmp_path: Path) -> None:  # noqa: F8
     assert tuple(rows[0]) == dcf.CSV_COLUMNS
     assert {r["lei"] for r in rows} == {NEW_LEI, EASY, TOP}
 
-    assert http.get("/changes/2026-01-01.jsonl.gz").status_code == 404
-    assert http.get("/changes/whatever.zip").status_code == 404
+    # A refusal is never kept by the edge: the paths end in static extensions.
+    for missing in ("/changes/2026-01-01.jsonl.gz", "/changes/whatever.zip"):
+        refused = http.get(missing)
+        assert refused.status_code == 404
+        assert refused.headers["cache-control"] == "no-store"
 
 
 def test_the_file_routes_answer_503_when_the_feature_is_off(
@@ -102,7 +105,13 @@ def test_the_file_routes_answer_503_when_the_feature_is_off(
     monkeypatch.delenv("OPENCHECK_DAILY_CHANGES_DB_FILE")
     get_settings.cache_clear()
     dc.reset_for_tests()
-    assert _client().get("/changes/latest.jsonl.gz").status_code == 503
+    off = _client().get("/changes/latest.jsonl.gz")
+    assert off.status_code == 503 and off.headers["cache-control"] == "no-store"
+
+
+def test_latest_before_any_file_is_a_404_the_edge_does_not_keep(env: Path) -> None:  # noqa: F811
+    got = _client().get("/changes/latest.jsonl.gz", follow_redirects=False)
+    assert got.status_code == 404 and got.headers["cache-control"] == "no-store"
 
 
 def test_files_are_pruned_with_the_days_the_store_drops(env: Path, tmp_path: Path) -> None:  # noqa: F811
