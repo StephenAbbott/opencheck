@@ -791,20 +791,52 @@ def _os_versions(client: Any) -> list[str]:
     return sorted({str(v) for v in (r.json().get("items") or [])})
 
 
-def _os_list_datasets(client: Any) -> frozenset[str] | None:
+#: Store meta key holding ``{dataset name: title}`` from the last catalogue
+#: read, so the page can name a list ("Canadian Consolidated Autonomous
+#: Sanctions List") rather than its code (``ca_dfatd_sema_sanctions``).
+OS_TITLES_META = "opensanctions_dataset_titles"
+
+
+def dataset_titles_from_catalog(catalog: dict[str, Any]) -> dict[str, str]:
+    """Each dataset's title as OpenSanctions publishes it; a dataset with no
+    title is left out (the page then shows its code, never a guess)."""
+    out: dict[str, str] = {}
+    for d in catalog.get("datasets") or []:
+        name, title = d.get("name"), d.get("title")
+        if name and isinstance(title, str) and title.strip():
+            out[str(name)] = title.strip()
+    return out
+
+
+def _os_list_datasets(
+    client: Any, store: DailyChangesStore | None = None
+) -> frozenset[str] | None:
     """The datasets the catalogue tags as a sanctions, export-control,
-    debarment or enforcement list; ``None`` when it cannot be read."""
+    debarment or enforcement list; ``None`` when it cannot be read. With a
+    store, the catalogue's titles are kept for :func:`day_payload`."""
     try:
         r = client.get(OS_CATALOG_URL, timeout=120.0)
         r.raise_for_status()
+        catalog = r.json()
+        if store is not None:
+            titles = dataset_titles_from_catalog(catalog)
+            store.set_meta(OS_TITLES_META, json.dumps(titles, sort_keys=True))
         return frozenset(
             str(d.get("name"))
-            for d in (r.json().get("datasets") or [])
+            for d in (catalog.get("datasets") or [])
             if set(d.get("tags") or []) & OS_LIST_TAGS
         )
     except Exception as exc:  # noqa: BLE001 — graded lower, never guessed
         log.warning("daily changes: OpenSanctions catalogue not read: %s", describe_exception(exc))
         return None
+
+
+def _stored_titles(store: DailyChangesStore) -> dict[str, str]:
+    try:
+        value = json.loads(store.get_meta(OS_TITLES_META) or "{}")
+    except ValueError:
+        return {}
+    return {str(k): str(v) for k, v in value.items()} if isinstance(value, dict) else {}
 
 
 def seed_states(lines: Iterable[str | bytes]) -> dict[str, dict[str, Any]]:
@@ -939,7 +971,10 @@ def opensanctions_tick(client: Any | None = None) -> dict[str, Any]:
             result["gaps"] = 1
             _note(os_last_version=versions[-1], os_last_error=None)
             return result
-        list_datasets = _os_list_datasets(client) if pending else None
+        # Read on a tick with versions to grade, or once when no titles are
+        # held yet (a store from before the titles were kept).
+        need_titles = store.get_meta(OS_TITLES_META) is None
+        list_datasets = _os_list_datasets(client, store) if pending or need_titles else None
         for version in pending[:OS_MAX_VERSIONS_PER_TICK]:
             try:
                 stored = _read_os_delta(client, store, version, list_datasets)
@@ -1067,7 +1102,20 @@ def day_payload(day: str, bands: Iterable[str] | None = None) -> dict[str, Any] 
         "counts": (summary or {}).get("bands", {}),
         "sources": (summary or {}).get("sources", {}),
         "rows": rows,
+        "dataset_titles": _titles_for(rows, _stored_titles(store)),
     }
+
+
+def _titles_for(rows: list[dict[str, Any]], titles: dict[str, str]) -> dict[str, str]:
+    """The titles of the datasets the served rows name, and no others."""
+    named = {
+        str(d)
+        for row in rows
+        for change in row.get("changes") or []
+        if isinstance(change, dict)
+        for d in change.get("datasets_added") or []
+    }
+    return {d: titles[d] for d in sorted(named) if d in titles}
 
 
 def stats() -> dict[str, Any]:

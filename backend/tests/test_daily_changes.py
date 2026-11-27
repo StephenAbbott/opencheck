@@ -381,10 +381,41 @@ def test_the_first_run_takes_a_baseline_and_stores_no_rows(env: Path) -> None:
     assert result["seeded"] == 1 and store.os_count() == 1
     assert store.get_meta("opensanctions_version") == V1
     assert store.days() == []
-    # Nothing new: nothing read.
+    # Nothing new: only the catalogue, once, for the dataset titles.
+    client.calls.clear()
+    assert dc.opensanctions_tick(client)["versions"] == 0
+    assert client.calls == [dc.OS_VERSIONS_URL, dc.OS_CATALOG_URL]
     client.calls.clear()
     assert dc.opensanctions_tick(client)["versions"] == 0
     assert client.calls == [dc.OS_VERSIONS_URL]
+
+
+def test_the_day_names_each_added_dataset_by_its_catalogue_title(env: Path) -> None:
+    """Steve, 27 Nov 2026: the page showed ``ca_dfatd_sema_sanctions`` where
+    the list's name belongs. The day carries the catalogue's titles for the
+    datasets its rows name, and only those; a dataset with no title is left
+    out, so the page falls back to the code."""
+    client = _Client()
+    client.catalog = {
+        "datasets": [
+            {"name": "us_ofac_sdn", "title": "US OFAC Specially Designated Nationals (SDN) List",
+             "tags": ["list.sanction"]},
+            {"name": "unused", "title": "Not named by any row", "tags": []},
+            {"name": "x", "tags": []},
+        ]
+    }
+    client.versions = [V1]
+    client.full[V1] = [_os("os-easy")]
+    dc.opensanctions_tick(client)
+    client.versions = [V1, V2]
+    client.deltas[V2] = [
+        {"op": "MOD", "entity": _os("os-easy", topics=["sanction"], datasets=["x", "us_ofac_sdn"])},
+    ]
+    dc.opensanctions_tick(client)
+    payload = dc.day_payload("2026-09-08", dc.BANDS)
+    assert payload["dataset_titles"] == {
+        "us_ofac_sdn": "US OFAC Specially Designated Nationals (SDN) List",
+    }
 
 
 def test_a_new_sanctions_topic_on_an_lei_heads_the_list_as_a_reference(env: Path) -> None:
