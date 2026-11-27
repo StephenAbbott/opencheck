@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 629** — Running a check from the daily changes page or the watchlist now opens the ordinary `/?lei=` address instead of keeping the page's own parameters.
+**Latest: Phase 630** — The blog's header and footer now link to the daily changes page, like every other page on the site.
 
 → [Full development history](docs/status.md)
 

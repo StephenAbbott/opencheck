@@ -1,5 +1,0 @@
----
-title: The blog's header and footer carry the Changes links the rest of the site has.
-readme: The blog's header and footer now link to the daily changes page, like every other page on the site.
----
-The blog is rendered by the backend (`opencheck/blog.py`), and its header and footer are a hand copy of `SiteChrome.tsx`. When "Changes" joined the app's top navigation and "Daily changes" joined its footer's Project group, the copy was not updated, so /blog showed a shorter menu than every other page. The blog header now carries Changes between API and Features, hidden below 640px like the app's (a `nav-wide` class), and the footer carries Daily changes between Watchlist and Features. `test_blog_chrome_matches_the_apps` now reads the header's labels from `NAV_ITEMS` in `lib/views.ts` and checks that the phone-hidden ones are hidden on the blog too. Its footer comparison matched one-word labels only, so it had skipped "Daily changes" and stayed green; it now matches labels of several words. The app's header search field is still not on the blog. After deploy: /blog shows Sources · API · Changes · Features · Blog at desktop width, and Daily changes in the footer.
