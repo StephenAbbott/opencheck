@@ -104,3 +104,20 @@ export const VIEW_DOCUMENT_TITLES: Record<Exclude<View, "main">, string> = {
   watchlist: "Watchlist — OpenCheck",
   changes: "Daily changes — OpenCheck",
 };
+
+/**
+ * The address a lookup starts from. A check is the main view, so when it is
+ * started from another view (Run a check on /changes, /watchlist…) the path
+ * goes back to `/` and that view's own parameters (`?day=`) are dropped:
+ * otherwise the address read `/changes?day=…&lei=…`, which neither view
+ * owns. On the main view the parameters are kept (`?mode=` and the rest).
+ * `isReport` says the path is a saved report's, which is cleared the same way.
+ */
+export function lookupBaseUrl(current: URL, isReport = false): URL {
+  const url = new URL(current.href);
+  if (isReport || pathToView(url.pathname) !== "main") {
+    url.pathname = "/";
+    url.search = "";
+  }
+  return url;
+}
