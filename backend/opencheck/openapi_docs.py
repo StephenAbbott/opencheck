@@ -350,6 +350,12 @@ OPERATIONS: dict[tuple[str, str], tuple[str, str, str]] = {
         "Every change GLEIF's and OpenSanctions' daily files recorded on one UTC day for any LEI, "
         "graded into bands (ownership and sanctions first). A day with nothing on it has no rows.",
     ),
+    ("get", "/changes/{name}"): (
+        "Daily changes", "Download a day's changes",
+        "`<day>.jsonl.gz`: every LEI GLEIF changed that day as BODS v0.4 JSON Lines, built from "
+        "OpenCheck's Golden Copy mirror. `<day>.csv`: the day's list, both sources. "
+        "`latest.jsonl.gz` and `latest.csv` redirect to the newest day held.",
+    ),
     # Catalogue
     ("get", "/sources"): (
         "Catalogue", "List the sources",
@@ -394,6 +400,7 @@ PARAMETERS: dict[str, str] = {
     "report_id": "The saved report's id.",
     "X-OpenCheck-Manage-Token": "The manage token returned once when the report was saved.",
     "day": "The UTC day, `YYYY-MM-DD`.",
+    "name": "`<day>.jsonl.gz`, `<day>.csv`, `latest.jsonl.gz` or `latest.csv`.",
 }
 
 _EXPORT_TYPES: dict[str, str] = {
@@ -421,6 +428,10 @@ CONTENT_TYPES: dict[tuple[str, str], dict[str, str]] = {
     ("get", "/watch/{token}.atom"): {"application/atom+xml": "The feed."},
     ("get", "/watch/{token}/record.md"): {"text/markdown": "The review record."},
     ("get", "/saved-reports/{report_id}.json"): {"application/json": "The canonical payload bytes."},
+    ("get", "/changes/{name}"): {
+        "application/gzip": "BODS v0.4 JSON Lines, gzipped.",
+        "text/csv": "The day's list.",
+    },
 }
 
 #: Status codes worth declaring beyond the generated 200 and 422.
@@ -440,7 +451,7 @@ _HAS_404 = {
     ("get", "/saved-reports/{report_id}"), ("get", "/saved-reports/{report_id}.json"),
     ("post", "/saved-reports/{report_id}/extend"), ("delete", "/saved-reports/{report_id}"),
     ("get", "/watch/{token}"), ("get", "/watch/{token}.atom"), ("post", "/export/discrepancy-note"),
-    ("get", "/lookup-register"), ("get", "/daily-changes/{day}.json"),
+    ("get", "/lookup-register"), ("get", "/daily-changes/{day}.json"), ("get", "/changes/{name}"),
 }
 _HAS_409 = {("post", "/saved-reports")}
 

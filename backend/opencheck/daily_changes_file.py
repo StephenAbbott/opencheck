@@ -119,7 +119,7 @@ def statements_for(
     bundle["direct_children"] = []
     bundle.pop("direct_child_relationships", None)
     with provenance.mapping_provenance(recorder.resolve(is_stub=False)):
-        statements = list(map_gleif(bundle).statements)
+        statements = list(map_gleif(bundle))
         subject = next(
             (s for s in statements if s.get("recordType") == "entity" and _lei_of(s) == lei),
             None,
