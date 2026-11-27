@@ -224,13 +224,24 @@ def test_blog_chrome_matches_the_apps(client: TestClient) -> None:
     ).read_text()
     footer = chrome[chrome.index("export function SiteFooter") :]
     project = footer[footer.index("Project") : footer.index("Legal")]
-    labels = re.findall(r">\s*\n?\s*([A-Za-z]+)\s*\n?\s*</a>", project)
+    # Labels may be several words ("Daily changes"): a one-word pattern
+    # skipped that link, so the blog lacked it with this test green.
+    labels = re.findall(r">\s*([A-Za-z][A-Za-z ]*?)\s*</a>", project)
+    assert "Daily changes" in labels
     page = client.get("/blog").text
     blog_footer = page[page.index('<footer class="site"') :]
     blog_project = blog_footer[blog_footer.index("Project") : blog_footer.index("Legal")]
     assert re.findall(r'<a href="[^"]*">([^<]+)</a>', blog_project) == labels
     nav = page[page.index('<nav aria-label="Site navigation">') : page.index("</nav>")]
-    assert re.findall(r">([^<]+)</a>", nav) == ["Sources", "API", "Features", "Blog"]
+    views = (
+        Path(__file__).resolve().parents[2] / "frontend/src/lib/views.ts"
+    ).read_text()
+    items = views[views.index("export const NAV_ITEMS") : views.index("export const BLOG_PATH")]
+    nav_labels = re.findall(r'label: "([^"]+)"', items)
+    assert re.findall(r">([^<]+)</a>", nav) == [*nav_labels, "Blog"]
+    # NAV_ITEMS' hideOnPhone entries are hidden below 640px on the blog too.
+    for label in re.findall(r'label: "([^"]+)", hideOnPhone: true', items):
+        assert re.search(rf'<a class="nav-wide" href="[^"]*">{label}</a>', nav)
     assert 'class="godin"' in page and "/godin-logo.png" in page
     assert 'clip-path="url(#oc-blog-lens)"' in page  # OpenCheckIcon, not the old triangle
     assert "See who owns and controls a company, from open data." in page
@@ -247,7 +258,7 @@ def test_blog_link_is_desktop_only_in_the_header(client: TestClient) -> None:
     assert "hidden sm:inline-flex" in header[header.index("href={BLOG_PATH}") - 400 :]
     page = client.get("/blog").text
     assert '<a class="nav-blog" href="/blog" aria-current="page">Blog</a>' in page
-    assert "header.site nav a.nav-blog{display:none}" in page
+    assert "header.site nav a.nav-blog,header.site nav a.nav-wide{display:none}" in page
     assert "@media(min-width:640px){header.site nav a.nav-blog{display:inline-flex}" in page
     footer = page[page.index('<footer class="site"') :]
     assert 'href="/blog"' in footer and "nav-blog" not in footer
