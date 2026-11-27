@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 627** — The daily changes list gained a /changes page and a daily BODS file of every LEI GLEIF changed that day.
+**Latest: Phase 628** — The daily changes file addresses answer a missing file with no-store, so the edge cannot keep a 404 after the file exists.
 
 → [Full development history](docs/status.md)
 
