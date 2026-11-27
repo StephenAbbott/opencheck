@@ -16,7 +16,8 @@ export type View =
   | "changelog"
   | "batch"
   | "watchlist"
-  | "features";
+  | "features"
+  | "changes";
 
 /** Views that already render a heading of their own: `main` has the hero, or
  *  the report's sr-only heading once a lookup is on screen, and `batch` has
@@ -32,6 +33,7 @@ export const PAGE_TITLES: Record<Exclude<View, SelfTitledView>, string> = {
   behind: "About OpenCheck",
   api: "The OpenCheck API",
   changelog: "OpenCheck development history",
+  changes: "Daily changes",
 };
 
 /**
@@ -46,9 +48,14 @@ export const PAGE_TITLES: Record<Exclude<View, SelfTitledView>, string> = {
  * labelled "Search" that is not the search field is a third thing pointing at
  * two behaviours. The logo remains the way home.
  */
-export const NAV_ITEMS: { view: View; label: string }[] = [
+export const NAV_ITEMS: { view: View; label: string; hideOnPhone?: boolean }[] = [
   { view: "sources", label: "Sources" },
   { view: "api", label: "API" },
+  // The daily-deltas ticket (Stephen, 13 Nov 2026): "Changes" in the top nav
+  // as an experiment, to keep or drop once it has been used.
+  // Hidden below sm like Blog: a fourth word does not fit the one-row phone
+  // header; phones reach it from the footer.
+  { view: "changes", label: "Changes", hideOnPhone: true },
   // Phase 175: "About" gave the top nav its slot to the page that explains
   // the architecture; a first-time visitor wants to know what the thing
   // DOES before how it is built. /about keeps its URL and its footer link.
@@ -69,6 +76,7 @@ export function pathToView(path: string): View {
   if (path === "/changelog") return "changelog";
   if (path === "/batch") return "batch";
   if (path === "/watchlist") return "watchlist";
+  if (path === "/changes") return "changes";
   return "main";
 }
 
@@ -80,6 +88,7 @@ export function viewToPath(v: View): string {
   if (v === "changelog") return "/changelog";
   if (v === "batch") return "/batch";
   if (v === "watchlist") return "/watchlist";
+  if (v === "changes") return "/changes";
   return "/";
 }
 
@@ -93,4 +102,5 @@ export const VIEW_DOCUMENT_TITLES: Record<Exclude<View, "main">, string> = {
   changelog: "Changelog — OpenCheck",
   batch: "Screen a list — OpenCheck",
   watchlist: "Watchlist — OpenCheck",
+  changes: "Daily changes — OpenCheck",
 };

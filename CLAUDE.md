@@ -5869,9 +5869,10 @@ re-derived otherwise:
 ## The daily changes list reads the deltas for every LEI and never runs a lookup (the daily-deltas ticket, 13 Nov 2026)
 
 `opencheck/daily_changes.py`, `routers/daily_changes.py`; reader's page
-`docs/daily-changes.md`. A **two-week shadow experiment** (Stephen, 13 Nov
-2026): JSON only at `/daily-changes` and `/daily-changes/{day}.json`, no page,
-no BODS file. Things that will be re-derived otherwise:
+`docs/daily-changes.md`. A two-week shadow experiment (Stephen, 13 Nov
+2026; JSON only at `/daily-changes` and `/daily-changes/{day}.json`), then
+the page and the daily BODS file (27 Nov 2026, the last item below). Things
+that will be re-derived otherwise:
 
 - **Not the watchlist, and stricter than it.** The watchlist intersects the
   deltas with watched LEIs and re-runs a lookup; this grades every LEI the
@@ -5906,5 +5907,20 @@ no BODS file. Things that will be re-derived otherwise:
 - **Sole proprietors are counted and left out.** `/signalstats` →
   `daily_changes` carries counts by closed keys only.
 - **Off unless `OPENCHECK_DAILY_CHANGES_DB_FILE` is set** (503 on the routes,
-  inert hooks). The path is `/daily-changes` so a later page can take
-  `/changes`.
+  inert hooks). The JSON is at `/daily-changes`; `/changes` is the page.
+- **The page and the file (27 Nov 2026, after the shadow fortnight).**
+  `/changes` (`components/ChangesPage.tsx`, `lib/dailyChanges.ts`, "Changes"
+  in `NAV_ITEMS` as an experiment) reads `/daily-changes`. The BODS file is
+  `opencheck/daily_changes_file.py`: rebuilt whole after each GLEIF delta from
+  every GLEIF row the store holds for the day (`build_from_store`, called at
+  the end of `on_gleif_delta`), each LEI mapped from the mirror with
+  `_snapshot_bundle(children=False)` + `map_gleif` inside
+  `mapping_provenance`, children dropped, parents' entity statements kept so
+  references resolve, a removed parent published as a closed relationship
+  under the open one's `recordId` with no `endDate`. Files are
+  `<db dir>/changes/<day>.jsonl.gz` on the persistent disk, never a release
+  asset (Stephen, 13 Nov), pruned in `tick` with the store. Served by
+  `GET /changes/{name}` (registered before the SPA fallback; `/changes`
+  itself is the SPA page): `<day>.jsonl.gz`, `<day>.csv`, `latest.*` → 302.
+  OpenSanctions is never in the BODS file. `BAND_LABELS` / `REASON_WORDS`
+  in the TypeScript are parsed by `test_daily_changes_file.py`.

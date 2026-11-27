@@ -63,6 +63,9 @@ const proxyRoutes: Record<string, { target: string; changeOrigin: boolean }> = {
   "/narrative":       { target: backendTarget, changeOrigin: true },
   "/license-matrix":  { target: backendTarget, changeOrigin: true },
   "/saved-reports":   { target: backendTarget, changeOrigin: true },
+  "/daily-changes":   { target: backendTarget, changeOrigin: true },
+  // The day files only — "/changes" itself is the SPA page.
+  "/changes/":        { target: backendTarget, changeOrigin: true },
   // Server-rendered pages, not API calls: proxied so the header's Blog link
   // works under `npm run dev` as it does in production.
   "/blog":            { target: backendTarget, changeOrigin: true },

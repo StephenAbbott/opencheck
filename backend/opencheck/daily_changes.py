@@ -753,6 +753,13 @@ def on_gleif_delta(
         stored = store.record(day, SOURCE_GLEIF, publish_label, rows, dict(counts))
         result.update(named=len(before), stored=stored, churn=counts["churn"])
         _note(gleif_last_publish=publish_label, gleif_last_stored=stored, last_error=None)
+        # The day's BODS file, rebuilt whole from every GLEIF row of the day.
+        from . import daily_changes_file
+
+        built = daily_changes_file.build_from_store(store, day)
+        if built is not None:
+            result["file_statements"] = built["statements"]
+            _note(gleif_last_file=day)
         log.info(
             "daily changes: GLEIF %s named %d LEIs — %d stored, %d churn",
             publish_label, len(before), stored, counts["churn"],
@@ -971,6 +978,9 @@ def tick() -> dict[str, Any]:
     result = opensanctions_tick() if settings.allow_live else {}
     try:
         result["pruned"] = store.prune(settings.daily_changes_keep_days)
+        from . import daily_changes_file
+
+        result["files_pruned"] = daily_changes_file.prune(d["day"] for d in store.days())
     except Exception as exc:  # noqa: BLE001
         log.warning("daily changes: prune failed: %s", describe_exception(exc))
     _note(last_tick_at=_now_iso())
@@ -1006,7 +1016,34 @@ def index_payload() -> dict[str, Any]:
         "what_this_is": WHAT_THIS_IS,
         "bands": [{"band": b, "label": BAND_WORDS[b]} for b in BANDS],
         "days": store.days(),
+        "files": _files_index(store),
     }
+
+
+def _files_index(store: DailyChangesStore) -> list[dict[str, Any]]:
+    """The day files held, newest first, with their addresses."""
+    from . import daily_changes_file
+
+    out = []
+    for day in daily_changes_file.held_days():
+        path = daily_changes_file.day_path(day)
+        size = path.stat().st_size if path is not None and path.exists() else None
+        try:
+            built = json.loads(store.get_meta(f"file:{day}") or "{}")
+        except ValueError:
+            built = {}
+        out.append(
+            {
+                "day": day,
+                "bods": f"/changes/{day}.jsonl.gz",
+                "csv": f"/changes/{day}.csv",
+                "json": f"/daily-changes/{day}.json?band=all",
+                "bytes": size,
+                "statements": built.get("statements"),
+                "leis": built.get("leis"),
+            }
+        )
+    return out
 
 
 def day_payload(day: str, bands: Iterable[str] | None = None) -> dict[str, Any] | None:

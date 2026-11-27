@@ -76,6 +76,12 @@ PAGES: tuple[SitePage, ...] = (
         "Watch companies with OpenCheck and see when their GLEIF record, "
         "sanctions listings or register entries change.",
     ),
+    SitePage(
+        "/changes",
+        "Daily changes — OpenCheck",
+        "What GLEIF and OpenSanctions changed today for companies with a "
+        "Legal Entity Identifier, with a daily BODS file to download.",
+    ),
 )
 
 _BY_PATH = {p.path: p for p in PAGES}
