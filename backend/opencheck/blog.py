@@ -38,7 +38,7 @@ from .cache import data_root
 from .entity_pages import FONTS_STYLESHEET, _goatcounter_snippet
 
 #: Bump when the rendered HTML changes materially (part of every ETag).
-TEMPLATE_VERSION = "5"
+TEMPLATE_VERSION = "6"
 
 AUTHOR = "Stephen Abbott Pugh"
 AUTHOR_URL = "https://www.beneficialownership.co.uk/"
@@ -399,6 +399,9 @@ border:1px solid var(--soft-border);border-radius:10px;padding:8px 12px;font-siz
 .prose ul,.prose ol{padding-left:1.2em;margin:0 0 1.2em}.prose li{margin:.3em 0}
 .prose a{text-underline-offset:2px}
 .prose code{font:15px "DM Mono",ui-monospace,monospace;background:var(--soft);padding:1px 5px;border-radius:4px}
+.prose pre{margin:0 0 1.2em;padding:12px 14px;background:var(--soft);border:1px solid var(--soft-border);
+border-radius:8px;overflow-x:auto;max-width:100%}
+.prose pre code{background:none;padding:0;border-radius:0;font-size:14px}
 .prose blockquote{margin:1.6em 0;padding:4px 0 4px 18px;border-left:3px solid var(--soft-border)}
 .prose blockquote p{font:600 19px/1.5 Bitter,Georgia,serif;color:var(--ink)}
 .prose figure{margin:1.6em 0}.prose figure img{border-radius:10px;border:1px solid var(--rule)}
@@ -432,7 +435,7 @@ footer.site .strip a{color:var(--blue);text-underline-offset:2px}
 footer.site .cols{grid-template-columns:1fr 1fr;gap:16px}footer.site .groups{justify-content:flex-end}}
 @media(min-width:1024px){.godin{padding-left:64px;padding-right:64px}
 footer.site{padding-left:64px;padding-right:64px}}
-@media(max-width:860px){.post{grid-template-columns:1fr;gap:18px}.post aside{position:static;order:2}
+@media(max-width:860px){.post{grid-template-columns:minmax(0,1fr);gap:18px}.post aside{position:static;order:2}
 .month{grid-template-columns:1fr}.month h2{position:static}.post article h1{font-size:28px}.dek{font-size:17px}}
 @media(max-width:640px){.card.has-thumb{grid-template-columns:1fr}.thumb{order:-1}.prose p,.prose li{font-size:16px}.head h1{font-size:26px}}
 """
