@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 624** — The MCP server's BODS export now returns counts and a short-lived download link, so an agent can filter a large ownership graph in code instead of reading it whole.
+**Latest: Phase 625** — The MCP BODS export now gives the same statements and counts whether it answers inline or by link.
 
 → [Full development history](docs/status.md)
 
