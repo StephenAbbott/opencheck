@@ -776,7 +776,7 @@ class GleifAdapter(SourceAdapter):
         return store is not None and store.get(lei) is not None
 
     def _snapshot_bundle(
-        self, lei: str, *, reason: str = "fallback"
+        self, lei: str, *, reason: str = "fallback", children: bool = True
     ) -> dict[str, Any] | None:
         """Anchor bundle from the entity-pages Golden Copy SQLite, or ``None``.
 
@@ -831,8 +831,13 @@ class GleifAdapter(SourceAdapter):
         # page a mirror-served (or rate-limited) group of more than 100 direct
         # children lost the rest from the graph and the export — Shell's 105
         # read as 100 — which mirror-first would have made the everyday case.
-        children_rows, children_total = store.children(
-            lei, limit=_DIRECT_CHILDREN_PAGE_CAP * 100
+        # ``children=False`` (the daily changes file): each child publishes
+        # its own parent edge, and a large parent's children query is the
+        # slowest read here.
+        children_rows, children_total = (
+            store.children(lei, limit=_DIRECT_CHILDREN_PAGE_CAP * 100)
+            if children
+            else ([], 0)
         )
 
         # Phase 178: the store now holds the REPEX file, so a subject with no

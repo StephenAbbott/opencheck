@@ -108,6 +108,8 @@ export function SiteHeader({
                     onClick={() => onNavigate(item.view)}
                     aria-current={current ? "page" : undefined}
                     className={`min-h-[44px] text-oo-small transition-colors ${
+                      item.hideOnPhone ? "hidden sm:inline-flex sm:items-center " : ""
+                    }${
                       current
                         ? "text-white font-medium border-b-2 border-oo-mark-line"
                         : "text-white/80 hover:text-white"
@@ -301,6 +303,13 @@ export function SiteFooter({ onNavigate }: { onNavigate: (v: View) => void }) {
                   className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
                 >
                   Watchlist
+                </a>
+                <a
+                  href="/changes"
+                  onClick={(e) => { e.preventDefault(); onNavigate("changes"); }}
+                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
+                >
+                  Daily changes
                 </a>
                 <a
                   href="/features"

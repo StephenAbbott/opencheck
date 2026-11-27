@@ -93,6 +93,7 @@ const ChangelogPage = lazyNamedWithRetry(() => import("./components/ChangelogPag
 const SourcesPage = lazyNamedWithRetry(() => import("./components/SourcesPage"), "SourcesPage");
 const BatchPage = lazyWithRetry(() => import("./components/BatchPage"));
 const WatchlistPage = lazyWithRetry(() => import("./components/WatchlistPage"));
+const ChangesPage = lazyWithRetry(() => import("./components/ChangesPage"));
 const ApiPage = lazyNamedWithRetry(() => import("./components/ApiPage"), "ApiPage");
 const BehindTheScenesPage = lazyNamedWithRetry(() => import("./components/BehindTheScenesPage"), "BehindTheScenesPage");
 const FeaturesPage = lazyNamedWithRetry(() => import("./components/FeaturesPage"), "FeaturesPage");
@@ -1575,6 +1576,12 @@ export default function App() {
         {view === "watchlist" && (
           <LazyPage label="Watchlist">
             <WatchlistPage sourceNames={sourceNameIndex} onOpen={(lei) => lookupLei(lei)} />
+          </LazyPage>
+        )}
+
+        {view === "changes" && (
+          <LazyPage label="Changes">
+            <ChangesPage onOpen={(lei) => lookupLei(lei)} onOpenWatchlist={() => navigate("watchlist")} />
           </LazyPage>
         )}
       </main>

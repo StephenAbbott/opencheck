@@ -5,6 +5,7 @@
  * Phase 2 surface: /lookup-stream (SSE, LEI-anchored progressive lookup).
  */
 
+import type { DailyDay, DailyIndex } from "./dailyChanges";
 import type { DisclosureStatusPayload } from "./disclosureStatus";
 import type { IntegratedOwnershipPayload } from "./integratedOwnership";
 import type { LegalFormList } from "./searchFilters";
@@ -2723,4 +2724,18 @@ export function savedReportJsonUrl(reportId: string): string {
  *  `/report/{id}`. */
 export function savedReportShareUrl(reportId: string): string {
   return `${BASE_URL || "https://api.opencheck.world"}/share/saved/${encodeURIComponent(reportId)}`;
+}
+
+// --- The daily changes list (/changes, the daily-deltas ticket) ------------
+
+/** The days held, their counts and the day files. 503 when the server does
+ *  not run the list. */
+export function fetchDailyChangesIndex(): Promise<DailyIndex> {
+  return getJson("/daily-changes");
+}
+
+/** One UTC day's rows, the bands the page lists (headline, ceased,
+ *  ceased_lapsed, record). */
+export function fetchDailyChangesDay(day: string): Promise<DailyDay> {
+  return getJson(`/daily-changes/${encodeURIComponent(day)}.json`);
 }

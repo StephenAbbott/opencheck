@@ -1,14 +1,56 @@
-# The daily changes list (shadow experiment)
+# The daily changes list
 
 Every LEI whose GLEIF record or OpenSanctions record changed on a given UTC
 day, graded so that the few changes worth reading are not buried under the
 thousands that are not. From the Notion ticket *Daily deltas for OpenCheck*
 (13 Nov 2026).
 
-**This is a two-week shadow experiment.** The list is computed and served as
-JSON. There is no page for readers and no downloadable BODS file yet; whether
-to build them is decided from what these two weeks show. The shape of the
-JSON may change.
+The list ran as a two-week shadow experiment (14–27 Nov 2026), JSON only. On
+27 Nov 2026 it gained a page for readers, [`/changes`](https://opencheck.world/changes),
+and a daily BODS file. "Changes" sits in the top nav as an experiment, to be
+kept or dropped once it has been used.
+
+## The page and the files
+
+`/changes` shows one UTC day (`?day=YYYY-MM-DD`, or the newest complete day
+without one). Ownership and sanctions changes are listed open, the first five
+shown. Ceased companies, ceased companies on an already-lapsed LEI and record
+changes are folded. New LEIs and note-only changes are counted, not listed;
+they are in the day's file. An OpenSanctions listing wears the risk chip. Each
+row links to the record its change is on and offers "Run a check", which is
+the reader's choice: nothing on the page runs one.
+
+| Address | What it is |
+|---|---|
+| `/changes/<day>.jsonl.gz` | BODS v0.4, JSON Lines, gzipped: every LEI GLEIF changed that day, in every band, as the mirror records it after the day's deltas. GLEIF only. |
+| `/changes/latest.jsonl.gz` | A redirect to the newest day held. |
+| `/changes/<day>.csv` | The day's list, every band, both sources. An OpenSanctions row carries the entity id, not the record. |
+| `/daily-changes/<day>.json?band=all` | The same list as JSON. |
+
+How the BODS file is built:
+
+- Each LEI is mapped from the Golden Copy mirror the way a lookup's anchor is:
+  its entity statement, its direct and ultimate parents and the edges to them,
+  its reporting exceptions. Nothing is looked up.
+- **Children are left out.** Each child that changed publishes its own parent
+  edge. A parent's entity statement rides along, so every reference resolves
+  inside the file. Statements are deduplicated and parties come before
+  relationships.
+- **A parent GLEIF removed is published as a closed relationship** under the
+  `recordId` its open statement carried, with no `endDate`: the delta says the
+  edge went, not when it ended. The former parent's entity statement is in the
+  file beside it.
+- A `recordId` is the same across days, so a reader replaces what it holds
+  under that id with the new statement.
+- OpenSanctions is not in the file. Its data is CC BY-NC 4.0, and its rows
+  are references only.
+- The file is rebuilt whole after each GLEIF delta of the day and written
+  atomically. A past day's file is final and served with a day-long cache; the
+  current day's is not cached.
+
+The files live on the server's persistent disk, in a `changes` folder beside
+the store (`OPENCHECK_DAILY_CHANGES_DB_FILE`), and are pruned with the days
+the store drops (thirty).
 
 ## What it is, and what it is not
 
@@ -94,8 +136,14 @@ end of the two weeks:
 
 Thirty days are kept (`OPENCHECK_DAILY_CHANGES_KEEP_DAYS`).
 
-## Not in the experiment
+## What the shadow fortnight showed
 
-A page on the site, a downloadable daily BODS file, a feed, changes from any
-register other than GLEIF and OpenSanctions, and any change to how the
-watchlist grades changes for a watched company.
+Over 14–27 Nov 2026: ownership and sanctions 44–124 a weekday and 3–6 at
+weekends; ceased 10–55 a weekday, and 24–119 more on an already-lapsed LEI;
+about 1,400 new LEIs a weekday; OpenSanctions headline rows 0–35 a day. No
+errors and no gaps.
+
+## Not built
+
+A feed, changes from any register other than GLEIF and OpenSanctions, and any
+change to how the watchlist grades changes for a watched company.

@@ -10,6 +10,7 @@ const VIEWS: View[] = [
   "batch",
   "watchlist",
   "features",
+  "changes",
 ];
 
 describe("views", () => {

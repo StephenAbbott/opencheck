@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { tmpdir } from "node:os";
 
 /**
  * The smoke tier (Phase 168).
@@ -62,7 +63,13 @@ export default defineConfig({
       url: `${BACKEND}/health`,
       timeout: 180_000,
       reuseExistingServer: !process.env.CI,
-      env: { OPENCHECK_CORS_ORIGIN: "*" },
+      env: {
+        OPENCHECK_CORS_ORIGIN: "*",
+        // /changes reads the daily changes list; an empty store answers with
+        // no days rather than the 503 of a server that does not run it.
+        OPENCHECK_DAILY_CHANGES_DB_FILE: `${tmpdir()}/opencheck-e2e-daily-changes.sqlite`,
+        OPENCHECK_DAILY_CHANGES_INTERVAL_S: "0",
+      },
     },
     {
       // Built, not `vite dev`: the dev server proxies /lookup to the backend,

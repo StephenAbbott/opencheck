@@ -50,6 +50,7 @@ const ROUTES = [
   { path: "/api", name: "api" },
   { path: "/changelog", name: "changelog" },
   { path: "/batch", name: "batch" },
+  { path: "/changes", name: "changes" },
 ] as const;
 
 /**
