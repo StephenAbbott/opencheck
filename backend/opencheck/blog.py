@@ -344,8 +344,8 @@ align-items:center;min-height:44px;transition:color .15s}
 header.site nav a:hover{color:#fff}
 header.site nav a[aria-current]{color:#fff;font-weight:500;border-bottom:2px solid var(--line)}
 /* SiteHeader's "hidden sm:inline-flex": phones reach the blog from the footer. */
-header.site nav a.nav-blog{display:none}
-@media(min-width:640px){header.site nav a.nav-blog{display:inline-flex}header.site{padding:16px 40px}header.site .in{gap:4px 16px}
+header.site nav a.nav-blog,header.site nav a.nav-wide{display:none}
+@media(min-width:640px){header.site nav a.nav-blog{display:inline-flex}header.site nav a.nav-wide{display:inline-flex}header.site{padding:16px 40px}header.site .in{gap:4px 16px}
 .brand{gap:10px;font-size:20px}.brand .mark{height:28px}header.site nav{gap:0 20px}}
 @media(min-width:768px){header.site .in{justify-content:flex-start}}
 @media(min-width:1024px){header.site{padding-left:64px;padding-right:64px}}
@@ -497,6 +497,7 @@ def _header(frontend: str) -> str:
         "<span>Open<b>Check</b></span></a>"
         '<nav aria-label="Site navigation">'
         f'<a href="{f}/sources">Sources</a><a href="{f}/api">API</a>'
+        f'<a class="nav-wide" href="{f}/changes">Changes</a>'
         f'<a href="{f}/features">Features</a>'
         '<a class="nav-blog" href="/blog" aria-current="page">Blog</a></nav></div></header>'
     )
@@ -519,6 +520,7 @@ def _footer(frontend: str) -> str:
             (_GITHUB, "GitHub"),
             (f"{f}/sources", "Sources"),
             (f"{f}/watchlist", "Watchlist"),
+            (f"{f}/changes", "Daily changes"),
             (f"{f}/features", "Features"),
             ("/blog", "Blog"),
             (f"{f}/about", "About"),
