@@ -1,5 +1,0 @@
----
-title: The daily changes page fits a phone screen.
-readme: The daily changes page no longer scrolls sideways on a phone or cuts off the end of its rows.
----
-Found by the post-deploy tester on 27 Nov 2026 (Notion ticket "Daily changes page is wider than a phone screen and cuts off its text"): at 390×844 a real day on `/changes` scrolled sideways by 111px, and the counts, the band sentences and the parent LEIs were clipped at the right edge. Below `lg` the page's grid had no explicit column, so its one implicit `auto` track took the min-content width of the widest item, the `curl` lines in the download box, and their own `overflow-x-auto` could not help. `ChangesPage.tsx` now gives the grid an explicit `minmax(0,1fr)` column below `lg` and the download box `min-w-0`, so the `curl` lines scroll inside their own box. The route sweep's empty store rendered no day and passed; a new 390px e2e case serves a day with rows and a file and asserts no sideways scroll (it fails on the old layout at 486px). Check in production: `opencheck.world/changes` at phone width shows each row whole.

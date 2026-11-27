@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 630** — The blog's header and footer now link to the daily changes page, like every other page on the site.
+**Latest: Phase 631** — The daily changes page no longer scrolls sideways on a phone or cuts off the end of its rows.
 
 → [Full development history](docs/status.md)
 
