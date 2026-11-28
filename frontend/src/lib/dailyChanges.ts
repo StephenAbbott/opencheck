@@ -305,7 +305,7 @@ export function rowsIn(day: DailyDay, band: Band): DailyRow[] {
 export const STRIP: { band: Band; label: string }[] = [
   { band: "headline", label: "ownership and sanctions" },
   { band: "ceased", label: "ceased" },
-  { band: "record", label: "record changed" },
+  { band: "record", label: "record changes" },
   { band: "new", label: "new LEIs" },
 ];
 
